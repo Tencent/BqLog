@@ -85,7 +85,7 @@ target_sources(your_target PRIVATE FILE_SET CXX_MODULES
 target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
-GCC also needs `-fmodules-ts`. Without CMake, with clang:
+The compiler needs to support modules: Clang 16+, MSVC 19.34+, or GCC 15+ (GCC 14 crashes with an internal compiler error on a module that imports `bq.log`). GCC also needs `-fmodules-ts`. Without CMake, with clang:
 
 ```bash
 clang++ -std=c++20 -x c++-module --precompile -I$PREFIX/include $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm

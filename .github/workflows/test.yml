@@ -63,26 +63,35 @@ jobs:
           bash build/pack_test/module_verify.sh
 
   #The module entry under GCC (the default GCC 13 cannot build modules).
+  # GCC 14 crashes with an internal compiler error (nonnull_arg_p) on a module that imports
+  # bq.log, so the module test wants 15 or newer; both supported versions run here, in their
+  # upstream images, which is also where the compiler comes from.
   module_verify_gcc:
-    name: module verify (gcc 14)
+    name: module verify (gcc ${{ matrix.gcc }})
     runs-on: ubuntu-24.04
+    container: gcc:${{ matrix.gcc }}
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc: [ "15", "16" ]
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      - name: Install GCC 14
+      - name: Install CMake and Ninja
         run: |
-          sudo apt-get update
-          sudo apt-get install -y gcc-14 g++-14
+          apt-get update
+          apt-get install -y cmake ninja-build
+          cmake --version | head -1
+          ninja --version
 
       - name: Build and run the module entry test
         run: |
           cmake -S test/cpp -B build_module_gcc -G Ninja -DTARGET_PLATFORM=linux \
-            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=20 \
-            -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=20
           cmake --build build_module_gcc --target BqLogModuleUnitTest --parallel 2
           test -f build_module_gcc/bq_module_test_enabled \
-            || { echo "GCC 14 must get the module test; see test/cpp/CMakeLists.txt" >&2; exit 1; }
+            || { echo "GCC ${{ matrix.gcc }} must get the module test (the image needs CMake 3.28+); see test/cpp/CMakeLists.txt" >&2; exit 1; }
           cd build_module_gcc
           ./BqLogModuleUnitTest
 

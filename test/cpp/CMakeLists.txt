@@ -221,6 +221,10 @@ OPTION(BQ_MODULE_TEST "Build and run the C++20 module entry test" ON)
 # Ninja. The compiler and the generator are a pair, so both are checked together: clang-cl with
 # the Visual Studio generator configures and compiles the interface unit, but the module never
 # reaches the importing project ("module 'bq.log' not found").
+#
+# GCC needs 15, not 14: 14 crashes with an internal compiler error (nonnull_arg_p) while
+# compiling a module that imports bq.log. GCC 15.3 and 16.2 compile both units of the module
+# test with -fmodules-ts and with -fmodules.
 set(BQ_MODULE_TOOLCHAIN_OK FALSE)
 if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION GREATER_EQUAL 1934
@@ -229,7 +233,7 @@ if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
     elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16
             AND CMAKE_GENERATOR MATCHES "Ninja")
         set(BQ_MODULE_TOOLCHAIN_OK TRUE)
-    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 14
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15
             AND CMAKE_GENERATOR MATCHES "Ninja")
         set(BQ_MODULE_TOOLCHAIN_OK TRUE)
     endif()
@@ -286,7 +290,7 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
     file(WRITE "${CMAKE_BINARY_DIR}/bq_module_test_enabled" "BqLogModuleUnitTest\n")
 else()
     file(REMOVE "${CMAKE_BINARY_DIR}/bq_module_test_enabled")
-    message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, and MSVC with the Visual Studio generator or Clang/GCC with Ninja)")
+    message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, and MSVC with the Visual Studio generator, or Clang 16 / GCC 15 with Ninja)")
 endif()
 
 

@@ -85,7 +85,7 @@ target_sources(your_target PRIVATE FILE_SET CXX_MODULES
 target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 ```
 
-GCC 还需要 `-fmodules-ts`。不用 CMake 时（以 clang 为例）：
+需要编译器支持 modules：Clang 16+、MSVC 19.34+ 或 GCC 15+（GCC 14 在编译 import `bq.log` 的模块时会触发内部编译器错误）。GCC 还需要 `-fmodules-ts`。不用 CMake 时（以 clang 为例）：
 
 ```bash
 clang++ -std=c++20 -x c++-module --precompile -I$PREFIX/include $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
