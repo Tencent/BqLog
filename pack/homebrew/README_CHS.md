@@ -17,12 +17,16 @@ target_link_libraries(app PRIVATE bqlog::BqLogShared)   # 或 bqlog::BqLogStatic
 
 ## 发布
 
-`Formula/bqlog.rb` 里的 `url` 与 `sha256` 在仓库中是占位符：它们属于一个还不存在的 tag，所以没填的 formula 会"取包失败"，而不会装错源码。发布流程会把填好新 tag 的 url 与 sha256 的 `bqlog.rb` 挂到 GitHub Release 上，以那一份提交到 homebrew-core 即可：
+`Formula/bqlog.rb` 里的 `url` 与 `sha256` 在仓库中是占位符：它们属于一个还不存在的 tag，所以没填的 formula 会"取包失败"，而不会装错源码。发布流程会把填好新 tag 的 url 与 sha256 的 `bqlog.rb` 挂到 GitHub Release 上，以那一份提交到 homebrew-core，路径是 `Formula/b/bqlog.rb`。
+
+Homebrew 不允许按路径安装 formula（`brew install ./bqlog.rb` 会报 "Homebrew requires formulae to be in a tap"），所以这个文件要先放进本地 homebrew-core 的检出目录——也就是 `brew tap --force homebrew/core` 写入的那个目录——才能验证：
 
 ```bash
-brew install --build-from-source ./bqlog.rb
+export HOMEBREW_NO_INSTALL_FROM_API=1
+brew install --build-from-source bqlog
 brew test bqlog
 brew audit --new --strict --online bqlog
+brew style bqlog
 ```
 
 本地可用 `bump.sh <版本> [源码包]` 填入同样的值。

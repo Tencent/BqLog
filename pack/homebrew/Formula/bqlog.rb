@@ -16,6 +16,8 @@ class Bqlog < Formula
 
   depends_on "cmake" => :build
 
+  deny_network_access!
+
   def install
     args = ["-DBUILD_LIB_TYPE=both", "-DBQ_BUILD_TOOLS=ON", "-DBQ_WERROR=OFF"]
     args << "-DCMAKE_OSX_ARCHITECTURES=#{Hardware::CPU.arch}" if OS.mac?

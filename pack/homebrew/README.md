@@ -17,12 +17,16 @@ target_link_libraries(app PRIVATE bqlog::BqLogShared)   # or bqlog::BqLogStatic
 
 ## Releasing
 
-The `url` and `sha256` in `Formula/bqlog.rb` are placeholders in the repository: they belong to a tag that does not exist yet, so an unfilled formula fails to fetch instead of installing the wrong source. The release workflow attaches a `bqlog.rb` filled in with the url and sha256 of the new tag to the GitHub release. Submit that one to homebrew-core as `Formula/b/bqlog.rb`:
+The `url` and `sha256` in `Formula/bqlog.rb` are placeholders in the repository: they belong to a tag that does not exist yet, so an unfilled formula fails to fetch instead of installing the wrong source. The release workflow attaches a `bqlog.rb` filled in with the url and sha256 of the new tag to the GitHub release. Submit that one to homebrew-core as `Formula/b/bqlog.rb`.
+
+Homebrew refuses to install a formula by path (`brew install ./bqlog.rb` fails with "Homebrew requires formulae to be in a tap"), so the file has to sit inside a local checkout of homebrew-core — the one `brew tap --force homebrew/core` writes to — before it can be checked:
 
 ```bash
-brew install --build-from-source ./bqlog.rb
+export HOMEBREW_NO_INSTALL_FROM_API=1
+brew install --build-from-source bqlog
 brew test bqlog
 brew audit --new --strict --online bqlog
+brew style bqlog
 ```
 
 `bump.sh <version> [tarball]` fills in the same values locally.

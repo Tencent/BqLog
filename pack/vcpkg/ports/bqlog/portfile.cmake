@@ -51,6 +51,19 @@ if("tools" IN_LIST FEATURES)
     vcpkg_copy_tools(TOOL_NAMES BqLog_CategoryLogGenerator BqLog_LogDecoder AUTO_CLEAN)
 endif()
 
+# Upstream lists `RUNTIME DESTINATION bin` for the library, so CMake creates bin/ and debug/bin/
+# even on platforms that keep the library in lib/ (and for a static build, which has no runtime
+# artifact at all). The tools feature is the only thing that normally fills them there, and the
+# post-build checks reject the empty directories that are left behind without it.
+foreach(possibly_empty_bin IN ITEMS "${CURRENT_PACKAGES_DIR}/bin" "${CURRENT_PACKAGES_DIR}/debug/bin")
+    if(EXISTS "${possibly_empty_bin}")
+        file(GLOB possibly_empty_bin_contents "${possibly_empty_bin}/*")
+        if(NOT possibly_empty_bin_contents)
+            file(REMOVE_RECURSE "${possibly_empty_bin}")
+        endif()
+    endif()
+endforeach()
+
 file(REMOVE_RECURSE
     "${CURRENT_PACKAGES_DIR}/debug/include"
     "${CURRENT_PACKAGES_DIR}/debug/share"
