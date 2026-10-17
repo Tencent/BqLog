@@ -2,9 +2,9 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO Tencent/BqLog
     REF "Release_${VERSION}"
-    # Placeholder: bump.sh writes the SHA512 of the published tag here.
     SHA512 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
     HEAD_REF main
+    PATCHES fix-msvc-pkgconfig.patch
 )
 
 # vcpkg decides static or shared through the triplet, so the port must follow it instead of
@@ -70,4 +70,3 @@ file(REMOVE_RECURSE
 )
 
 vcpkg_install_copyright(FILE_LIST "${SOURCE_PATH}/LICENSE.txt")
-file(INSTALL "${CMAKE_CURRENT_LIST_DIR}/usage" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}")
