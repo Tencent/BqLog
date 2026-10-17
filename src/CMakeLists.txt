@@ -578,6 +578,13 @@ install(FILES
     DESTINATION "${_bq_package_cmake_dir}"
 )
 
+# bqlog.pc advertises the extra link requirement of a static library. Windows does not link
+# pthread for any target (see the target_link_libraries calls above), so it stays empty there.
+set(BQ_PC_LIBS_PRIVATE "-lpthread")
+if(TARGET_PLATFORM STREQUAL "win64")
+    set(BQ_PC_LIBS_PRIVATE "")
+endif()
+
 configure_file(
     "${CMAKE_CURRENT_SOURCE_DIR}/../pack/bqlog.pc.in"
     "${CMAKE_CURRENT_BINARY_DIR}/bqlog.pc"

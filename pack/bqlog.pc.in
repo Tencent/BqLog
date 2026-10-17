@@ -17,5 +17,5 @@ Description: Lightweight, high-performance, cross-language logging library
 URL: https://github.com/Tencent/BqLog
 Version: @PROJECT_VERSION@
 Libs: -L${libdir} -lBqLog
-Libs.private: -lpthread
+Libs.private: @BQ_PC_LIBS_PRIVATE@
 Cflags: -I${includedir}
