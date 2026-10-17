@@ -23,7 +23,9 @@ class Bqlog < Formula
     args << "-DCMAKE_OSX_ARCHITECTURES=#{Hardware::CPU.arch}" if OS.mac?
 
     system "cmake", "-S", ".", "-B", "build", *std_cmake_args, *args
-    system "cmake", "--build", "build", "--parallel"
+    # A bare --parallel makes make run an unlimited number of jobs, which exhausts memory
+    # on the Linux runners while the tools are compiled.
+    system "cmake", "--build", "build", "--parallel", ENV.make_jobs.to_s
     system "cmake", "--install", "build"
   end
 
