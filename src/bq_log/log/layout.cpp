@@ -8,8 +8,8 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include <math.h>
 #include "bq_log/log/layout.h"
+#include <math.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/misc/bq_log_wrapper_tools.h"
 
