@@ -116,7 +116,8 @@
 | [**Unity**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UPM tarball | *从 tarball 安装* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
 | [**Unreal Engine**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
 
-> 不想用包管理器？各平台的预编译包在 [release 页面](https://github.com/Tencent/BqLog/releases)；`find_package`、pkg-config 与 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
+> [!IMPORTANT]
+> **表格里没有你的平台？** iOS、tvOS 等 Apple 平台不走包管理器，需要通过 Xcode 或 CMake 集成 —— 见[集成指南：iOS / Apple 平台](docs/INTEGRATION_GUIDE_CHS.md#ios--apple-平台c--objective-c)。嵌入式 Linux、各类 BSD、以及从源码构建的情况，同样见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)与 [release 页面](https://github.com/Tencent/BqLog/releases)的预编译包。
 
 ---
 
