@@ -1,8 +1,5 @@
 name: Build
 on:  
-  push:
-    branches:
-      - develop
   workflow_dispatch:  # manually trigger
   workflow_call:
     outputs:
