@@ -1,6 +1,9 @@
 name: AutoTest
 
 on:
+  push:
+    branches:
+      - develop
   workflow_dispatch:  # manually trigger
     inputs:
       run_arm_tests:
