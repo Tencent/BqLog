@@ -17,14 +17,15 @@
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
 [![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange?logo=homebrew&logoColor=white&style=flat)](https://formulae.brew.sh/formula/bqlog)
 [![NuGet](https://img.shields.io/nuget/v/BqLog?logo=nuget&label=nuget&style=flat)](https://www.nuget.org/packages/BqLog)
-[![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/java?label=maven&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/java)
+[![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/java?label=maven%20java&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/java)
+[![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/android?label=maven%20android&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/android)
 [![PyPI](https://img.shields.io/pypi/v/bqlog?logo=pypi&label=pypi&style=flat)](https://pypi.org/project/bqlog/)
 [![npm](https://img.shields.io/npm/v/@pippocao/bqlog?logo=npm&label=npm&style=flat)](https://www.npmjs.com/package/@pippocao/bqlog)
 [![ohpm](https://img.shields.io/badge/ohpm-bqlog-blue?style=flat)](https://ohpm.openharmony.cn/#/cn/detail/bqlog)
 [![Go](https://img.shields.io/badge/Go-go%2Fv2-00ADD8?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)
 [![vcpkg](https://img.shields.io/badge/vcpkg-in%20review-lightgrey?logo=vcpkg&style=flat)](https://github.com/microsoft/vcpkg/pull/54463)
 [![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
-[![Unreal](https://img.shields.io/badge/Unreal-plugin-0E1128?logo=unrealengine&style=flat)](https://github.com/Tencent/BqLog/releases)
+[![Unreal](https://img.shields.io/badge/Unreal-Fab-0E1128?logo=unrealengine&style=flat)](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。
 
@@ -101,18 +102,19 @@
 
 ## 📦 安装
 
-| 生态 | 安装命令 | 库 | 命令行工具 |
-|------|---------|:--:|:---------:|
-| [**Homebrew**](https://formulae.brew.sh/formula/bqlog)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ |
-| [**NuGet**](https://www.nuget.org/packages/BqLog)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — |
-| [**Maven Central**](https://central.sonatype.com/artifact/com.tencent.bqlog/java)<br>Java · Kotlin | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — |
-| [**PyPI**](https://pypi.org/project/bqlog/)<br>Python 3.7+ | `pip install bqlog` | ✅ | — |
-| [**npm**](https://www.npmjs.com/package/@pippocao/bqlog)<br>Node.js · TypeScript | `npm install @pippocao/bqlog` | ✅ | — |
-| [**ohpm**](https://ohpm.openharmony.cn/#/cn/detail/bqlog)<br>HarmonyOS · OpenHarmony | `ohpm install bqlog` | ✅ | — |
-| [**Go modules**](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — |
-| [**vcpkg**](https://github.com/microsoft/vcpkg/pull/54463)<br>Windows · Linux · macOS<br>*（port 审核中）* | `vcpkg install bqlog` | ✅ | `bqlog[tools]` |
-| [**Unity**](https://github.com/Tencent/BqLog/releases)<br>UPM tarball | *从 tarball 安装* | ✅ | — |
-| [**Unreal Engine**](https://github.com/Tencent/BqLog/releases)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — |
+| 生态 | 安装命令 | 库 | 命令行工具 | 平台主页 |
+|------|---------|:--:|:---------:|----------|
+| [**Homebrew**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ | [formulae.brew.sh](https://formulae.brew.sh/formula/bqlog) |
+| [**vcpkg**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>Windows · Linux · macOS<br>*（port 审核中）* | `vcpkg install bqlog` | ✅ | `bqlog[tools]` | [vcpkg.io](https://vcpkg.io/en/package/bqlog) |
+| [**NuGet**](docs/INTEGRATION_GUIDE_CHS.md#cunity--团结引擎--net)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
+| [**Maven Central — Java**](docs/INTEGRATION_GUIDE_CHS.md#javaserver--desktop)<br>Java · Kotlin · 服务端 | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) |
+| [**Maven Central — Android**](docs/INTEGRATION_GUIDE_CHS.md#android)<br>Android · Kotlin | `implementation("com.tencent.bqlog:android:2.+")` | ✅ | — | [com.tencent.bqlog:android](https://central.sonatype.com/artifact/com.tencent.bqlog/android) |
+| [**PyPI**](docs/INTEGRATION_GUIDE_CHS.md#python)<br>Python 3.7+ | `pip install bqlog` | ✅ | — | [pypi.org](https://pypi.org/project/bqlog/) |
+| [**npm**](docs/INTEGRATION_GUIDE_CHS.md#nodejs)<br>Node.js · TypeScript | `npm install @pippocao/bqlog` | ✅ | — | [npmjs.com](https://www.npmjs.com/package/@pippocao/bqlog) |
+| [**ohpm**](docs/INTEGRATION_GUIDE_CHS.md#harmonyos--openharmonyarkts--c)<br>HarmonyOS · OpenHarmony | `ohpm install bqlog` | ✅ | — | [ohpm.openharmony.cn](https://ohpm.openharmony.cn/#/cn/detail/bqlog) |
+| [**Go modules**](docs/INTEGRATION_GUIDE_CHS.md#go)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — | [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) |
+| [**Unity**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UPM tarball | *从 tarball 安装* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
+| [**Unreal Engine**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
 
 > 不想用包管理器？各平台的预编译包在 [release 页面](https://github.com/Tencent/BqLog/releases)；`find_package`、pkg-config 与 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
 
