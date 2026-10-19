@@ -1288,8 +1288,8 @@ namespace bq {
     {
         for (uint32_t i = 0; i < MAX_RECOVERY_VERSION_RANGE; ++i) {
             rt_cache_.current_reading_.recovery_records_.push_back(decltype(rt_cache_.current_reading_.recovery_records_)::value_type());
-            rt_cache_.current_reading_.recovery_found_counts_.push_back(0);
-            rt_cache_.current_reading_.recovery_replayed_counts_.push_back(0);
+            rt_cache_.current_reading_.recovery_found_counts_.push_back(0u);
+            rt_cache_.current_reading_.recovery_replayed_counts_.push_back(0u);
 #ifdef BQ_UNIT_TEST
             rt_cache_.current_reading_.recovery_seq_records_.push_back(decltype(rt_cache_.current_reading_.recovery_seq_records_)::value_type());
 #endif
