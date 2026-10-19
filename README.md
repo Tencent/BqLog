@@ -45,13 +45,22 @@
 
 ## 📦 Install
 
-```bash
-brew install bqlog              # macOS / Linux, from homebrew-core; the two command line tools are included
-vcpkg install bqlog             # Windows / Linux / macOS; the port is in review upstream
-vcpkg install "bqlog[tools]"    # the same, plus BqLog_CategoryLogGenerator and BqLog_LogDecoder
-```
+| Ecosystem | Package | Install |
+|-----------|---------|---------|
+| **Homebrew** (macOS, Linux) | [bqlog](https://formulae.brew.sh/formula/bqlog) | `brew install bqlog` |
+| **NuGet** (C#, .NET) | [BqLog](https://www.nuget.org/packages/BqLog) | `dotnet add package BqLog` |
+| **Maven Central** (Java, Kotlin) | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) | `implementation("com.tencent.bqlog:java:2.+")` |
+| **PyPI** (Python 3.7+) | [bqlog](https://pypi.org/project/bqlog/) | `pip install bqlog` |
+| **npm** (Node.js, TypeScript) | [@pippocao/bqlog](https://www.npmjs.com/package/@pippocao/bqlog) | `npm install @pippocao/bqlog` |
+| **ohpm** (HarmonyOS, OpenHarmony) | [bqlog](https://ohpm.openharmony.cn/#/cn/detail/bqlog) | `ohpm install bqlog` |
+| **Go modules** | [github.com/Tencent/BqLog/go/v2](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) | `go get github.com/Tencent/BqLog/go/v2@latest` |
+| **vcpkg** (Windows, Linux, macOS) | [bqlog](https://vcpkg.io/en/package/bqlog) — port in review | `vcpkg install bqlog` |
+| **Unity** | [unity_package_2.7.0.zip](https://github.com/Tencent/BqLog/releases) | UPM → Install package from tarball |
+| **Unreal Engine** | [unreal_plugin_*.zip](https://github.com/Tencent/BqLog/releases) | drop into `Plugins/`, or use the Fab listing |
 
-No package manager at hand? Every platform has a prebuilt package on the [release page](https://github.com/Tencent/BqLog/releases), and the [Integration Guide](docs/INTEGRATION_GUIDE.md) covers CMake `find_package`, pkg-config and `FetchContent`.
+`brew install bqlog` ships the two command line tools; on vcpkg they are a feature: `vcpkg install "bqlog[tools]"`.
+
+Every platform also has a prebuilt package (headers + static/shared libraries) on the [release page](https://github.com/Tencent/BqLog/releases). For `find_package`, pkg-config and `FetchContent`, see the [Integration Guide](docs/INTEGRATION_GUIDE.md).
 
 ## 📋 What's New in v2.7.0
 
