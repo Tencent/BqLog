@@ -13,9 +13,10 @@ project(BqLog_CategoryLogGenerator VERSION ${BQ_VERSION} LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
-# A CI or local build that only needs the binary must not need write access to /usr/local:
-# keep the default prefix inside the build tree unless the caller passed one.
-if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+# A standalone build that only needs the binary must not need write access to /usr/local: keep the
+# default prefix inside the build tree. Subdirectory builds (the top-level project's BQ_BUILD_TOOLS)
+# keep the parent's prefix, so a packager's install layout is untouched.
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
     set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install path prefix" FORCE)
 endif()
 
