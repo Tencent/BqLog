@@ -13,6 +13,12 @@ project(BqLog_LogDecoder VERSION ${BQ_VERSION} LANGUAGES CXX)
 
 include(GNUInstallDirs)
 
+# A CI or local build that only needs the binary must not need write access to /usr/local:
+# keep the default prefix inside the build tree unless the caller passed one.
+if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
+    set(CMAKE_INSTALL_PREFIX "${CMAKE_BINARY_DIR}/install" CACHE PATH "Install path prefix" FORCE)
+endif()
+
 # A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
 bq_default_target_platform()
 
