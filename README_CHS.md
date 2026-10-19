@@ -8,13 +8,23 @@
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange.svg?style=flat&logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/bqlog)
 [![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
+
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS%20%7C%20OpenHarmony%20%7C%20Unix-lightgrey.svg?style=flat)]()
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
+[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange?logo=homebrew&logoColor=white&style=flat)](https://formulae.brew.sh/formula/bqlog)
+[![NuGet](https://img.shields.io/nuget/v/BqLog?logo=nuget&label=nuget&style=flat)](https://www.nuget.org/packages/BqLog)
+[![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/java?label=maven&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/java)
+[![PyPI](https://img.shields.io/pypi/v/bqlog?logo=pypi&label=pypi&style=flat)](https://pypi.org/project/bqlog/)
+[![npm](https://img.shields.io/npm/v/@pippocao/bqlog?logo=npm&label=npm&style=flat)](https://www.npmjs.com/package/@pippocao/bqlog)
+[![ohpm](https://img.shields.io/badge/ohpm-bqlog-blue?style=flat)](https://ohpm.openharmony.cn/#/cn/detail/bqlog)
+[![Go](https://img.shields.io/badge/Go-go%2Fv2-00ADD8?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)
+[![vcpkg](https://img.shields.io/badge/vcpkg-in%20review-lightgrey?logo=vcpkg&style=flat)](https://github.com/microsoft/vcpkg/pull/54463)
+[![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
+[![Unreal](https://img.shields.io/badge/Unreal-plugin-0E1128?logo=unrealengine&style=flat)](https://github.com/Tencent/BqLog/releases)
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。
 
@@ -43,25 +53,6 @@
 
 [![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📦 安装
-
-| 生态 | 包 | 安装命令 |
-|------|-----|---------|
-| **Homebrew**（macOS、Linux） | [bqlog](https://formulae.brew.sh/formula/bqlog) | `brew install bqlog` |
-| **NuGet**（C#、.NET） | [BqLog](https://www.nuget.org/packages/BqLog) | `dotnet add package BqLog` |
-| **Maven Central**（Java、Kotlin） | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) | `implementation("com.tencent.bqlog:java:2.+")` |
-| **PyPI**（Python 3.7+） | [bqlog](https://pypi.org/project/bqlog/) | `pip install bqlog` |
-| **npm**（Node.js、TypeScript） | [@pippocao/bqlog](https://www.npmjs.com/package/@pippocao/bqlog) | `npm install @pippocao/bqlog` |
-| **ohpm**（HarmonyOS、OpenHarmony） | [bqlog](https://ohpm.openharmony.cn/#/cn/detail/bqlog) | `ohpm install bqlog` |
-| **Go modules** | [github.com/Tencent/BqLog/go/v2](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) | `go get github.com/Tencent/BqLog/go/v2@latest` |
-| **vcpkg**（Windows、Linux、macOS） | [bqlog](https://vcpkg.io/en/package/bqlog) — port 审核中 | `vcpkg install bqlog` |
-| **Unity** | [unity_package_2.7.0.zip](https://github.com/Tencent/BqLog/releases) | UPM → 从 tarball 安装 |
-| **Unreal Engine** | [unreal_plugin_*.zip](https://github.com/Tencent/BqLog/releases) | 放进 `Plugins/`，或用 Fab 上的条目 |
-
-`brew install bqlog` 已包含两个命令行工具；vcpkg 上是可选特性：`vcpkg install "bqlog[tools]"`。
-
-每个平台也都有预编译包（头文件 + 静态/动态库），在 [release 页面](https://github.com/Tencent/BqLog/releases)。`find_package`、pkg-config 和 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
-
 ## 📋 v2.7.0 更新亮点
 
 - **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。
@@ -74,18 +65,6 @@
 > **该版本更改了 ABI。** 头文件（或各语言 wrapper）和库需要一起升级。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
-
----
-
-## 💡 如果您有以下困扰，可以尝试 BqLog
-
-- 如果您的客户端产品（尤其是游戏）希望同时满足以下「不可能三角」：
-  - 方便追溯问题（日志应写尽写）
-  - 性能足够好（日志要少写）
-  - 节约存储空间（日志最好就别写）
-- 如果您是后台服务开发者，现有日志库在**高并发场景**下性能不足，导致日志丢失或程序阻塞。
-- 如果您的编程语言是 C++、Java、C#、Kotlin、TypeScript、JavaScript、Python 之一，或者同时使用多种语言，希望有一套**统一的跨语言日志解决方案**。
-
 
 ---
 
@@ -117,6 +96,25 @@
 
 **硬件架构**：x86、x86_64、ARM32、ARM64
 **引入方式**：动态库、静态库、源代码
+
+---
+
+## 📦 安装
+
+| 生态 | 安装命令 | 库 | 命令行工具 |
+|------|---------|:--:|:---------:|
+| [**Homebrew**](https://formulae.brew.sh/formula/bqlog)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ |
+| [**NuGet**](https://www.nuget.org/packages/BqLog)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — |
+| [**Maven Central**](https://central.sonatype.com/artifact/com.tencent.bqlog/java)<br>Java · Kotlin | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — |
+| [**PyPI**](https://pypi.org/project/bqlog/)<br>Python 3.7+ | `pip install bqlog` | ✅ | — |
+| [**npm**](https://www.npmjs.com/package/@pippocao/bqlog)<br>Node.js · TypeScript | `npm install @pippocao/bqlog` | ✅ | — |
+| [**ohpm**](https://ohpm.openharmony.cn/#/cn/detail/bqlog)<br>HarmonyOS · OpenHarmony | `ohpm install bqlog` | ✅ | — |
+| [**Go modules**](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — |
+| [**vcpkg**](https://github.com/microsoft/vcpkg/pull/54463)<br>Windows · Linux · macOS<br>*（port 审核中）* | `vcpkg install bqlog` | ✅ | `bqlog[tools]` |
+| [**Unity**](https://github.com/Tencent/BqLog/releases)<br>UPM tarball | *从 tarball 安装* | ✅ | — |
+| [**Unreal Engine**](https://github.com/Tencent/BqLog/releases)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — |
+
+> 不想用包管理器？各平台的预编译包在 [release 页面](https://github.com/Tencent/BqLog/releases)；`find_package`、pkg-config 与 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
 
 ---
 
