@@ -271,7 +271,6 @@ namespace bq {
                         mark_block_removed(block_cache, true); // mark removed
                         set_cur_block(tls_buffer, alloc_new_hp_block());
                         continue;
-                        break;
                     case log_memory_policy::block_when_full:
                         result.result = enum_buffer_result_code::err_wait_and_retry;
                         break;
@@ -299,7 +298,6 @@ namespace bq {
                         // discard result and switch to high frequency mode and try again
                         lp_buffer_.commit_write_chunk(result);
                         continue;
-                        break;
                     case log_memory_policy::block_when_full:
                         result.result = enum_buffer_result_code::err_wait_and_retry;
                         break;
@@ -756,7 +754,6 @@ namespace bq {
                 case context_verify_result::seq_pending:
                     lp_buffer_.discard_read_chunk(read_handle);
                     return false;
-                    break;
                 default:
                     break;
                 }
@@ -1127,7 +1124,6 @@ namespace bq {
                         rt_oversize_target_buffer_ = buffer.operator->();
                         out_oversize_handle = read_handle;
                         return true;
-                        break;
                     case bq::log_buffer::context_verify_result::version_invalid:
                     case bq::log_buffer::context_verify_result::seq_invalid:
                         buffer->buffer_.return_read_chunk(read_handle);

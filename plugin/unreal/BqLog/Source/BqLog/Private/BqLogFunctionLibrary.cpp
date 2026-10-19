@@ -131,7 +131,6 @@ bool UBqLogFunctionLibrary::DoBqLogFormat(UBqLog* LogInstance, EBqLogLevel Level
             Arg.FormattedString = Arg.LColor.ToString();
             total_args_size += bq::tools::make_size_seq<true>(Arg.FormattedString).get_element().get_aligned_value();
             break;
-        break;
         }
     }
     const void* format_data_ptr = should_print_stack ? nullptr : bq::tools::_serialize_str_helper_by_type<FString>::get_storage_data_addr(FormatString);

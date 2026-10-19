@@ -227,7 +227,6 @@ namespace bq {
 #endif
             return handle;
         }
-        return handle;
     }
 
     void miso_ring_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
@@ -269,7 +268,6 @@ namespace bq {
                 block_ref.chunk_head.status = block_status::unused;
                 head_->read_cursor_cache_ += block_count;
                 continue;
-                break;
             case block_status::unused:
                 handle.result = enum_buffer_result_code::err_empty_log_buffer;
                 break;
@@ -479,7 +477,6 @@ namespace bq {
                 break;
             default:
                 return false;
-                break;
             }
             uint32_t total_size_parsed = static_cast<uint32_t>(current_cursor - head_->read_cursor_cache_);
             if (total_size_parsed == aligned_blocks_count_) {

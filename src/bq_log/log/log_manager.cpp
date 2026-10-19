@@ -53,13 +53,11 @@ namespace bq {
         case phase::invalid:
             util::log_device_console(bq::log_level::error, "you can not create log before BqLog initing!");
             return 0;
-            break;
         case phase::working:
             break;
         case phase::uninitialized:
             util::log_device_console(bq::log_level::error, "you can not create log after BqLog is uninited!");
             return 0;
-            break;
         default:
             break;
         }
@@ -139,13 +137,11 @@ namespace bq {
         case phase::invalid:
             util::log_device_console(bq::log_level::error, "you can not reset log config before BqLog initing!");
             return 0;
-            break;
         case phase::working:
             break;
         case phase::uninitialized:
             util::log_device_console(bq::log_level::error, "you can not reset log config after BqLog is uninited!");
             return 0;
-            break;
         default:
             break;
         }
