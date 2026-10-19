@@ -45,13 +45,22 @@
 
 ## 📦 安装
 
-```bash
-brew install bqlog              # macOS / Linux，来自 homebrew-core，含两个命令行工具
-vcpkg install bqlog             # Windows / Linux / macOS，port 正在上游审核中
-vcpkg install "bqlog[tools]"    # 同上，另含 BqLog_CategoryLogGenerator 与 BqLog_LogDecoder
-```
+| 生态 | 包 | 安装命令 |
+|------|-----|---------|
+| **Homebrew**（macOS、Linux） | [bqlog](https://formulae.brew.sh/formula/bqlog) | `brew install bqlog` |
+| **NuGet**（C#、.NET） | [BqLog](https://www.nuget.org/packages/BqLog) | `dotnet add package BqLog` |
+| **Maven Central**（Java、Kotlin） | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) | `implementation("com.tencent.bqlog:java:2.+")` |
+| **PyPI**（Python 3.7+） | [bqlog](https://pypi.org/project/bqlog/) | `pip install bqlog` |
+| **npm**（Node.js、TypeScript） | [@pippocao/bqlog](https://www.npmjs.com/package/@pippocao/bqlog) | `npm install @pippocao/bqlog` |
+| **ohpm**（HarmonyOS、OpenHarmony） | [bqlog](https://ohpm.openharmony.cn/#/cn/detail/bqlog) | `ohpm install bqlog` |
+| **Go modules** | [github.com/Tencent/BqLog/go/v2](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) | `go get github.com/Tencent/BqLog/go/v2@latest` |
+| **vcpkg**（Windows、Linux、macOS） | [bqlog](https://vcpkg.io/en/package/bqlog) — port 审核中 | `vcpkg install bqlog` |
+| **Unity** | [unity_package_2.7.0.zip](https://github.com/Tencent/BqLog/releases) | UPM → 从 tarball 安装 |
+| **Unreal Engine** | [unreal_plugin_*.zip](https://github.com/Tencent/BqLog/releases) | 放进 `Plugins/`，或用 Fab 上的条目 |
 
-不想用包管理器？每个平台的预编译包都在 [release 页面](https://github.com/Tencent/BqLog/releases)，`find_package`、pkg-config 和 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
+`brew install bqlog` 已包含两个命令行工具；vcpkg 上是可选特性：`vcpkg install "bqlog[tools]"`。
+
+每个平台也都有预编译包（头文件 + 静态/动态库），在 [release 页面](https://github.com/Tencent/BqLog/releases)。`find_package`、pkg-config 和 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
 
 ## 📋 v2.7.0 更新亮点
 
