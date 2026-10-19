@@ -116,31 +116,41 @@ namespace bq {
 #define _ISO_VOLATILE_BITS(SIZE_BYTE) BQ_ATOMIC_CONCATX(_ISO_VOLATILE_BITS_, SIZE_BYTE)
 
 // seq_cst stores and read-modify-writes are full barriers, so a seq_cst load only needs acquire
-#if defined(_M_IX86)
-// 32bit x86: an aligned 1/2/4 byte access is atomic, an 8 byte one is not, so only the latter
-// keeps the lock prefix. The x86/x64 versions of __iso_volatile_load/store are missing from the
-// toolsets used by UE 4.x, a plain volatile access is available in every MSVC version.
-#define _BQ_LOAD_RELAXED_X86_8(_Ptr) (*reinterpret_cast<const volatile __int8*>(_Ptr))
-#define _BQ_LOAD_RELAXED_X86_16(_Ptr) (*reinterpret_cast<const volatile __int16*>(_Ptr))
-#define _BQ_LOAD_RELAXED_X86_32(_Ptr) (*reinterpret_cast<const volatile __int32*>(_Ptr))
-#define _BQ_LOAD_RELAXED_X86_64(_Ptr) (_InterlockedExchangeAdd64(reinterpret_cast<__int64 volatile*>(_Ptr), 0))
-#define _BQ_STORE_RELAXED_X86_8(_Ptr, _Value) (*reinterpret_cast<volatile __int8*>(_Ptr) = static_cast<__int8>(_Value))
-#define _BQ_STORE_RELAXED_X86_16(_Ptr, _Value) (*reinterpret_cast<volatile __int16*>(_Ptr) = static_cast<__int16>(_Value))
-#define _BQ_STORE_RELAXED_X86_32(_Ptr, _Value) (*reinterpret_cast<volatile __int32*>(_Ptr) = static_cast<__int32>(_Value))
-#define _BQ_STORE_RELAXED_X86_64(_Ptr, _Value) ((void)_InterlockedExchange64(reinterpret_cast<__int64 volatile*>(_Ptr), static_cast<__int64>(_Value)))
-#define _BQ_LOAD_RELAXED(_Bits, _Ptr) BQ_ATOMIC_CONCATX(_BQ_LOAD_RELAXED_X86_, _Bits)(_Ptr)
-#define _BQ_STORE_RELAXED(_Bits, _Ptr, _Value) BQ_ATOMIC_CONCATX(_BQ_STORE_RELAXED_X86_, _Bits)(_Ptr, _Value)
-#elif defined(_M_X64) && !defined(_M_ARM64EC)
-// x64: an aligned access is atomic and the TSO memory model already provides acquire/release,
-// so a volatile access compiles to a bare mov. __iso_volatile_load/store emits the same
-// instructions, but only exists in recent VS2019 toolsets (which UE 4.x does not use).
-#define _BQ_LOAD_RELAXED(_Bits, _Ptr) (*reinterpret_cast<const volatile BQ_ATOMIC_CONCATX(__int, _Bits)*>(_Ptr))
-#define _BQ_STORE_RELAXED(_Bits, _Ptr, _Value) (*reinterpret_cast<volatile BQ_ATOMIC_CONCATX(__int, _Bits)*>(_Ptr) = static_cast<BQ_ATOMIC_CONCATX(__int, _Bits)>(_Value))
-#else
-// ARM family: __iso_volatile_load/store has been available since VS2013 and avoids the dmb that
-// the /volatile:ms model emits for an ordinary volatile access.
+#if defined(_M_ARM) || defined(_M_ARM64) || defined(_M_ARM64EC)
+// __iso_volatile_load/store has been available since VS2013 and avoids the dmb that the
+// /volatile:ms model adds to an ordinary volatile access.
 #define _BQ_LOAD_RELAXED(_Bits, _Ptr) BQ_ATOMIC_CONCATX(__iso_volatile_load, _Bits)(reinterpret_cast<const volatile BQ_ATOMIC_CONCATX(__int, _Bits)*>(_Ptr))
 #define _BQ_STORE_RELAXED(_Bits, _Ptr, _Value) BQ_ATOMIC_CONCATX(__iso_volatile_store, _Bits)(reinterpret_cast<volatile BQ_ATOMIC_CONCATX(__int, _Bits)*>(_Ptr), static_cast<BQ_ATOMIC_CONCATX(__int, _Bits)>(_Value))
+#else
+        // x86/x64: an aligned access is atomic and TSO already provides acquire/release, so a volatile
+        // access is a bare mov; __iso_volatile_load/store is missing from the toolsets that UE 4.x uses.
+        template <typename T>
+        bq_forceinline T _atomic_load_relaxed(const T* ptr) noexcept
+        {
+            return *reinterpret_cast<const volatile T*>(ptr);
+        }
+
+        template <typename T>
+        bq_forceinline void _atomic_store_relaxed(T* ptr, T value) noexcept
+        {
+            *reinterpret_cast<volatile T*>(ptr) = value;
+        }
+
+#if defined(_M_IX86)
+        // 32bit x86: the 8 byte access is the only one that is not atomic, it keeps the lock prefix.
+        bq_forceinline __int64 _atomic_load_relaxed(const __int64* ptr) noexcept
+        {
+            return _InterlockedExchangeAdd64(const_cast<__int64 volatile*>(ptr), 0);
+        }
+
+        bq_forceinline void _atomic_store_relaxed(__int64* ptr, __int64 value) noexcept
+        {
+            _InterlockedExchange64(reinterpret_cast<__int64 volatile*>(ptr), value);
+        }
+#endif
+
+#define _BQ_LOAD_RELAXED(_Bits, _Ptr) _atomic_load_relaxed(_Ptr)
+#define _BQ_STORE_RELAXED(_Bits, _Ptr, _Value) _atomic_store_relaxed(_Ptr, _Value)
 #endif
 #if defined(_M_ARM64) || defined(_M_ARM64EC)
 #if _MSC_FULL_VER >= 193632407
