@@ -703,11 +703,13 @@ namespace bq {
             }
         } else {
             // for recovering data
-            auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
+            const uint16_t version_idx = static_cast<uint16_t>(version_ - 1 - context.version_);
+            auto& recover_map = rt_cache_.current_reading_.recovery_records_[version_idx];
 #if defined(BQ_LOG_BUFFER_DEBUG)
             assert((recover_map.find(context.get_tls_info()) != recover_map.end()) && "unregister none exist seq");
 #endif
             ++recover_map[context.get_tls_info()];
+            ++rt_cache_.current_reading_.recovery_replayed_counts_[version_idx];
 #if defined(BQ_UNIT_TEST)
             // In unit tests, recovery happens in the same process, so the pointer is valid and safe to delete.
             if (context.is_thread_finished_) {
@@ -912,10 +914,20 @@ namespace bq {
     void log_buffer::rt_try_traverse_to_next_version()
     {
         auto& rt_reading = rt_cache_.current_reading_;
-        auto& recover_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)];
+        const uint16_t version_idx = static_cast<uint16_t>(version_ - 1 - rt_reading.version_);
+        // the reader leaves this version for good: whatever was found but not replayed is lost
+        const uint32_t found = rt_reading.recovery_found_counts_[version_idx];
+        const uint32_t replayed = rt_reading.recovery_replayed_counts_[version_idx];
+        if (replayed < found) {
+            bq::util::log_device_console(bq::log_level::error, "recovery of version %" PRIu16 " ended with %" PRIu32 " of %" PRIu32 " contexts not replayed, their logs are lost, log_name:%s",
+                rt_reading.version_, found - replayed, found, config_.log_name.c_str());
+        }
+        rt_reading.recovery_found_counts_[version_idx] = 0;
+        rt_reading.recovery_replayed_counts_[version_idx] = 0;
+        auto& recover_map = rt_reading.recovery_records_[version_idx];
         recover_map.clear();
 #ifdef BQ_UNIT_TEST
-        rt_cache_.current_reading_.recovery_seq_records_[static_cast<uint16_t>(version_ - 1 - rt_reading.version_)].clear();
+        rt_cache_.current_reading_.recovery_seq_records_[version_idx].clear();
 #endif
         ++rt_reading.version_;
         rt_reading.is_in_recovery_reading_ = (rt_reading.version_ != version_);
@@ -1280,6 +1292,8 @@ namespace bq {
     {
         for (uint32_t i = 0; i < MAX_RECOVERY_VERSION_RANGE; ++i) {
             rt_cache_.current_reading_.recovery_records_.push_back(decltype(rt_cache_.current_reading_.recovery_records_)::value_type());
+            rt_cache_.current_reading_.recovery_found_counts_.push_back(0);
+            rt_cache_.current_reading_.recovery_replayed_counts_.push_back(0);
 #ifdef BQ_UNIT_TEST
             rt_cache_.current_reading_.recovery_seq_records_.push_back(decltype(rt_cache_.current_reading_.recovery_seq_records_)::value_type());
 #endif
@@ -1296,6 +1310,7 @@ namespace bq {
                 context.version_ = invalid_recovery_version_for(buffer.get_version()); // mark unrecoverable
             } else if (static_cast<uint16_t>(buffer.version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                 auto& recovery_map = buffer.rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_)];
+                ++buffer.rt_cache_.current_reading_.recovery_found_counts_[static_cast<uint16_t>(buffer.version_ - 1 - context.version_)];
                 auto iter = recovery_map.find(context.get_tls_info());
                 if (iter == recovery_map.end()) {
                     recovery_map[context.get_tls_info()] = context.seq_;
@@ -1327,6 +1342,7 @@ namespace bq {
                     context.version_ = invalid_recovery_version(); // mark unrecoverable
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
+                    ++rt_cache_.current_reading_.recovery_found_counts_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());
                     if (iter == recovery_map.end()) {
                         recovery_map[context.get_tls_info()] = context.seq_;
@@ -1354,6 +1370,7 @@ namespace bq {
                     context.version_ = invalid_recovery_version(); // mark unrecoverable
                 } else if (static_cast<uint16_t>(version_ - 1 - context.version_) < MAX_RECOVERY_VERSION_RANGE) {
                     auto& recovery_map = rt_cache_.current_reading_.recovery_records_[static_cast<uint16_t>(version_ - 1 - context.version_)];
+                    ++rt_cache_.current_reading_.recovery_found_counts_[static_cast<uint16_t>(version_ - 1 - context.version_)];
                     auto iter = recovery_map.find(context.get_tls_info());
                     if (iter == recovery_map.end()) {
                         recovery_map[context.get_tls_info()] = context.seq_;
