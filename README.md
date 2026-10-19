@@ -117,7 +117,8 @@
 | [**Unity**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine)<br>UPM tarball | *Install package from tarball* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) |
 | [**Unreal Engine**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine)<br>UE4 · UE5 | *copy into `Plugins/`* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
 
-> No package manager? Prebuilt packages for every platform are on the [release page](https://github.com/Tencent/BqLog/releases); `find_package`, pkg-config and `FetchContent` are covered in the [Integration Guide](docs/INTEGRATION_GUIDE.md).
+> [!IMPORTANT]
+> **Not in the table?** iOS, tvOS and the other Apple platforms are integrated through Xcode or CMake instead of a package manager — start at [iOS / Apple platforms](docs/INTEGRATION_GUIDE.md#ios--apple-platforms-c--objective-c). Embedded Linux, the BSD family and plain source builds are covered by the same [Integration Guide](docs/INTEGRATION_GUIDE.md) and by the prebuilt archives on the [release page](https://github.com/Tencent/BqLog/releases).
 
 ---
 
