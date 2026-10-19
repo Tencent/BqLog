@@ -8,6 +8,7 @@
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange.svg?style=flat&logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/bqlog)
 [![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.7.0-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
@@ -41,6 +42,16 @@
 ---
 
 [![Download](https://img.shields.io/badge/⬇_Download-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+
+## 📦 Install
+
+```bash
+brew install bqlog              # macOS / Linux, from homebrew-core; the two command line tools are included
+vcpkg install bqlog             # Windows / Linux / macOS; the port is in review upstream
+vcpkg install "bqlog[tools]"    # the same, plus BqLog_CategoryLogGenerator and BqLog_LogDecoder
+```
+
+No package manager at hand? Every platform has a prebuilt package on the [release page](https://github.com/Tencent/BqLog/releases), and the [Integration Guide](docs/INTEGRATION_GUIDE.md) covers CMake `find_package`, pkg-config and `FetchContent`.
 
 ## 📋 What's New in v2.7.0
 

@@ -8,6 +8,7 @@
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
 [![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange.svg?style=flat&logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/bqlog)
 [![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
@@ -41,6 +42,16 @@
 ---
 
 [![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+
+## 📦 安装
+
+```bash
+brew install bqlog              # macOS / Linux，来自 homebrew-core，含两个命令行工具
+vcpkg install bqlog             # Windows / Linux / macOS，port 正在上游审核中
+vcpkg install "bqlog[tools]"    # 同上，另含 BqLog_CategoryLogGenerator 与 BqLog_LogDecoder
+```
+
+不想用包管理器？每个平台的预编译包都在 [release 页面](https://github.com/Tencent/BqLog/releases)，`find_package`、pkg-config 和 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
 
 ## 📋 v2.7.0 更新亮点
 
