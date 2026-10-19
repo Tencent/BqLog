@@ -27,6 +27,8 @@ namespace bq.test
                 {
                     throw new Exception("Failed to get version");
                 }
+                // The recovery capability query must be reachable from this wrapper as well.
+                Console.WriteLine("Recovery capability: " + bq.log.get_recovery_capability());
 
                 test_manager.add_test(new test_log_1("Test Log Basic"));
                 test_manager.add_test(new test_log_2("Test Log MultiThread"));

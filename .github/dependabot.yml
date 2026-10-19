@@ -1,0 +1,13 @@
+version: 2
+updates:
+  # Dependabot is a GitHub bot, not a workflow: it opens a pull request when one of these actions
+  # publishes a new version, updating the pinned commit sha and the "# vX.Y.Z" comment together.
+  # The actions/* ones stay on their floating major tag, so they are not watched here.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    allow:
+      - dependency-name: "softprops/action-gh-release"
+      - dependency-name: "NuGet/login"
+      - dependency-name: "vmactions/*"

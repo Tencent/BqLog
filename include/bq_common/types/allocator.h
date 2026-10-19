@@ -21,9 +21,12 @@
  */
 
 #include "bq_common/types/type_tools.h"
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdlib.h>
+#endif
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     template <typename Allocator>
     class allocator_traits {
     private:
@@ -48,7 +51,7 @@ namespace bq {
         default_allocator() = default;
 
         template <typename U>
-        default_allocator(const default_allocator<U>&) { }
+        default_allocator(const default_allocator<U>&) {}
 
         value_type* allocate(size_t n)
         {
@@ -77,4 +80,5 @@ namespace bq {
         bool operator==(const default_allocator&) const noexcept { return true; }
         bool operator!=(const default_allocator&) const noexcept { return false; }
     };
+    BQ_MODULE_EXPORT_END
 }

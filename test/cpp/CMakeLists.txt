@@ -110,6 +110,10 @@ COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
 COLLECT_SRC_FILES(TEST_LIST "${TEST_DIR}")
 
 add_compile_definitions(BQ_UNIT_TEST)
+option(BQ_TEST_DISABLE_FILE_LOCK "Test a platform without a cross-process file lock" OFF)
+if(BQ_TEST_DISABLE_FILE_LOCK)
+    add_compile_definitions(BQ_TEST_DISABLE_FILE_LOCK)
+endif()
 if(DEFINED ENV{GITHUB_ACTIONS} AND "$ENV{GITHUB_ACTIONS}" STREQUAL "true")
     message(STATUS "Detected: running inside GitHub Actions")
     add_compile_definitions(BQ_IN_GITHUB_ACTIONS=1)
@@ -165,22 +169,22 @@ else()
             endif()
         endforeach()
 	endif()
+    # The library itself, compiled once: both test entries link it, the include entry's
+    # binary and the module entry's. Everything that is not test code belongs to it.
+    add_library(bqlog_lib OBJECT ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+
     # build executable
-    add_executable(BqLogUnitTest
-            ${SRC_LIST}
-            ${TEST_LIST}
-            ${THIRD_PARTY_LIST}
-            ${INC_LIST}
-            )
+    add_executable(BqLogUnitTest ${TEST_LIST})
+    target_link_libraries(BqLogUnitTest PRIVATE bqlog_lib)
 endif()
 
 
 
 if(TARGET_PLATFORM STREQUAL "android")
     find_library(log-lib log)
-    target_link_libraries(BqLogUnitTest ${log-lib})
+    target_link_libraries(BqLogUnitTest PRIVATE ${log-lib})
     find_library(android-lib android)
-    target_link_libraries(BqLogUnitTest ${android-lib})
+    target_link_libraries(BqLogUnitTest PRIVATE ${android-lib})
 elseif(TARGET_PLATFORM STREQUAL "ohos")
     find_library(HILOG_LIB hilog_ndk.z REQUIRED)
     target_link_libraries(BqLogUnitTest
@@ -189,19 +193,104 @@ elseif(TARGET_PLATFORM STREQUAL "ohos")
             dl
     )
 elseif(TARGET_PLATFORM STREQUAL "linux")
-    target_link_libraries(BqLogUnitTest pthread dl)
+    target_link_libraries(bqlog_lib PRIVATE pthread dl)
 elseif(TARGET_PLATFORM STREQUAL "unix")
-    target_link_libraries(BqLogUnitTest PRIVATE pthread)
+    target_link_libraries(bqlog_lib PRIVATE pthread)
     find_library(EXECINFO_LIBRARY execinfo)
     if(EXECINFO_LIBRARY)
-        target_link_libraries(BqLogUnitTest PRIVATE ${EXECINFO_LIBRARY})
+        target_link_libraries(bqlog_lib PRIVATE ${EXECINFO_LIBRARY})
     endif()
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLogUnitTest PRIVATE -ldbghelp)
+        target_link_libraries(bqlog_lib PRIVATE -ldbghelp)
     endif()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogUnitTest)
+endif()
+
+############################################################
+# C++20 module entry
+############################################################
+# `import bq.log;` is exercised by a binary of its own: a translation unit may not import
+# and include the same library, so it cannot live in BqLogUnitTest. The test runners start
+# it after BqLogUnitTest and CTest registers it, so it is compiled and run wherever a
+# toolchain can build modules; one that cannot skips it and says so.
+OPTION(BQ_MODULE_TEST "Build and run the C++20 module entry test" ON)
+
+# CMake builds modules with MSVC under the Visual Studio generator, or with Clang / GCC under
+# Ninja. The compiler and the generator are a pair, so both are checked together: clang-cl with
+# the Visual Studio generator configures and compiles the interface unit, but the module never
+# reaches the importing project ("module 'bq.log' not found").
+#
+# GCC needs 15, not 14: 14 crashes with an internal compiler error (nonnull_arg_p) while
+# compiling a module that imports bq.log. GCC 15.3 and 16.2 compile both units of the module
+# test with -fmodules-ts and with -fmodules.
+set(BQ_MODULE_TOOLCHAIN_OK FALSE)
+if(CMAKE_VERSION VERSION_GREATER_EQUAL 3.28)
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "MSVC" AND MSVC_VERSION GREATER_EQUAL 1934
+            AND CMAKE_GENERATOR MATCHES "Ninja|Visual Studio")
+        set(BQ_MODULE_TOOLCHAIN_OK TRUE)
+    elseif(CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16
+            AND CMAKE_GENERATOR MATCHES "Ninja")
+        set(BQ_MODULE_TOOLCHAIN_OK TRUE)
+    elseif(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 15
+            AND CMAKE_GENERATOR MATCHES "Ninja")
+        set(BQ_MODULE_TOOLCHAIN_OK TRUE)
+    endif()
+endif()
+
+# Only where the test binary is an executable that can be run: iOS builds a static
+# library, and whether the module is shipped to the mobile platforms is a packaging
+# question of its own.
+if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE_TOOLCHAIN_OK
+        AND TARGET bqlog_lib)
+    message(STATUS "Module entry test: enabled (import bq.log)")
+
+    # PUBLIC: an import from another target needs the file set in the interface
+    add_library(bqlog_module STATIC)
+    target_include_directories(bqlog_module PRIVATE ${ALL_INC_DIRS})
+    target_sources(bqlog_module PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../../include
+            FILES ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm)
+    # the module has to see the headers exactly as the test sources do
+    target_compile_definitions(bqlog_module PRIVATE BQ_UNIT_TEST)
+
+    # The generator also writes test_category_log.cppm, so the category log is exercised through a
+    # module entry too. It has to be built before the test binary, hence the dependency.
+    set(BQ_MODULE_TEST_LIBS "")
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+        add_library(bqlog_test_category_module STATIC)
+        target_include_directories(bqlog_test_category_module PRIVATE ${ALL_INC_DIRS})
+        target_sources(bqlog_test_category_module PUBLIC FILE_SET CXX_MODULES BASE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}
+                FILES ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+        # the module has to see the headers exactly as the test sources do, and it imports bq.log
+        target_compile_definitions(bqlog_test_category_module PRIVATE BQ_UNIT_TEST)
+        target_link_libraries(bqlog_test_category_module PRIVATE bqlog_module)
+        list(APPEND BQ_MODULE_TEST_LIBS bqlog_test_category_module)
+    endif()
+
+    add_executable(BqLogModuleUnitTest ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
+    target_link_libraries(BqLogModuleUnitTest PRIVATE bqlog_lib bqlog_module ${BQ_MODULE_TEST_LIBS})
+    # a source file that only imports is not scanned by default; CMP0155 would scan the
+    # whole project, this says so for this target alone
+    set_property(TARGET BqLogModuleUnitTest PROPERTY CXX_SCAN_FOR_MODULES ON)
+
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+        # GCC's modules are still a TS, and the flag is needed on both sides.
+        target_compile_options(bqlog_module PRIVATE -fmodules-ts)
+        target_compile_options(BqLogModuleUnitTest PRIVATE -fmodules-ts)
+        foreach(_bq_module_test_lib IN LISTS BQ_MODULE_TEST_LIBS)
+            target_compile_options(${_bq_module_test_lib} PRIVATE -fmodules-ts)
+        endforeach()
+    endif()
+
+    enable_testing()
+    add_test(NAME module_entry COMMAND BqLogModuleUnitTest)
+
+    # the runner scripts require BqLogModuleUnitTest whenever this marker exists
+    file(WRITE "${CMAKE_BINARY_DIR}/bq_module_test_enabled" "BqLogModuleUnitTest\n")
+else()
+    file(REMOVE "${CMAKE_BINARY_DIR}/bq_module_test_enabled")
+    message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, and MSVC with the Visual Studio generator, or Clang 16 / GCC 15 with Ninja)")
 endif()
 
 

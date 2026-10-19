@@ -84,7 +84,7 @@ set(JAVADOC_JAR_PATH "${ARTIFACTS_DIR}/BqLogWrapper_Java-${BQ_VERSION}-javadoc.j
 add_custom_command(
     OUTPUT "${JAVADOC_JAR_PATH}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${JAVADOC_DIR}"
-    COMMAND "${Java_JAVADOC_EXECUTABLE}" -encoding UTF-8 -quiet -Xdoclint:none
+    COMMAND "${Java_JAVADOC_EXECUTABLE}" -encoding UTF-8 -quiet
             -d "${JAVADOC_DIR}"
             ${SRC_LIST}
     COMMAND "${Java_JAR_EXECUTABLE}" cfm "BqLogWrapper_Java-${BQ_VERSION}-javadoc.jar" "${MANIFEST_FILE}" -C "${JAVADOC_DIR}" .

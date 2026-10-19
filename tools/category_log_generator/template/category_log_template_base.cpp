@@ -78,4 +78,13 @@ namespace bq {
         return format(template_content, root_node);
     }
 
+    bq::string category_log_template_base::generate_module(const category_node& root_node) const
+    {
+        const bq::string& module_content = get_module_template_content();
+        if (module_content.is_empty()) {
+            return bq::string();
+        }
+        return format(module_content, root_node);
+    }
+
 }

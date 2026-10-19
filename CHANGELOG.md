@@ -2,6 +2,24 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.7.0] - 2026-10-11
+- **C++20 modules**: `import bq.log;` as an alternative to `#include "bq_log/bq_log.h"`, with no change to the logging code. `BqLog_CategoryLogGenerator` also writes a `.cppm` for each category log class (`import bq.business_log;`). See [Integration Guide](docs/INTEGRATION_GUIDE.md#c20-modules-import).
+- **Macro-free fast log (C++20)**: modules do not export macros, so with `import bq.log;` the fast mode is written as `log.fast_info<"...">(args...)` (plus `fast_verbose` … `fast_fatal`), with an optional category as the first template argument. Same cost as `BQ_LOG_FAST_*`, real IDE support, and not bound to one log object per call site. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
+- **Package managers**: Homebrew (`brew install bqlog`, library and tools), vcpkg (tools via the `tools` feature) and NuGet (C# bindings with native libraries for six platforms). The CMake install provides `find_package(BqLog)` and pkg-config.
+- **Multi-process**: several processes may log into the same directory, each with its own recovery data; a log with `log.recovery=false` no longer touches the disk.
+- **Recovery**: the window grows from the last 2 runs to the last 16; `bq::log::get_recovery_capability()` (in every wrapper) reports whether the platform supports recovery.
+- **Compatibility**: the ABI changed; headers, wrappers and library must be upgraded together. A category log written by an older `BqLog_CategoryLogGenerator` no longer compiles (its empty-base macro is now `BQ_EBCO`), so regenerate it. On Windows, `cmake --install` now puts `BqLog.dll` under `bin/`; the release archives keep their layout.
+- **Bug fixes**:
+  - fast mode: a call site could be initialized twice by concurrent first calls; the format registry had no size limit.
+  - recovery: a crash mid-batch replayed the whole batch; fast-log metadata in continuation segments could be lost on restart; text-file recovery wrote no `RECOVER END` marker ([#90](https://github.com/Tencent/BqLog/pull/90)).
+  - formatting: sign, rounding and range of floating-point values ([#82](https://github.com/Tencent/BqLog/pull/82)); format specs longer than 10 characters ([#83](https://github.com/Tencent/BqLog/pull/83)); integer sign, `0x`/`0b`/octal prefixes, zero padding and centre fill ([#89](https://github.com/Tencent/BqLog/pull/89), [#91](https://github.com/Tencent/BqLog/pull/91)).
+  - time zone: `UTC-0:30` lost its sign, out-of-range offsets were accepted ([#84](https://github.com/Tencent/BqLog/pull/84)).
+  - config: line continuation hung on the last line and aborted on a blank one ([#86](https://github.com/Tencent/BqLog/pull/86)).
+  - decoder: malformed files, short writes and broken segment chains are rejected instead of producing partial output ([#81](https://github.com/Tencent/BqLog/pull/81), [#85](https://github.com/Tencent/BqLog/issues/85)).
+  - wide strings: reading a UTF-16/UTF-32 argument could run past the end of a memory page.
+  - prebuilt desktop libraries were missing the Go bridge.
+- **Thanks to [@mvanslobbe](https://github.com/mvanslobbe)** for [#81](https://github.com/Tencent/BqLog/pull/81), [#82](https://github.com/Tencent/BqLog/pull/82), [#83](https://github.com/Tencent/BqLog/pull/83), [#84](https://github.com/Tencent/BqLog/pull/84), [#86](https://github.com/Tencent/BqLog/pull/86), [#89](https://github.com/Tencent/BqLog/pull/89), [#90](https://github.com/Tencent/BqLog/pull/90) and [#91](https://github.com/Tencent/BqLog/pull/91).
+
 ## [v2.6.0] - 2026-10-05
 - **C++ only fast mode**: Added `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`. They write the same entries as `log.info` and friends, but the work on the calling thread is inlined at the call site: a level check, the timestamp and the raw arguments. The same macros take a category too: `BQ_LOG_FAST_INFO(log, log.cat.xxx, "...", ...)`; with or without a category is decided at compile time and costs the same. Trade-offs: slightly more memory, weaker IDE hints (macros), and a fixed log object and format string per call site. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
 - **Performance — normal mode, logging thread**: `log.info` and the other level functions run about 16% fewer instructions on the calling thread; a disabled level now costs a single memory load and bit test.

@@ -10,12 +10,23 @@ sudo sysctl -w kernel.core_pattern=core.%p || echo "Failed to set core pattern (
 echo "Running BqLogUnitTest directly..."
 
 # 1) Debug
-CC=clang CXX=clang++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
-make -j"$(nproc)"
+# Ninja, not the default generator: cmake builds C++20 modules with Ninja and Visual Studio
+# only, and the module entry test is skipped under anything else.
+CC=gcc CXX=g++ cmake -G Ninja -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=Debug -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
+cmake --build . --parallel
 
 set +e
 ./BqLogUnitTest
 exit_code=$?
+# bq_module_test_enabled: the configuration builds the module test, so its binary must exist.
+if [ -f bq_module_test_enabled ]; then
+    if [ -x ./BqLogModuleUnitTest ]; then
+        ./BqLogModuleUnitTest || exit_code=$?
+    else
+        echo "BqLogModuleUnitTest is missing although the module test is enabled for this build." >&2
+        exit_code=1
+    fi
+fi
 set -e
 
 if [ $exit_code -eq 0 ]; then
@@ -44,12 +55,21 @@ else
 fi
 
 # 2) RelWithDebInfo
-CC=gcc CXX=g++ cmake -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
-make -j"$(nproc)"
+CC=gcc CXX=g++ cmake -G Ninja -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
+cmake --build . --parallel
 
 set +e
 ./BqLogUnitTest
 exit_code=$?
+# bq_module_test_enabled: the configuration builds the module test, so its binary must exist.
+if [ -f bq_module_test_enabled ]; then
+    if [ -x ./BqLogModuleUnitTest ]; then
+        ./BqLogModuleUnitTest || exit_code=$?
+    else
+        echo "BqLogModuleUnitTest is missing although the module test is enabled for this build." >&2
+        exit_code=1
+    fi
+fi
 set -e
 
 if [ $exit_code -eq 0 ]; then

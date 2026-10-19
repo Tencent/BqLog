@@ -64,7 +64,7 @@ namespace bq {
     void appender_file_text::on_appender_file_recovery_end()
     {
         appender_file_base::on_appender_file_recovery_end();
-        direct_write(log_global_vars::get().log_recover_start_str_, strlen(log_global_vars::get().log_recover_end_str_), bq::file_manager::seek_option::end, 0);
+        direct_write(log_global_vars::get().log_recover_end_str_, strlen(log_global_vars::get().log_recover_end_str_), bq::file_manager::seek_option::end, 0);
         direct_write("\n", 1, bq::file_manager::seek_option::current, 0);
     }
 

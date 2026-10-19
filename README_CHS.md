@@ -2,13 +2,14 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.6.0
+# BqLog (扁鹊日志) V 2.7.0
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.6.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.6.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange.svg?style=flat&logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/bqlog)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -40,12 +41,28 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.6.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 v2.6.0 更新亮点
+## 📦 安装
 
-- **C++ 专属的快速模式**：`BQ_LOG_FAST_INFO(log, ...)` 等宏，日志线程上的开销约为普通模式的一半，持续写日志的线程上每条只要几纳秒，见[快速开始](#c)和 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
-- **普通模式更快**：`log.info` 在日志线程上执行的指令减少约 16%。和 2.5.0 比整条流水线（macOS，同一个 benchmark），文本输出快 14%～30%，压缩输出最多快约 40%。
+```bash
+brew install bqlog              # macOS / Linux，来自 homebrew-core，含两个命令行工具
+vcpkg install bqlog             # Windows / Linux / macOS，port 正在上游审核中
+vcpkg install "bqlog[tools]"    # 同上，另含 BqLog_CategoryLogGenerator 与 BqLog_LogDecoder
+```
+
+不想用包管理器？每个平台的预编译包都在 [release 页面](https://github.com/Tencent/BqLog/releases)，`find_package`、pkg-config 和 `FetchContent` 的用法见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
+
+## 📋 v2.7.0 更新亮点
+
+- **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。
+- **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)`，性能与 `BQ_LOG_FAST_INFO` 相同，IDE 提示完整，任何日志对象都能用。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
+- **包管理器**：支持 Homebrew、vcpkg、NuGet，见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
+- **多进程**：多个进程可以共用同一个日志目录，各自拥有独立的崩溃恢复数据。
+- **问题修复**：修复了快速模式、恢复、格式化、配置解析与解码器等多处问题。
+
+> [!WARNING]
+> **该版本更改了 ABI。** 头文件（或各语言 wrapper）和库需要一起升级。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 
@@ -77,6 +94,7 @@
 - 仅依赖标准 C 语言库与平台 API，可在 Android 的 `ANDROID_STL = none` 模式下编译通过。
 - 支持 `C++11` 及之后的标准，可在极其严格的编译选项下工作。
 - 编译系统基于 `CMake`，并提供多平台编译脚本，集成简单。
+- 可通过 Homebrew、vcpkg、NuGet 安装，支持 `find_package` 与 pkg-config。
 - 支持自定义参数类型。
 - 对代码提示非常友好。
 
@@ -144,13 +162,14 @@ int main() {
 }
 ```
 
-**C++ 专属的快速模式。** 在 C++ 最热的代码路径上，可以用 `BQ_LOG_FAST_*` 宏写同样的日志，调用线程的开销只有普通模式的一小部分：
+**C++ 专属的快速模式。** 在 C++ 最热的代码路径上，可以用 `BQ_LOG_FAST_*` 宏写同样的日志，调用线程的开销只有普通模式的一小部分。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
 
 ```cpp
 BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+log.fast_info<"Hello BqLog fast mode! int:{}, float:{}">(123, 3.14f);  // C++20，import bq.log; 时只能用这种
 ```
 
-输出和 `log.info` 完全一样。代价是：内存使用稍高一点；它是宏，IDE 代码提示体验比普通成员函数差一点；每个调用点会绑定第一次调用时的日志对象和格式串，所以同一个调用点必须固定使用同一个日志对象和同一个格式串。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
+输出和 `log.info` 完全一样。代价是内存使用稍高一点。宏的每个调用点还会绑定第一次调用时的日志对象和格式串，所以同一个宏调用点要固定使用同一个日志对象；`fast_info<...>` 没有这个限制。
 
 ### Java
 
@@ -286,6 +305,7 @@ bq.log.force_flush_all_logs();
 
 | 文档 | 说明 |
 |------|------|
+| [开发规范](DEVELOPMENT_GUIDELINES_CHS.md) | 贡献代码的编码规范 |
 | [常见问题（FAQ）](docs/FAQ_CHS.md) | 常见问题：对比、平台与语言、发布渠道、崩溃恢复 |
 | [集成指南](docs/INTEGRATION_GUIDE_CHS.md) | 所有平台完整集成步骤 + 各语言 Demo |
 | [游戏引擎集成](docs/ENGINE_INTEGRATION_CHS.md) | Unity、团结引擎、Unreal Engine 插件与蓝图使用 |
@@ -298,6 +318,8 @@ bq.log.force_flush_all_logs();
 ---
 
 ## 🤝 如何贡献代码
+
+请先阅读[开发规范](DEVELOPMENT_GUIDELINES_CHS.md)。
 
 若您希望贡献代码，请确保您的改动能通过仓库中 GitHub Actions 下的以下工作流：
 

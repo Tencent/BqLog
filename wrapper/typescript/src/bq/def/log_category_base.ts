@@ -12,6 +12,7 @@
 
 import { log_invoker } from "../impl/log_invoker";
 
+/** Base class of the generated category items; each one carries its index. */
 export class log_category_base {
     protected index: number = 0;
 

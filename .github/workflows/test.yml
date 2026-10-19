@@ -10,6 +10,312 @@ on:
         default: false
   workflow_call:
 jobs:
+  #The layout a package manager installs, verified through find_package and pkg-config.
+  install_verify:
+    name: install verify (${{ matrix.label }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "ubuntu-22.04"
+            runs_on: ubuntu-22.04
+          - label: "macos-latest"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Verify the standard install
+        run: bash build/pack_test/install_verify.sh
+
+  #The C++20 module interface unit: precompiled into a BMI, imported and run.
+  module_verify:
+    name: module verify (${{ matrix.label }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: "ubuntu-24.04"
+            runs_on: ubuntu-24.04
+          - label: "macos-latest"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Apple clang does not implement the C++20 module syntax at all -- even `export module foo;`
+      # fails to parse -- so macOS needs upstream LLVM. See pack/homebrew/README.md.
+      - name: Install upstream LLVM (macOS)
+        if: runner.os == 'macOS'
+        run: brew install llvm
+
+      - name: Verify the module interface unit
+        run: |
+          if [ "${RUNNER_OS}" = "macOS" ]; then
+            LLVM="$(brew --prefix llvm)"
+            export CC="${LLVM}/bin/clang"
+            export CXX="${LLVM}/bin/clang++"
+          else
+            export CXX=clang++
+          fi
+          bash build/pack_test/module_verify.sh
+
+  #The module entry under GCC (the default GCC 13 cannot build modules).
+  # GCC 14 crashes with an internal compiler error (nonnull_arg_p) on a module that imports
+  # bq.log, so the module test wants 15 or newer; both supported versions run here, in their
+  # upstream images, which is also where the compiler comes from.
+  module_verify_gcc:
+    name: module verify (gcc ${{ matrix.gcc }})
+    runs-on: ubuntu-24.04
+    container: gcc:${{ matrix.gcc }}
+    strategy:
+      fail-fast: false
+      matrix:
+        gcc: [ "15", "16" ]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Install CMake and Ninja
+        run: |
+          apt-get update
+          apt-get install -y cmake ninja-build
+          cmake --version | head -1
+          ninja --version
+
+      - name: Build and run the module entry test
+        run: |
+          cmake -S test/cpp -B build_module_gcc -G Ninja -DTARGET_PLATFORM=linux \
+            -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER=20
+          cmake --build build_module_gcc --target BqLogModuleUnitTest --parallel 2
+          test -f build_module_gcc/bq_module_test_enabled \
+            || { echo "GCC ${{ matrix.gcc }} must get the module test (the image needs CMake 3.28+); see test/cpp/CMakeLists.txt" >&2; exit 1; }
+          cd build_module_gcc
+          ./BqLogModuleUnitTest
+
+  #The Homebrew formula, built from an archive of this commit.
+  homebrew_formula:
+    name: homebrew formula
+    runs-on: macos-latest
+    env:
+      HOMEBREW_NO_AUTO_UPDATE: 1
+      HOMEBREW_NO_INSTALL_CLEANUP: 1
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Point the formula at this commit
+        run: |
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION = "\(.*\)".*/\1/p' src/bq_log/global/version.cpp)"
+          TARBALL="$RUNNER_TEMP/Release_${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="BqLog-Release_${VERSION}/" -o "$TARBALL" HEAD
+          BQ_FORMULA_URL="file://$TARBALL" bash pack/homebrew/bump.sh "$VERSION" "$TARBALL"
+          brew tap-new --no-git bqlog/ci
+          cp pack/homebrew/Formula/bqlog.rb "$(brew --repository)/Library/Taps/bqlog/homebrew-ci/Formula/"
+
+      - name: Install, test and check the style
+        run: |
+          brew install --build-from-source bqlog/ci/bqlog
+          brew test bqlog/ci/bqlog
+          brew style bqlog/ci/bqlog
+
+  #The vcpkg port, built from an archive of this commit.
+  vcpkg_port:
+    name: vcpkg port (${{ matrix.triplet }})
+    runs-on: ${{ matrix.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - triplet: x64-linux
+            runs_on: ubuntu-24.04
+          - triplet: x64-windows
+            runs_on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Bootstrap vcpkg (linux)
+        if: runner.os != 'Windows'
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg vcpkg_tool
+          ./vcpkg_tool/bootstrap-vcpkg.sh -disableMetrics
+
+      - name: Bootstrap vcpkg (windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: |
+          git clone --depth 1 https://github.com/microsoft/vcpkg vcpkg_tool
+          call vcpkg_tool\bootstrap-vcpkg.bat -disableMetrics
+
+      # vcpkg_from_github takes the archive from its download cache when the file name and SHA512 match.
+      - name: Point the port at this commit
+        shell: bash
+        run: |
+          VERSION="$(sed -n 's/.*BQ_LOG_VERSION = "\(.*\)".*/\1/p' src/bq_log/global/version.cpp)"
+          mkdir -p vcpkg_tool/downloads
+          TARBALL="vcpkg_tool/downloads/Tencent-BqLog-Release_${VERSION}.tar.gz"
+          git archive --format=tar.gz --prefix="BqLog-Release_${VERSION}/" -o "$TARBALL" HEAD
+          bash pack/vcpkg/bump.sh "$VERSION" "$TARBALL"
+
+      # The tools-free install is the `bqlog[core]` case upstream CI runs: it is where an empty
+      # bin/ or debug/bin/ left behind by the build system fails the post-build checks.
+      - name: Install the port without features
+        shell: bash
+        run: |
+          ./vcpkg_tool/vcpkg install bqlog \
+            --overlay-ports=pack/vcpkg/ports --triplet "${{ matrix.triplet }}"
+
+      - name: Install the port with the tools feature
+        shell: bash
+        run: |
+          ./vcpkg_tool/vcpkg install "bqlog[tools]" --recurse \
+            --overlay-ports=pack/vcpkg/ports --triplet "${{ matrix.triplet }}"
+
+      - name: Assert the installed layout
+        shell: bash
+        run: |
+          installed="vcpkg_tool/installed/${{ matrix.triplet }}"
+          test -d "$installed/tools/bqlog" || { echo "the tools feature installed no tools" >&2; exit 1; }
+          if find "$installed/lib" -name '*.dll' -print -quit | grep -q .; then
+            echo "a DLL is under lib/" >&2
+            exit 1
+          fi
+
+  #The NuGet package: pack one RID and publish a consumer against it.
+  nuget_package:
+    name: nuget package (win-x64)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Build the native library (win-x64)
+        run: |
+          cmake -S . -B build_nuget -A x64 -DBUILD_LIB_TYPE=dynamic_lib -DBQ_BUILD_TOOLS=OFF -DBQ_WERROR=OFF -DCMAKE_INSTALL_PREFIX=nuget_prefix
+          cmake --build build_nuget --config Release --parallel 2
+          cmake --install build_nuget --config Release
+          if (Test-Path nuget_prefix/lib/BqLog.dll) {
+            throw "the DLL must install under bin/, not lib/"
+          }
+
+      - name: Assemble the native runtimes
+        run: |
+          New-Item -ItemType Directory -Force -Path artifacts_in/windows_x86_64_libs_local | Out-Null
+          Copy-Item nuget_prefix/bin/BqLog.dll artifacts_in/windows_x86_64_libs_local/
+          bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget windows_x86_64_libs
+
+      - name: Pack
+        shell: pwsh
+        run: |
+          # The version lives in src/bq_log/global/version.cpp, never in the csproj.
+          $version = (Select-String -Path src/bq_log/global/version.cpp -Pattern 'BQ_LOG_VERSION = "(.*?)"').Matches[0].Groups[1].Value
+          dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=$version -o nuget_out
+          if ($LASTEXITCODE -ne 0) { throw "dotnet pack failed" }
+
+      - name: Publish a consumer against the packed nupkg
+        shell: pwsh
+        run: |
+          $version = (Select-String -Path src/bq_log/global/version.cpp -Pattern 'BQ_LOG_VERSION = "(.*?)"').Matches[0].Groups[1].Value
+          New-Item -ItemType Directory -Force -Path consumer | Out-Null
+
+          @"
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net8.0</TargetFramework>
+              <AssemblyName>consumer</AssemblyName>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="BqLog" Version="$version" />
+            </ItemGroup>
+          </Project>
+          "@ | Set-Content -Encoding utf8 consumer/consumer.csproj
+
+          @'
+          class Program
+          {
+              static int Main()
+              {
+                  // create_log rejects a config without an appenders_config object, so name one.
+                  bq.log log_inst = bq.log.create_log("nuget_consumer",
+                      "log.thread_mode=sync\n"
+                      + "appenders_config.console.type=console\n"
+                      + "appenders_config.console.levels=[all]");
+                  if (!log_inst.is_valid())
+                  {
+                      System.Console.Error.WriteLine("create_log failed");
+                      return 1;
+                  }
+                  log_inst.info("bqlog installed through NuGet: {}", 1);
+                  log_inst.force_flush();
+                  return 0;
+              }
+          }
+          '@ | Set-Content -Encoding utf8 consumer/Program.cs
+
+          @"
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local" value="../nuget_out" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+          </configuration>
+          "@ | Set-Content -Encoding utf8 consumer/nuget.config
+
+          dotnet publish consumer/consumer.csproj -c Release -r win-x64 -o consumer_out
+          ./consumer_out/consumer.exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "the consumer failed to run with a RID"
+          }
+
+          # Without a RID the SDK still copies runtimes/<rid>/native and the host finds it through
+          # deps.json, so the plain .NET path gets its own check.
+          dotnet run --project consumer/consumer.csproj -c Release
+          if ($LASTEXITCODE -ne 0) {
+            throw "the consumer failed to run without a RID"
+          }
+
+          # .NET Framework ignores runtimes/, so the package's buildTransitive targets must copy the
+          # native library. This is the only check of that path.
+          New-Item -ItemType Directory -Force -Path consumer_framework | Out-Null
+          @"
+          <Project Sdk="Microsoft.NET.Sdk">
+            <PropertyGroup>
+              <OutputType>Exe</OutputType>
+              <TargetFramework>net48</TargetFramework>
+              <AssemblyName>consumer_framework</AssemblyName>
+            </PropertyGroup>
+            <ItemGroup>
+              <PackageReference Include="BqLog" Version="$version" />
+              <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+            </ItemGroup>
+          </Project>
+          "@ | Set-Content -Encoding utf8 consumer_framework/consumer_framework.csproj
+          Copy-Item consumer/Program.cs consumer_framework/Program.cs
+          Copy-Item consumer/nuget.config consumer_framework/nuget.config
+
+          dotnet build consumer_framework/consumer_framework.csproj -c Release -o consumer_framework_out
+          if ($LASTEXITCODE -ne 0) {
+            throw "the .NET Framework consumer failed to build"
+          }
+          if (-not (Test-Path consumer_framework_out/BqLog.dll)) {
+            throw "the buildTransitive targets did not copy BqLog.dll for .NET Framework"
+          }
+          ./consumer_framework_out/consumer_framework.exe
+          if ($LASTEXITCODE -ne 0) {
+            throw "the .NET Framework consumer failed to run"
+          }
+
   #Windows
   win64:
     name: win64 (${{ matrix.cc }} cpp${{ matrix.cpp_ver }} ${{ matrix.runner.label }})
@@ -65,12 +371,13 @@ jobs:
         run: |
           choco install -y llvm
 
-      - name: Install MSYS2 (Attempt 1)
+      - name: Install MSYS2 UCRT64 (Attempt 1)
+        id: msys2
         if: ${{ matrix.cc == 'mingw_gcc' }}
         continue-on-error: true
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           release: true
           path-type: inherit
           update: true
@@ -80,7 +387,7 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -89,7 +396,7 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -98,7 +405,7 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc mingw-w64-x86_64-binutils mingw-w64-x86_64-make
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-binutils mingw-w64-ucrt-x86_64-make
           echo "MSYS2 Root: $MSYSTEM_CARCH"
           which gcc
           which mingw32-make
@@ -112,7 +419,9 @@ jobs:
       - name: Add MSYS2 to PATH
         if: ${{ matrix.cc == 'mingw_gcc' }}
         run: |
-          $env:Path = "${{ steps.msys2.outputs.msys2-location }}\mingw64\bin;" + $env:Path
+          $msys = "${{ steps.msys2.outputs.msys2-location }}"
+          if (-not $msys) { $msys = "C:\msys64" }
+          $env:Path = "$msys\ucrt64\bin;" + $env:Path
           echo "PATH=$env:Path" >> $env:GITHUB_ENV
         shell: powershell
 
@@ -212,6 +521,58 @@ jobs:
         run: exit 1
 
 
+  #Multi-instance regression
+  multi_instance:
+    name: multi_instance (${{ matrix.os.label }})
+    runs-on: ${{ matrix.os.runs_on }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - label: "windows"
+            runs_on: windows-latest
+          - label: "ubuntu"
+            runs_on: ubuntu-latest
+          - label: "macos"
+            runs_on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.x'
+
+      - name: Prepare legacy 2.6.0 checkout (ubuntu)
+        if: ${{ matrix.os.label == 'ubuntu' }}
+        run: |
+          # FETCH_HEAD, not the sha again: a fetch of a bare sha leaves no ref behind, so
+          # naming the commit a second time depends on the clone and the git version.
+          git fetch --no-tags --depth=1 origin 948d05079b73d12c7f980372a28b82fd1bba5c6c
+          git worktree add --detach /tmp/bq260 FETCH_HEAD
+
+      - name: Configure and build (windows)
+        if: ${{ matrix.os.label == 'windows' }}
+        shell: pwsh
+        run: |
+          cmake -S test/multi_instance -B build_mi
+          cmake --build build_mi --config Release --parallel 2
+
+      - name: Configure and build (linux/macos)
+        if: ${{ matrix.os.label != 'windows' }}
+        run: |
+          cmake -S test/multi_instance -B build_mi \
+            ${{ matrix.os.label == 'ubuntu' && '-DBQ_LEGACY_SRC=/tmp/bq260' || '' }}
+          cmake --build build_mi --parallel 2
+
+      # ctest on every platform: it resolves the worker path and the per-case output
+      # directory itself, so no shell-specific find/$(...) is needed (the previous
+      # bash-ism did not run under the default pwsh on Windows)
+      - name: Run multi-instance cases
+        run: |
+          ctest --test-dir build_mi --output-on-failure -R multi_instance -C Release
+
   #Linux-ubuntu
   ubuntu:
     name: ubuntu (${{ matrix.runner.label }} ${{ matrix.cc }} ${{ matrix.cpp_ver }} ${{ matrix.asan.label }})
@@ -244,23 +605,56 @@ jobs:
       - name: Install GDB(Attempt 1)
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y gdb
+          sudo apt-get update && sudo apt-get install -y gdb ninja-build
       - name: Install GDB(Attempt 2)
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y gdb
+          sudo apt-get update && sudo apt-get install -y gdb ninja-build
       - name: Install GDB(Attempt 3)
         continue-on-error: true
         run: |
-          sudo apt-get update && sudo apt-get install -y gdb       
+          sudo apt-get update && sudo apt-get install -y gdb ninja-build       
 
       - name: Build for Linux
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
-          cd build/test/linux  
+          cd build/test/linux
           chmod +x *.sh
           ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+
+  # The suite skips the recovery groups when the platform has no instance lock; that path is
+  # unreachable on an ordinary runner, so build it once with the lock compiled out.
+  recovery_capability:
+    name: recovery capability
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+      - name: Install ninja
+        run: |
+          sudo apt-get update && sudo apt-get install -y ninja-build
+
+      - name: Run the suite without instance locks
+        env:
+          BQ_LOW_PERFORMANCE_TESTS: "true"
+        run: |
+          cmake -S test/cpp -B build_recovery_capability -G Ninja -DTARGET_PLATFORM=linux \
+            -DCPP_VER=20 -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBQ_TEST_DISABLE_FILE_LOCK=ON
+          cmake --build build_recovery_capability --target BqLogUnitTest --parallel 2
+          cd build_recovery_capability
+          ./BqLogUnitTest --instance-only
+          ./BqLogUnitTest --appender-only
+          ./BqLogUnitTest --fast-only
+          ./BqLogUnitTest --meta-only
+          ./BqLogUnitTest --fast-info-only
+
+      - name: The multi-instance suite must skip, not fail, without locks
+        run: |
+          cmake -S test/multi_instance -B build_recovery_capability_mi -DBQ_TEST_DISABLE_FILE_LOCK=ON
+          cmake --build build_recovery_capability_mi --parallel 2
+          ctest --test-dir build_recovery_capability_mi -R multi_instance --output-on-failure
 
   #linux-debian
   debian:
@@ -285,7 +679,7 @@ jobs:
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y gcc clang g++ make cmake gdb ninja-build
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
@@ -294,7 +688,7 @@ jobs:
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y gcc clang g++ make cmake gdb ninja-build
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
@@ -303,7 +697,7 @@ jobs:
         continue-on-error: true
         run: |
           apt-get update
-          apt-get install -y gcc clang g++ make cmake gdb
+          apt-get install -y gcc clang g++ make cmake gdb ninja-build
           apt-get install -y software-properties-common
           apt-get update
           apt-get install -y openjdk-17-jdk
@@ -347,6 +741,16 @@ jobs:
           java-version: '11'
           distribution: 'temurin'
 
+      # The module entry test runs under Ninja; the Xcode generator used for the rest of the
+      # suite cannot produce that target.
+      - name: Install Ninja
+        run: brew install ninja
+
+      # A toolchain that implements C++20 modules; run_test.sh picks this clang++ up.
+      - name: Install LLVM for the module test
+        if: matrix.cpp_ver >= 20
+        run: brew install llvm
+
       - name: Build for macOS
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
@@ -378,8 +782,8 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in FreeBSD(Attempt 1)
-        continue-on-error: true
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in FreeBSD
         uses: vmactions/freebsd-vm@v1
         with:
           usesh: true
@@ -393,70 +797,11 @@ jobs:
             exit 1
 
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
-            touch ../../../UNIT_TEST_SUCCESS
-
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e 
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in FreeBSD(Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/freebsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            for i in 1 2 3 4 5; do
-              pkg install -y llvm cmake bash gdb gcc && exit 0
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
-            touch ../../../UNIT_TEST_SUCCESS
 
   freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -480,6 +825,7 @@ jobs:
           docker-images: true
           swap-storage: true
 
+      # A failing test fails the job. The only retry left is prepare's package fetch.
       - name: Run in FreeBSD
         continue-on-error: true
         uses: vmactions/freebsd-vm@v1
@@ -556,9 +902,9 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in Solaris（Attempt 1）
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in Solaris
         uses: vmactions/solaris-vm@v1
-        continue-on-error: true
         with:
           usesh: true
           mem: 8192
@@ -578,13 +924,18 @@ jobs:
             done
             exit 1
           run: |
-            touch UNIT_TEST_STARTED
             ulimit -c unlimited
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            
+
+            # this is the platform where the instance lock may be unavailable, so the probe
+            # reports the capability instead of the suite having to guess
+            cmake ../../../test/multi_instance -B instance_lock_build -DTARGET_PLATFORM=unix -DCPP_VER=${{ matrix.cpp_ver }} -DCMAKE_BUILD_TYPE=Release
+            cmake --build instance_lock_build --target bq_instance_lock_probe -j2
+            ctest --test-dir instance_lock_build --output-on-failure -R multi_instance_lock
+
             set +e
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
             EXIT_CODE=$?
@@ -618,105 +969,7 @@ jobs:
                 fi
                 exit $EXIT_CODE
             fi
-            touch ../../../UNIT_TEST_SUCCESS
 
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e 
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-          echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-          echo "Found domains: $DOMAINS"
-          for DOMAIN in $DOMAINS; do
-            echo "Processing domain: $DOMAIN"
-            sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-            sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-              || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-              || echo "virsh undefine failed for $DOMAIN (ignored)"
-          done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in Solaris (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/solaris-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            for i in 1 2 3 4 5; do
-              (
-                pkg publisher && \
-                pkg install -v --accept \
-                  developer/build/cmake \
-                  developer/build/gnu-make \
-                  developer/debug/gdb \
-                  developer/gcc-14 \
-                  shell/bash
-              ) && exit 0
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-          run: |
-            ulimit -c unlimited
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            
-            set +e
-            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
-            EXIT_CODE=$?
-            set -e
-
-            if [ $EXIT_CODE -ne 0 ]; then
-                echo "Test failed with exit code $EXIT_CODE."
-                echo "Waiting 30s for core dump to finish writing..."
-                sleep 30
-                echo "Searching for core dump file and executable..."
-                CORE=$(find . -name 'core*' -type f | head -n 1)
-                EXE=$(find . -name BqLogUnitTest -type f | head -n 1)
-
-                if [ -n "$CORE" ] && [ -n "$EXE" ]; then
-                    echo "Found core file: $CORE"
-                    echo "Found executable: $EXE"
-                    echo "Preparing GDB commands..."
-                    echo "set pagination off" > gdb_cmds.txt
-                    echo "thread apply all bt full" >> gdb_cmds.txt
-                    echo "quit" >> gdb_cmds.txt
-            
-                    echo "Starting GDB to generate backtrace..."
-                    gdb -q "$EXE" "$CORE" < gdb_cmds.txt || echo "GDB execution failed."
-                    echo "GDB backtrace generation finished."
-                else
-                    echo "Could not find core file or executable."
-                    echo "Core file path: '${CORE}'"
-                    echo "Executable path: '${EXE}'"
-                    echo "Listing current directory structure to help debug..."
-                    ls -R
-                fi
-                exit $EXIT_CODE
-            fi 
-
-  #Unix-OmnisOS
   omnisOS_x86_64_GCC:
     runs-on: ubuntu-latest
     strategy:
@@ -744,83 +997,8 @@ jobs:
           echo "PKG_OMNIOS_IP=$PKG_IP" >> "$GITHUB_ENV"
           echo "Resolved pkg.omnios.org -> $PKG_IP"
 
-      - name: Run in OmnisOS（Attempt 1）
-        uses: vmactions/omnios-vm@v1
-        continue-on-error: true
-        with:
-          envs: 'PKG_OMNIOS_IP'
-          usesh: true
-          mem: 8192
-          prepare: |
-            echo "nameserver 8.8.8.8" > /etc/resolv.conf
-            echo "nameserver 1.1.1.1" >> /etc/resolv.conf
-            if [ -n "$PKG_OMNIOS_IP" ]; then
-              grep -q pkg.omnios.org /etc/hosts || echo "$PKG_OMNIOS_IP pkg.omnios.org" >> /etc/hosts
-            fi
-            for i in 1 2 3 4 5; do
-              (
-                set -e
-                pkg refresh --full
-                if ! pkg publisher | grep -q '^extra\.omnios'; then
-                  REL="$(uname -v | sed -n 's/.*\(r[0-9][0-9]*\).*/\1/p')"
-                  [ -n "$REL" ] || REL="r151054"
-                  pkg set-publisher -g "https://pkg.omnios.org/${REL}/extra" extra.omnios || true
-                  pkg refresh --full
-                fi
-                pkg install -v --accept shell/bash developer/build/gnu-make || true
-                pkg install -v --accept ooce/developer/cmake
-                pkg install -v --accept developer/gcc13
-              ) && exit 0
-              echo "Prepare failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
-            touch ../../../UNIT_TEST_SUCCESS
-
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e 
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in OmnisOS (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in OmnisOS
         uses: vmactions/omnios-vm@v1
         with:
           envs: 'PKG_OMNIOS_IP'
@@ -851,15 +1029,12 @@ jobs:
             done
             exit 1
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
             ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
-            touch ../../../UNIT_TEST_SUCCESS
 
-  #Unix-DragonFlyBSD
   dragonflyBSD_x86_64:
     runs-on: ubuntu-latest
     strategy:
@@ -885,8 +1060,8 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in DragonFlyBSD  (Attempt 1)
-        continue-on-error: true
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in DragonFlyBSD
         uses: vmactions/dragonflybsd-vm@v1
         with:
           usesh: true
@@ -899,7 +1074,6 @@ jobs:
             done
             exit 1
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
@@ -940,100 +1114,7 @@ jobs:
               fi
               exit $EXIT_CODE
             fi
-            touch ../../../UNIT_TEST_SUCCESS
 
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e 
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in DragonFlyBSD  (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/dragonflybsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            for i in 1 2 3 4 5; do
-              pkg install -y cmake bash gmake gdb openjdk11 gcc llvm && exit 0
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            ulimit -c unlimited || true
-            sysctl kern.coredump=1 || true
-
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            
-            set +e
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}  
-            EXIT_CODE=$?
-            set -e
-
-            if [ $EXIT_CODE -ne 0 ]; then
-              echo "Test failed with exit code $EXIT_CODE"
-              # Look for core files. DragonflyBSD often names them <progname>.core
-              CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name '*.core' \) 2>/dev/null | head -n1)"
-            
-              EXE=""
-              for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
-                if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
-              done
-
-              echo "exe: ${EXE:-<not found>}"
-              echo "core: ${CORE_FILE:-<not found>}"
-
-              if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
-                echo "=== GDB core backtrace (DragonflyBSD) ==="
-                gdb --batch -q \
-                  -ex "set pagination off" \
-                  -ex "info threads" \
-                  -ex "thread apply all bt full" \
-                  -ex "quit" \
-                  "$EXE" "$CORE_FILE" || echo "gdb analysis failed"
-              else
-                echo "Core file or executable not found. Listing all files:"
-                ls -R || true
-              fi
-              exit $EXIT_CODE
-            fi
-            touch ../../../UNIT_TEST_SUCCESS
-
-  #Unix-OpenBSD
   openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
     strategy:
@@ -1055,8 +1136,8 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in OpenBSD (Attempt 1)
-        continue-on-error: true
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in OpenBSD
         uses: vmactions/openbsd-vm@v1
         with:
           usesh: true
@@ -1079,7 +1160,6 @@ jobs:
             exit 1
 
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
@@ -1147,135 +1227,6 @@ jobs:
               fi
               exit $EXIT_CODE
             fi
-            touch ../../../UNIT_TEST_SUCCESS
-
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e 
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in OpenBSD (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/openbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          prepare: |
-            set -x
-            for i in 1 2 3 4 5; do
-              (
-                export PKG_PATH="http://cdn.openbsd.org/pub/OpenBSD/$(uname -r)/packages/$(arch -s)/" && \
-                pkg_add -v -I cmake bash gdb
-              ) && {
-                echo "PATH=$PATH"
-                pkg_info | grep gdb
-                ls -l /usr/local/bin/gdb* /usr/bin/gdb*
-                exit 0
-              }
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            ulimit -c unlimited || true
-            sysctl kern.coredump=1 || true
-            sysctl kern.corefile=core.%p 2>/dev/null || sysctl kern.corefile=core || true
-
-            cd build/test/unix_like
-            chmod +x *.sh
-
-            GDB_CMD=""
-            if [ -x "/usr/local/bin/gdb" ]; then
-              GDB_CMD="/usr/local/bin/gdb"
-            elif [ -x "/usr/local/bin/egdb" ]; then
-              GDB_CMD="/usr/local/bin/egdb"
-            elif [ -x "/usr/bin/gdb" ]; then
-              GDB_CMD="/usr/bin/gdb"
-            fi
-
-            if [ -n "$GDB_CMD" ]; then
-              echo "Found GDB at: $GDB_CMD"
-              if ! $GDB_CMD --version | grep "GNU gdb"; then
-                echo "!!! Command '$GDB_CMD' is not a valid GNU gdb. Aborting."
-                exit 1
-              fi
-            else
-              echo "!!! GNU gdb not found. Aborting."
-              exit 1
-            fi
-
-            set +e
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_clang.sh ${{ matrix.cpp_ver }}
-            EXIT_CODE=$?
-            set -e
-
-            if [ $EXIT_CODE -ne 0 ]; then
-              echo "Test failed with exit $EXIT_CODE. Searching for core..."
-              CORE_FILE="$(find . -maxdepth 5 -type f \( -name 'core' -o -name 'core.*' -o -name '*.core' \) 2>/dev/null | head -n1)"
-
-              EXE=""
-              for cand in ./BqLogUnitTest ./CMakeFiles/BqLogUnitTest $(find . -maxdepth 5 -type f -name 'BqLogUnitTest' 2>/dev/null | head -n1); do
-                if [ -n "$cand" ] && [ -x "$cand" ]; then EXE="$cand"; break; fi
-              done
-
-              echo "exe: ${EXE:-<not found>}"
-              echo "core: ${CORE_FILE:-<not found>}"
-
-              if [ -n "$CORE_FILE" ] && [ -n "$EXE" ]; then
-                echo "=== GDB core backtrace ==="
-                $GDB_CMD --batch -q \
-                  -ex "set pagination off" \
-                  -ex "info threads" \
-                  -ex "thread apply all bt full" \
-                  -ex "quit" \
-                  "$EXE" "$CORE_FILE" || echo "gdb core analysis failed"
-              elif [ -n "$EXE" ]; then
-                echo "Core not found; run once under gdb for live backtrace"
-                $GDB_CMD --batch -q \
-                  -ex "run" \
-                  -ex "info threads" \
-                  -ex "thread apply all bt full" \
-                  -ex "quit" \
-                  "$EXE" || true
-              fi
-              exit $EXIT_CODE
-            fi
-            touch ../../../UNIT_TEST_SUCCESS
 
   openBSD_arm64_Clang:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
@@ -1299,8 +1250,8 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in OpenBSD (Attempt 1)
-        continue-on-error: true
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in OpenBSD
         uses: vmactions/openbsd-vm@v1
         with:
           arch: aarch64
@@ -1314,7 +1265,6 @@ jobs:
             done
             exit 1
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like  
             chmod +x *.sh
@@ -1324,70 +1274,7 @@ jobs:
             ulimit -n 4096
             export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_clang.sh ${{ matrix.cpp_ver }}
-            touch ../../../UNIT_TEST_SUCCESS
 
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e 
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in OpenBSD (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/openbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          prepare: |
-            for i in 1 2 3 4 5; do
-              pkg_add cmake bash && exit 0
-              echo "Install failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            export BQ_LOW_PERFORMANCE_TESTS=true
-            ./run_test_clang.sh ${{ matrix.cpp_ver }}
-            touch ../../../UNIT_TEST_SUCCESS
-
-  #NetBSD
   netBSD_x86_64:
     runs-on: ubuntu-latest
     strategy:
@@ -1413,8 +1300,8 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in NetBSD (Attempt 1)
-        continue-on-error: true
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in NetBSD
         uses: vmactions/netbsd-vm@v1
         with:
           usesh: true
@@ -1452,7 +1339,6 @@ jobs:
             done
             exit 1
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like
             chmod +x *.sh
@@ -1461,91 +1347,6 @@ jobs:
             ulimit -Hn
             ulimit -n 4096
             ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
-            touch ../../../UNIT_TEST_SUCCESS
-
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in NetBSD (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/netbsd-vm@v1
-        with:
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-            ARCH=$(uname -m)
-            case "$ARCH" in
-              evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
-              *) PKG_ARCH="$ARCH" ;;
-            esac
-            MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            for i in 1 2 3 4 5; do
-              for mirror in $MIRRORS; do
-                echo "=== Attempt $i, trying mirror: $mirror ==="
-                (
-                  set -e
-                  export PKG_PATH="$mirror"
-                  /usr/sbin/pkg_add -v pkgin || true
-                  echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                  pkgin -y update
-                  pkgin -y install cmake gmake bash gdb
-                  pkgin -y install clang
-                  pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10
-                ) && exit 0
-                echo "Mirror $mirror failed, trying next..."
-              done
-              echo "All mirrors failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
-            touch ../../../UNIT_TEST_SUCCESS
 
   netBSD_arm64_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -1569,8 +1370,8 @@ jobs:
           docker-images: true
           swap-storage: true
 
-      - name: Run in NetBSD (Attempt 1)
-        continue-on-error: true
+      # A failing test fails the job. The only retry left is prepare's package fetch.
+      - name: Run in NetBSD
         uses: vmactions/netbsd-vm@v1
         with:
           arch: aarch64
@@ -1609,7 +1410,6 @@ jobs:
             done
             exit 1
           run: |
-            touch UNIT_TEST_STARTED
             set -e -x
             cd build/test/unix_like
             chmod +x *.sh
@@ -1619,96 +1419,7 @@ jobs:
             ulimit -n 4096
             export BQ_LOW_PERFORMANCE_TESTS=true
             ./run_test_${{ matrix.cc }}.sh 17
-            touch ../../../UNIT_TEST_SUCCESS
 
-      - name: Check Retry
-        id: CheckRetry
-        run: |
-          if [ ! -f "UNIT_TEST_STARTED" ]; then
-            echo "retry=true" >> $GITHUB_OUTPUT
-          elif [ ! -f "UNIT_TEST_SUCCESS" ]; then
-            echo "::error::Test script execution failed! (Not retrying)"
-            exit 1
-          fi
-      - name: Cleanup Before Retry
-        if: steps.CheckRetry.outputs.retry == 'true'
-        run: |
-          set +e
-          DOMAINS="$(sudo virsh list --all --name 2>/dev/null | grep -v "^$" || true)"
-          if [ -z "$DOMAINS" ]; then
-            echo "No lingering domains found (virsh may be unavailable or no domains exist)."
-          else
-            echo "Found domains: $DOMAINS"
-            for DOMAIN in $DOMAINS; do
-              echo "Processing domain: $DOMAIN"
-              sudo virsh destroy "$DOMAIN" 2>/dev/null || echo "virsh destroy failed for $DOMAIN (ignored)"
-              sudo virsh undefine "$DOMAIN" --nvram 2>/dev/null \
-                || sudo virsh undefine "$DOMAIN" 2>/dev/null \
-                || echo "virsh undefine failed for $DOMAIN (ignored)"
-            done
-          fi
-
-          echo "--- Removing potentially corrupted VM images ---"
-          find . -name "*.qcow2" -delete 2>/dev/null || echo "local qcow2 cleanup failed (ignored)"
-          sudo find /home/runner/work/_actions/vmactions -name "*.qcow2" -delete 2>/dev/null || echo "vmactions qcow2 cleanup failed (ignored)"
-          sudo rm -f /var/lib/libvirt/dnsmasq/*.leases 2>/dev/null || echo "dnsmasq leases cleanup failed (ignored)"
-          sleep 5
-          echo "Cleanup complete."
-
-      - name: Run in NetBSD (Attempt 2)
-        if: steps.CheckRetry.outputs.retry == 'true'
-        uses: vmactions/netbsd-vm@v1
-        with:
-          arch: aarch64
-          usesh: true
-          mem: 8192
-          release: "10.1"
-          prepare: |
-            export PATH="/usr/sbin:/usr/bin:/usr/pkg/sbin:/usr/pkg/bin:$PATH"
-            ARCH=$(uname -m)
-            case "$ARCH" in
-              evbarm|aarch64|arm64) PKG_ARCH="aarch64" ;;
-              *) PKG_ARCH="$ARCH" ;;
-            esac
-            MIRRORS="
-              https://cdn.NetBSD.org/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://ftp.jaist.ac.jp/pub/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-              https://mirrors.nju.edu.cn/pkgsrc/packages/NetBSD/${PKG_ARCH}/10.1/All
-            "
-            for i in 1 2 3 4 5; do
-              for mirror in $MIRRORS; do
-                echo "=== Attempt $i, trying mirror: $mirror ==="
-                (
-                  set -e
-                  export PKG_PATH="$mirror"
-                  /usr/sbin/pkg_add -v pkgin || true
-                  echo "$mirror" | sed 's|/All$|/All|' > /usr/pkg/etc/pkgin/repositories.conf || true
-                  pkgin -y update
-                  pkgin -y install cmake gmake bash gdb
-                  pkgin -y install clang
-                  pkgin -y install gcc12 || pkgin -y install gcc13 || pkgin -y install gcc10
-                ) && exit 0
-                echo "Mirror $mirror failed, trying next..."
-              done
-              echo "All mirrors failed, retrying in 60s... ($i/5)"
-              sleep 60
-            done
-            exit 1
-          run: |
-            touch UNIT_TEST_STARTED
-            set -e -x
-            cd build/test/unix_like  
-            chmod +x *.sh
-            ls -l
-            ulimit -n
-            ulimit -Hn
-            ulimit -n 4096
-            export BQ_LOW_PERFORMANCE_TESTS=true
-            ./run_test_${{ matrix.cc }}.sh 17
-            touch ../../../UNIT_TEST_SUCCESS
-
-
-  #Android Test
   android:
     runs-on: ubuntu-latest
     strategy:
@@ -2380,6 +2091,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # A failing test fails the job. The only retry left is prepare's package fetch.
       - name: Run in FreeBSD
         uses: vmactions/freebsd-vm@v1
         with:
@@ -2446,12 +2158,14 @@ jobs:
         if: runner.os == 'Windows'
         uses: lukka/get-cmake@latest
 
-      - name: Install MSYS2 (Attempt 1)
+      # cgo needs a gcc compatible compiler; UCRT64 links the same C runtime as the MSVC built bqlog dll
+      - name: Install MSYS2 UCRT64 (Attempt 1)
+        id: msys2
         if: runner.os == 'Windows'
         continue-on-error: true
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
+          msystem: UCRT64
           release: true
           path-type: inherit
           update: true
@@ -2461,15 +2175,27 @@ jobs:
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc
           which gcc
       - name: Ensure MSYS2 packages (Attempt 3)
         if: runner.os == 'Windows'
         continue-on-error: true
         shell: msys2 {0}
         run: |
-          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-x86_64-gcc
+          pacman -S --noconfirm --needed --overwrite '*' mingw-w64-ucrt-x86_64-gcc
           which gcc
+
+      - name: Put UCRT64 gcc first in PATH
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $msys = "${{ steps.msys2.outputs.msys2-location }}"
+          if (-not $msys) { $msys = "C:\msys64" }
+          $env:Path = $env:Path -replace 'C:\\mingw64\\bin;','' -replace 'C:\\Program Files\\Git\\mingw64\\bin;',''
+          $env:Path = "$msys\ucrt64\bin;" + $env:Path
+          echo "PATH=$env:Path" >> $env:GITHUB_ENV
+          where.exe gcc
+          gcc -dumpmachine
 
       - name: Run Go Tests
         shell: bash
@@ -2488,6 +2214,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      # A failing test fails the job. The only retry left is prepare's package fetch.
       - name: Run in FreeBSD
         uses: vmactions/freebsd-vm@v1
         with:
@@ -2514,4 +2241,3 @@ jobs:
               echo "Test failed with exit code $EXIT_CODE"
               exit $EXIT_CODE
             fi
-

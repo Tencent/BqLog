@@ -2,13 +2,14 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (BianQue Log) V 2.6.0
+# BqLog (BianQue Log) V 2.7.0
 
 **English** | [简体中文](./README_CHS.md)
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.6.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.6.0-orange.svg?style=flat)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/release-2.7.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange.svg?style=flat&logo=homebrew&logoColor=white)](https://formulae.brew.sh/formula/bqlog)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.7.0-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -40,12 +41,28 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_Download-Release_2.6.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.7.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 What's New in v2.6.0
+## 📦 Install
 
-- **C++ only fast mode**: `BQ_LOG_FAST_INFO(log, ...)` and friends roughly halve the cost on the logging thread, down to a few nanoseconds per call on a busy thread; see [Quick Start](#c) and [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
-- **Faster normal mode**: `log.info` runs about 16% fewer instructions on the logging thread. End to end against 2.5.0 (macOS, same benchmark), text output is 14–30% faster and compressed output up to about 40% faster.
+```bash
+brew install bqlog              # macOS / Linux, from homebrew-core; the two command line tools are included
+vcpkg install bqlog             # Windows / Linux / macOS; the port is in review upstream
+vcpkg install "bqlog[tools]"    # the same, plus BqLog_CategoryLogGenerator and BqLog_LogDecoder
+```
+
+No package manager at hand? Every platform has a prebuilt package on the [release page](https://github.com/Tencent/BqLog/releases), and the [Integration Guide](docs/INTEGRATION_GUIDE.md) covers CMake `find_package`, pkg-config and `FetchContent`.
+
+## 📋 What's New in v2.7.0
+
+- **C++20 modules**: `import bq.log;`, as an alternative to `#include "bq_log/bq_log.h"`, with no change to the logging code.
+- **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)`, the same speed as `BQ_LOG_FAST_INFO` with full IDE support, and usable with any log object. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
+- **Package managers**: Homebrew, vcpkg and NuGet. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
+- **Multi-process**: several processes can share one log directory, each with its own crash recovery data.
+- **Bug fixes**: fast mode, recovery, formatting, config parsing and the decoder, among others.
+
+> [!WARNING]
+> **This release changes the ABI.** Upgrade the headers (or language wrapper) and the library together.
 
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 
@@ -65,6 +82,7 @@
 - Depends only on the standard C library and platform APIs; can be compiled with Android `ANDROID_STL = none`.
 - Supports `C++11` and later standards and works under very strict compiler options.
 - Build system is based on `CMake` and provides multi-platform scripts, easy to integrate.
+- Available through Homebrew, vcpkg and NuGet, with `find_package` / pkg-config support.
 - Supports custom parameter types.
 - Very friendly for code completion and IDE hints.
 
@@ -132,13 +150,14 @@ int main() {
 }
 ```
 
-**C++ only fast mode.** On the hottest C++ paths, the `BQ_LOG_FAST_*` macros write the same log entry for a fraction of the cost on the calling thread:
+**C++ only fast mode.** On the hottest C++ paths, the `BQ_LOG_FAST_*` macros write the same log entry for a fraction of the cost on the calling thread. Details in [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
 
 ```cpp
 BQ_LOG_FAST_INFO(log, "Hello BqLog fast mode! int:{}, float:{}", 123, 3.14f);
+log.fast_info<"Hello BqLog fast mode! int:{}, float:{}">(123, 3.14f);  // C++20, the only form with import bq.log;
 ```
 
-The output is identical to `log.info`. The price: a little more memory, weaker IDE hints than a plain member function (it is a macro), and each call site binds the log object and format string of its first call — use one log object and a fixed format string per call site. Details in [API Reference — fast mode](docs/API_REFERENCE.md#fast-mode).
+The output is identical to `log.info`. The price: a little more memory. A macro call site also binds the log object and format string of its first call, so keep one log object per macro call site; `fast_info<...>` has no such limit.
 
 ### Java
 
@@ -274,6 +293,7 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 
 | Document | Description |
 |----------|-------------|
+| [Development Guidelines](DEVELOPMENT_GUIDELINES.md) | Coding rules for contributors |
 | [FAQ](docs/FAQ.md) | Common questions: comparisons, platforms, distribution channels, crash recovery |
 | [Integration Guide](docs/INTEGRATION_GUIDE.md) | Full integration steps for all platforms + all language demos |
 | [Game Engine Integration](docs/ENGINE_INTEGRATION.md) | Unity, Tuanjie Engine, Unreal Engine plugins and Blueprint usage |
@@ -286,6 +306,8 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 ---
 
 ## 🤝 How to contribute
+
+Please read the [Development Guidelines](DEVELOPMENT_GUIDELINES.md) first.
 
 If you want to contribute code, please make sure your changes can pass the following workflows under GitHub Actions in the repository:
 

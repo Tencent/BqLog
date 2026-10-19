@@ -8,22 +8,16 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-/*
- * Copyright (C) 2025 Tencent.
- * BQLOG is licensed under the Apache License, Version 2.0.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- */
+// Must come before every include: it controls whether <fcntl.h> exposes F_OFD_SETLK on Linux.
+#if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
+#define _GNU_SOURCE
+#endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <sys/file.h>
 #ifndef BQ_PS
 #include <dirent.h>
 #endif
@@ -216,6 +210,91 @@ namespace bq {
                 return false;
             }
             return true;
+        }
+
+        bool is_cross_process_file_lock_supported()
+        {
+#if defined(BQ_PS) || defined(BQ_TEST_DISABLE_FILE_LOCK)
+            // PlayStation locks are not cross-process; test builds compile the lock out on purpose.
+            return false;
+#elif defined(F_OFD_SETLK) || (defined(LOCK_EX) && defined(LOCK_NB))
+            return true;
+#else
+            return false;
+#endif
+        }
+
+        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
+        {
+            out_handle = invalid_platform_file_handle;
+#ifdef BQ_PS
+            // PlayStation has no inheritable file locks: report the instance as locked so callers
+            // do not fall into the retry loop. Multi-instance isolation is not supported there.
+            (void)abs_path;
+            return instance_lock_result::locked;
+#else
+            if (!is_cross_process_file_lock_supported()) {
+                bq::util::log_device_console(log_level::warning, "cross-process file lock unsupported on this platform: %s", abs_path);
+                return instance_lock_result::error;
+            }
+            int32_t fd = ::open(abs_path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+            if (fd < 0) {
+                bq::util::log_device_console(log_level::warning, "file lock open failed: %s, errno:%d", abs_path, errno);
+                return instance_lock_result::error;
+            }
+            bool locked = false;
+#if defined(F_OFD_SETLK)
+            struct flock fl;
+            memset(&fl, 0, sizeof(fl));
+            fl.l_type = F_WRLCK;
+            fl.l_whence = SEEK_SET;
+            if (::fcntl(fd, F_OFD_SETLK, &fl) == 0) {
+                locked = true;
+            } else if (errno != EINVAL) {
+                // EINVAL means this kernel cannot do OFD locks; fall through to flock. Anything
+                // else has an errno that says whether another description holds the lock.
+                const int err = errno;
+                if (err != EAGAIN && err != EACCES && err != EWOULDBLOCK) {
+                    bq::util::log_device_console(log_level::warning, "file lock fcntl failed: %s, errno:%d", abs_path, err);
+                    ::close(fd);
+                    return instance_lock_result::error;
+                }
+                ::close(fd);
+                return instance_lock_result::held_by_other;
+            }
+#endif
+#if defined(LOCK_EX) && defined(LOCK_NB)
+            if (!locked && ::flock(fd, LOCK_EX | LOCK_NB) != 0) {
+                // only a genuine "someone else holds it" is retryable; a filesystem that does not
+                // support locks at all (NFS returns ENOLCK, some FUSE returns EOPNOTSUPP) must be
+                // reported as an error, otherwise the caller retries forever
+                const int err = errno;
+                ::close(fd);
+                if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
+                    return instance_lock_result::held_by_other;
+                }
+                bq::util::log_device_console(log_level::warning, "file lock flock failed: %s, errno:%d", abs_path, err);
+                return instance_lock_result::error;
+            }
+#else
+            if (!locked) {
+                bq::util::log_device_console(log_level::warning, "no cross-process file lock on this kernel: OFD locks or native flock required (%s)", abs_path);
+                ::close(fd);
+                return instance_lock_result::error;
+            }
+#endif
+            out_handle = fd;
+            return instance_lock_result::locked;
+#endif
+        }
+
+        void unlock_instance_file(platform_file_handle& handle)
+        {
+            // closing the fd releases both OFD and flock locks
+            if (is_platform_handle_valid(handle)) {
+                ::close(handle);
+            }
+            handle = invalid_platform_file_handle;
         }
 
         bq::string get_lexically_path(const bq::string& original_path)

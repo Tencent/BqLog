@@ -61,6 +61,22 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 ---
 
+## Escaping and line continuation
+
+A value is everything after the first `=` (or `:` if there is no `=`), trimmed.
+
+| Written         | Result                                |
+|-----------------|---------------------------------------|
+| `\` at line end | The value continues on the next line |
+| `\n`            | A line break                         |
+| `\=`, `\:`      | A literal `=` / `:`                  |
+
+A trailing `\` therefore joins the next line onto the value. To end a value with a real backslash (a Windows directory such as `D:\logs\`), put that line last in the config, or use `/`.
+
+An empty value (`key=`) is ignored.
+
+---
+
 ## Detailed explanation
 
 ### `appenders_config`
@@ -195,6 +211,8 @@ Larger buffer can withstand larger burst write peaks, but memory usage will also
 
 - `true`: When asynchronous log encounters abnormal program exit, data in buffer that has not been flushed to disk will be rewritten to log file after next startup.
 - `false`: Log data in buffer will be lost when process exits abnormally and `force_flush()` is not called.
+
+Not supported on a few platforms such as Solaris, where it prints a warning and is ignored; see [`get_recovery_capability()`](./API_REFERENCE.md#recovery-capability).
 
 Detailed behavior see [Advanced Usage — Data protection on abnormal exit](./ADVANCED_USAGE.md#3-data-protection-on-abnormal-exit).
 

@@ -13,6 +13,9 @@
 #include <thread>
 #include <atomic>
 #include <cstdio>
+#include <random>
+#include <locale.h>
+#include <math.h>
 #include "bq_common/bq_common.h"
 
 namespace bq {
@@ -130,19 +133,165 @@ namespace bq {
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|00000C|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X000C|"), "layout format");
+                // Centre alignment puts the odd fill character after the value, like std::format.
+                log_inst.error(log_inst.cat.ModuleB, "|{:^7d}|", i);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|  12   |"), "layout format centre alignment");
+                log_inst.error(log_inst.cat.ModuleB, "|{:*^7}|", -1);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|**-1***|"), "layout format centre alignment with fill");
+                log_inst.error(log_inst.cat.ModuleB, "|{:^8}|", "hello");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t| hello  |"), "layout format centre alignment of a string");
+                // The alternate form of octal starts with a 0, unless the value is 0.
+                log_inst.error(log_inst.cat.ModuleB, "|{:#o}|{:#o}|{:#o}|{:#o}|", 8, -42, 0, static_cast<uint64_t>(UINT64_MAX));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|010|-052|0|01777777777777777777777|"), "layout format octal alternate form");
+                log_inst.error(log_inst.cat.ModuleB, "|{:#6o}|{:#06o}|", 8, 8);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   010|000010|"), "layout format octal alternate form with width");
+                // Zero padding goes after the sign and the 0x/0b prefix; any other fill goes in front of both.
+                log_inst.error(log_inst.cat.ModuleB, "|{:#010x}|{:+#010x}|{:#010b}|{:#010X}|", -42, 42, -5, static_cast<int64_t>(-255));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0x000002a|+0x000002a|-0b0000101|-0X00000FF|"), "layout format zero padding after sign and prefix");
+                log_inst.error(log_inst.cat.ModuleB, "|{:*>8}|{:*>+8}|{:*>#8x}|", -42, 42, -42);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|*****-42|*****+42|***-0x2a|"), "layout format fill in front of sign and prefix");
+                log_inst.error(log_inst.cat.ModuleB, "|{:015.3e}|", 1500.0);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0000001.500e+03|"), "layout format zero padding with an exponent sign");
+                // A space sign puts a space in front of non-negative values; a space followed by an alignment is a fill.
+                log_inst.error(log_inst.cat.ModuleB, "|{: d}|{: d}|{: d}|{: d}|", 12, -12, 0, static_cast<uint32_t>(7));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t| 12|-12| 0| 7|"), "layout format space sign");
+                log_inst.error(log_inst.cat.ModuleB, "|{: 6d}|{: 06d}|{: x}|{: #x}|", 12, 12, 255, 255);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    12| 00012| ff| 0xff|"), "layout format space sign with width and prefix");
+                log_inst.error(log_inst.cat.ModuleB, "|{: >6}|{: <6}|", 12, 12);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|    12|12    |"), "layout format space fill");
+                // + on an unsigned 0 is still written.
+                log_inst.error(log_inst.cat.ModuleB, "|{:+d}|{:+d}|", static_cast<uint32_t>(0), static_cast<uint64_t>(0));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|+0|+0|"), "layout format plus sign of unsigned zero");
                 double dd { 3.14159265758 / 2.3 };
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", dd);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.3659098511|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.366|"), "layout format");
+                log_inst.error(log_inst.cat.ModuleB, "|{}|", -0.5);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0.500000000000000|"), "layout format negative fraction");
+                log_inst.error(log_inst.cat.ModuleB, "|{:+.1f}|", -0.25f);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-0.2|"), "layout format negative fraction with sign");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.2f}|", 0.96);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0.96|"), "layout format rounding");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.0f}|", 1.75);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|2|"), "layout format rounding to integer");
+                log_inst.error(log_inst.cat.ModuleB, "|{:.1f}|", 1e20);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|100000000000000000000.0|"), "layout format beyond int64");
+                log_inst.error(log_inst.cat.ModuleB, "|{}|{}|{}|", static_cast<double>(NAN), static_cast<double>(INFINITY), -static_cast<double>(INFINITY));
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|nan|inf|-inf|"), "layout format nan and infinity");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12e}|", 10000000000000);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+11|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000e+13|"), "layout format integer e-style");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12E}|", (uint64_t)10000000000000);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+11|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.000000E+13|"), "layout format integer e-style");
+                log_inst.error(log_inst.cat.ModuleB, "v=[{:e}] end", 100000);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\tv=[1.000000e+05] end"), "layout format integer e-style keeps preceding text");
+                log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:+.2e}|{:.1e}|{:.0e}|", -1500, (uint16_t)1500, 99999, 25);
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|-1.500000e+03|+1.50e+03|1.0e+05|2e+01|"), "layout format integer e-style sign and rounding");
+                {
+                    // A spec longer than 10 characters is not supported and must not keep its width:
+                    // the output buffer is not grown for it, so padding near the end of the buffer
+                    // used to write past it. Try every line length around the initial 1024 byte buffer.
+                    bool long_spec_ok = true;
+                    bool width_ok = true;
+                    bq::string padding;
+                    bq::string spaces;
+                    for (uint32_t space = 0; space < 98; ++space) {
+                        spaces.push_back(' ');
+                    }
+                    for (uint32_t pad = 0; pad < 1100; ++pad) {
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:<99--------}").c_str(), 1);
+                        long_spec_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "1");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:<99}").c_str(), 1);
+                        width_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "1" + spaces);
+                        padding.push_back('a');
+                    }
+                    result.add_result(long_spec_ok, "layout format spec longer than 10 characters");
+                    result.add_result(width_ok, "layout format width near the end of the buffer");
+                }
+                {
+                    // The sign and the "0x"/"0b" prefix of an integer need room on top of its digits.
+                    // Try every line length around the 1024 and 2048 byte buffer sizes, so the last
+                    // digit lands on the end of the buffer.
+                    bool hex_ok = true;
+                    bool hex_min_ok = true;
+                    bool bin_ok = true;
+                    bool bin_max_ok = true;
+                    bq::string padding;
+                    bq::string ones_63;
+                    for (uint32_t bit = 0; bit < 63; ++bit) {
+                        ones_63.push_back('1');
+                    }
+                    for (uint32_t pad = 0; pad < 2100; ++pad) {
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), static_cast<uint64_t>(0xFFFFFFFFFFFFFFFFULL));
+                        hex_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "0xffffffffffffffff");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:#x}").c_str(), static_cast<int64_t>(INT64_MIN));
+                        hex_min_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "-0x8000000000000000");
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), static_cast<int64_t>(INT64_MAX));
+                        bin_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "+0b" + ones_63);
+                        log_inst.error(log_inst.cat.ModuleB, (padding + "{:+#b}").c_str(), static_cast<uint64_t>(0xFFFFFFFFFFFFFFFFULL));
+                        bin_max_ok &= log_str.end_with("[E]\t[ModuleB]\t" + padding + "+0b1" + ones_63);
+                        padding.push_back('a');
+                    }
+                    result.add_result(hex_ok, "layout format {:#x} of UINT64_MAX near the end of the buffer");
+                    result.add_result(hex_min_ok, "layout format {:#x} of INT64_MIN near the end of the buffer");
+                    result.add_result(bin_ok, "layout format {:+#b} of INT64_MAX near the end of the buffer");
+                    result.add_result(bin_max_ok, "layout format {:+#b} of UINT64_MAX near the end of the buffer");
+                }
+                {
+                    const char* current_locale = setlocale(LC_NUMERIC, nullptr);
+                    bq::string saved_locale = current_locale ? current_locale : "C";
+                    const char* comma_locales[] = { "de-DE", "de_DE.UTF-8", "de_DE.utf8", "fr_FR.UTF-8", "fr_FR.utf8" };
+                    bool locale_applied = false;
+                    for (const char* name : comma_locales) {
+                        if (setlocale(LC_NUMERIC, name)) {
+                            locale_applied = true;
+                            break;
+                        }
+                    }
+                    if (locale_applied) {
+                        log_inst.error(log_inst.cat.ModuleB, "|{:.2f}|{:.1f}|", 1.25, 1e20);
+                        result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.25|100000000000000000000.0|"), "layout format fixed notation ignores LC_NUMERIC");
+                        log_inst.error(log_inst.cat.ModuleB, "|{:e}|{:12.3E}|{:.25f}|", 1.5, 103.1234, 0.1);
+                        result.add_result(log_str.end_with("[E]\t[ModuleB]\t|1.500000e+00|   1.031E+02|0.1000000000000000055511151|"), "layout format snprintf path ignores LC_NUMERIC");
+                        setlocale(LC_NUMERIC, saved_locale.c_str());
+                    }
+                }
+                {
+                    std::mt19937_64 rng(20261009);
+                    char fmt[32];
+                    char expected[512];
+                    for (int32_t precision = 0; precision <= 19; ++precision) {
+                        snprintf(fmt, sizeof(fmt), "|{:.%" PRId32 "f}|", precision);
+                        for (int32_t n = 0; n < 300; ++n) {
+                            double value = 0;
+                            uint64_t bits = rng();
+                            switch (n % 4) {
+                            case 0:
+                                value = std::uniform_real_distribution<double>(-1000.0, 1000.0)(rng);
+                                break;
+                            case 1:
+                                // any magnitude below 2^64, subnormals included
+                                bits = (bits & 0x800FFFFFFFFFFFFFULL) | (((bits >> 52) % (1023 + 64)) << 52);
+                                memcpy(&value, &bits, sizeof(value));
+                                break;
+                            case 2:
+                                // exact binary ties
+                                value = static_cast<double>(static_cast<int64_t>(bits % 2000) - 1000) + static_cast<double>((bits >> 32) % 16) / 16.0;
+                                break;
+                            default:
+                                value = static_cast<double>(static_cast<float>(std::uniform_real_distribution<double>(-100000.0, 100000.0)(rng)));
+                                break;
+                            }
+                            snprintf(expected, sizeof(expected), "|%.*f|", static_cast<int>(precision), value);
+                            log_inst.error(log_inst.cat.ModuleB, fmt, value);
+                            result.add_result(log_str.end_with(expected), "layout format %s of %.17g matches printf %s", fmt, value, expected);
+                        }
+                    }
+                }
 
                 i = 15841548461;
                 log_inst.error(log_inst.cat.ModuleB, "|{:+10d}|", i);
@@ -184,13 +333,13 @@ namespace bq {
                 log_inst.error(log_inst.cat.ModuleB, "|{:#06X}|", i);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|0X3B03AD8AD|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.365e+00|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.366e+00|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 103.1234);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.031e+02|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12d}|", 100);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|         100|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3}|", dd);
-                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.365|"), "layout format");
+                result.add_result(log_str.end_with("[E]\t[ModuleB]\t|       1.366|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3e}|", 10000000000000.0);
                 result.add_result(log_str.end_with("[E]\t[ModuleB]\t|   1.000e+13|"), "layout format");
                 log_inst.error(log_inst.cat.ModuleB, "|{:12.3E}|", 10000000000000.0);

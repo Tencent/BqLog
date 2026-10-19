@@ -11,6 +11,11 @@ package bq.def;
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+/** Holds the text a native call wrote, so the JNI layer can hand a String back. */
 public class string_holder {
+	/** Constructor; the decoder fills in the text it decoded. */
+	public string_holder() {
+	}
+	/** The text the last native call produced. */
 	public String value;
 }

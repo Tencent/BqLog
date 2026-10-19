@@ -22,6 +22,7 @@ namespace bq {
 
     protected:
         virtual bq::string get_template_content() const override;
+        virtual bq::string get_module_template_content() const override;
         virtual bq::string format(const bq::string& template_string, const category_node& root_node) const override;
 
     private:

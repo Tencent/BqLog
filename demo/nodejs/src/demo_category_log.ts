@@ -11,7 +11,7 @@
          * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
          */
 
-        /*!
+        /**
          * Generated Wrapper For demo_category_log (TypeScript - Node.js)
          *
          * A category_log that supports attaching a category to each log entry.
@@ -33,6 +33,7 @@
         // Plain Node CommonJS (no "type":"module"): use this instead
         // const { bq } = require("@pippocao/bqlog");
 
+        /** Base class of the generated category classes. */
         class demo_category_log_category_base extends bq.log_category_base {
             protected constructor(index: number) {
                 super(index);
@@ -40,46 +41,56 @@
         }
 
 
-        class  demo_category_log_category_root
+        /** The categories declared by the category configuration. */
+        class demo_category_log_category_root
         {
+            /** The node_2 category. */
             public readonly node_2 = new (class demo_category_log_node_2 extends demo_category_log_category_base {
                 constructor() {
                     super(1);
                 }
+                /** The node_2.node_5 category. */
                 public readonly node_5 = new (class demo_category_log_node_5 extends demo_category_log_category_base {
                     constructor() {
                         super(2);
                     }
                 })();
             })();
+            /** The node_3 category. */
             public readonly node_3 = new (class demo_category_log_node_3 extends demo_category_log_category_base {
                 constructor() {
                     super(3);
                 }
+                /** The node_3.node_6 category. */
                 public readonly node_6 = new (class demo_category_log_node_6 extends demo_category_log_category_base {
                     constructor() {
                         super(4);
                     }
                 })();
+                /** The node_3.node_10 category. */
                 public readonly node_10 = new (class demo_category_log_node_10 extends demo_category_log_category_base {
                     constructor() {
                         super(5);
                     }
                 })();
             })();
+            /** The node_4 category. */
             public readonly node_4 = new (class demo_category_log_node_4 extends demo_category_log_category_base {
                 constructor() {
                     super(6);
                 }
+                /** The node_4.node_7 category. */
                 public readonly node_7 = new (class demo_category_log_node_7 extends demo_category_log_category_base {
                     constructor() {
                         super(7);
                     }
+                    /** The node_4.node_7.node_8 category. */
                     public readonly node_8 = new (class demo_category_log_node_8 extends demo_category_log_category_base {
                         constructor() {
                             super(8);
                         }
                     })();
+                    /** The node_4.node_7.node_9 category. */
                     public readonly node_9 = new (class demo_category_log_node_9 extends demo_category_log_category_base {
                         constructor() {
                             super(9);
@@ -90,6 +101,7 @@
         }
 
 
+        /** A category log whose entries may carry one of the generated categories. */
         export class demo_category_log extends bq.category_log {
             private static readonly category_names: string[] = [
                                                                    ""
@@ -105,13 +117,16 @@
                                                                ];
             private static readonly categories_count: number = demo_category_log.category_names.length;
 
+            /** The categories this log can attach to an entry; pass one to the level methods. */
             public readonly cat = new demo_category_log_category_root();
 
             protected constructor(arg: demo_category_log | bigint) {
                 super(arg as any);
             }
 
+            /** Returns how many categories this log object has. */
             public declare get_categories_count: () => number;
+            /** Returns the category names the configuration declared. */
             public declare get_categories_name_array: () => string[];
 
             /**
@@ -156,11 +171,17 @@
             }
 
             // ======== Overloads: each function supports both modes you requested ========
+            /** Logs at the verbose level in the given category. */
             public declare verbose: (typeof bq.log.prototype.verbose) & ((cat: demo_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the debug level in the given category. */
             public declare debug: (typeof bq.log.prototype.debug) & ((cat: demo_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the info level in the given category. */
             public declare info: (typeof bq.log.prototype.info) & ((cat: demo_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the warning level in the given category. */
             public declare warning: (typeof bq.log.prototype.warning) & ((cat: demo_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the error level in the given category. */
             public declare error: (typeof bq.log.prototype.error) & ((cat: demo_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
+            /** Logs at the fatal level in the given category. */
             public declare fatal: (typeof bq.log.prototype.fatal) & ((cat: demo_category_log_category_base, log_format_content: string, ...args: unknown[]) => boolean);
         }
         

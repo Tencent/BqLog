@@ -12,6 +12,8 @@
 //
 // AUTO-GENERATED - do not edit by hand.
 // Contains BENCH_MULTI_FORMAT_COUNT distinct compile-time format-string literals.
+// The generator pairs each handler with the Go parity test, which reads one case per line.
+// clang-format off
 //
 // Provides BENCH_MULTI_FORMAT_COUNT distinct compile-time format-string
 // literals. Each distinct literal produces a distinct compressed-log format

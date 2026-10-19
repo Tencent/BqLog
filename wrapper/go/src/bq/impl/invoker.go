@@ -52,6 +52,7 @@ var (
 	console_hook Console_callback
 )
 
+// Set_console_hook stores the callback the native console hook calls into.
 func Set_console_hook(cb Console_callback) {
 	callback_mu.Lock()
 	console_hook = cb
@@ -76,14 +77,22 @@ func bq_go_console_fetch_callback(handle C.uintptr_t, log_id C.uint64_t, categor
 	}
 }
 
+// Get_log_version returns the version string of the loaded library.
 func Get_log_version() string {
 	return C.GoString(C.__api_get_log_version())
 }
 
+// Enable_auto_crash_handler asks the library to flush buffered logs from a crash handler.
 func Enable_auto_crash_handler() {
 	C.__api_enable_auto_crash_handler()
 }
 
+// Get_recovery_capability returns the native recovery_capability value.
+func Get_recovery_capability() int32 {
+	return int32(C.__api_get_recovery_capability())
+}
+
+// Create_log creates a log object and returns its id, or 0 when it failed.
 func Create_log(name, config string, category_names []string) uint64 {
 	c_name := C.CString(name)
 	defer C.free(unsafe.Pointer(c_name))
@@ -106,6 +115,7 @@ func Create_log(name, config string, category_names []string) uint64 {
 	return uint64(C.__api_create_log(c_name, c_config, C.uint32_t(len(category_names)), cat_array))
 }
 
+// Log_reset_config applies a new config to an existing log, and reports whether it was accepted.
 func Log_reset_config(name, config string) bool {
 	c_name := C.CString(name)
 	defer C.free(unsafe.Pointer(c_name))
@@ -154,40 +164,48 @@ func Go_log_write_4(log_id uint64, level uint8, category_index uint32, format st
 		C.uint64_t(value3), (*C.char)(unsafe.Pointer(unsafe.StringData(string3)))))
 }
 
+// Log_device_console writes one line to the device console.
 func Log_device_console(level int32, content string) {
 	c_content := C.CString(content)
 	defer C.free(unsafe.Pointer(c_content))
 	C.__api_log_device_console(C.bq_log_level(level), c_content)
 }
 
+// Force_flush flushes the buffered logs of one log object; id 0 means every log object.
 func Force_flush(log_id uint64) {
 	C.__api_force_flush(C.uint64_t(log_id))
 }
 
+// Set_appender_enable turns one appender of a log object on or off.
 func Set_appender_enable(log_id uint64, appender_name string, enable bool) {
 	c_name := C.CString(appender_name)
 	defer C.free(unsafe.Pointer(c_name))
 	C.__api_set_appender_enable(C.uint64_t(log_id), c_name, C.bool(enable))
 }
 
+// Get_file_base_dir returns one of the library's base directories.
 func Get_file_base_dir(base_dir_type int32) string {
 	return C.GoString(C.__api_get_file_base_dir(C.int32_t(base_dir_type)))
 }
 
+// Reset_base_dir points one of the library's base directories at dir.
 func Reset_base_dir(base_dir_type int32, dir string) {
 	c_dir := C.CString(dir)
 	defer C.free(unsafe.Pointer(c_dir))
 	C.__api_reset_base_dir(C.int32_t(base_dir_type), c_dir)
 }
 
+// Get_logs_count returns how many log objects exist.
 func Get_logs_count() uint32 {
 	return uint32(C.__api_get_logs_count())
 }
 
+// Get_log_id_by_index returns the id of the log object at index.
 func Get_log_id_by_index(index uint32) uint64 {
 	return uint64(C.__api_get_log_id_by_index(C.uint32_t(index)))
 }
 
+// Get_log_name_by_id returns the name of a log object; the bool is false when it does not exist.
 func Get_log_name_by_id(log_id uint64) (string, bool) {
 	var name_def C.bq_api_string_def
 	if C.__api_get_log_name_by_id(C.uint64_t(log_id), &name_def) {
@@ -196,10 +214,12 @@ func Get_log_name_by_id(log_id uint64) (string, bool) {
 	return "", false
 }
 
+// Get_log_categories_count returns how many categories a log object has.
 func Get_log_categories_count(log_id uint64) uint32 {
 	return uint32(C.__api_get_log_categories_count(C.uint64_t(log_id)))
 }
 
+// Get_log_category_name_by_index returns a category name; the bool is false when the index is out of range.
 func Get_log_category_name_by_index(log_id uint64, category_index uint32) (string, bool) {
 	var name_def C.bq_api_string_def
 	if C.__api_get_log_category_name_by_index(C.uint64_t(log_id), C.uint32_t(category_index), &name_def) {
@@ -214,6 +234,7 @@ func Get_log_merged_log_level_bitmap(log_id uint64) *uint32 {
 	return (*uint32)(unsafe.Pointer(C.__api_get_log_merged_log_level_bitmap_by_log_id(C.uint64_t(log_id))))
 }
 
+// Get_log_print_stack_level_bitmap returns the native bitmap of the levels that print a stack trace.
 func Get_log_print_stack_level_bitmap(log_id uint64) *uint32 {
 	return (*uint32)(unsafe.Pointer(C.__api_get_log_print_stack_level_bitmap_by_log_id(C.uint64_t(log_id))))
 }
@@ -224,10 +245,12 @@ func Get_log_category_level_words(log_id uint64) *uint32 {
 	return (*uint32)(unsafe.Pointer(C.__api_get_log_category_level_words_by_log_id(C.uint64_t(log_id))))
 }
 
+// Get_log_category_masks_array returns the native array of category masks.
 func Get_log_category_masks_array(log_id uint64) *uint8 {
 	return (*uint8)(unsafe.Pointer(C.__api_get_log_category_masks_array_by_log_id(C.uint64_t(log_id))))
 }
 
+// Take_snapshot_string returns the buffered recent logs of a log object as text.
 func Take_snapshot_string(log_id uint64, time_zone_config string) string {
 	// Native snapshot locks must not outlive the OS-thread affinity of a call.
 	runtime.LockOSThread()
@@ -243,6 +266,7 @@ func Take_snapshot_string(log_id uint64, time_zone_config string) string {
 	return C.GoStringN(snapshot.str, C.int(snapshot.len))
 }
 
+// Log_decoder_create opens a decoder for a log file and returns its handle; the bool is false when it failed.
 func Log_decoder_create(log_file_path, priv_key string) (uint32, bool) {
 	c_path := C.CString(log_file_path)
 	defer C.free(unsafe.Pointer(c_path))
@@ -256,6 +280,7 @@ func Log_decoder_create(log_file_path, priv_key string) (uint32, bool) {
 	return uint32(handle), rc == 0
 }
 
+// Log_decoder_decode returns the next decoded chunk; the bool is false at the end or on error.
 func Log_decoder_decode(handle uint32) (string, bool) {
 	var out C.bq_api_string_def
 	rc := C.__api_log_decoder_decode(C.uint32_t(handle), &out)
@@ -265,10 +290,12 @@ func Log_decoder_decode(handle uint32) (string, bool) {
 	return C.GoStringN(out.str, C.int(out.len)), true
 }
 
+// Log_decoder_destroy closes a decoder handle.
 func Log_decoder_destroy(handle uint32) {
 	C.__api_log_decoder_destroy(C.uint32_t(handle))
 }
 
+// Log_decode decodes a whole log file into another file, and reports whether it succeeded.
 func Log_decode(in_file_path, out_file_path, priv_key string) bool {
 	c_in := C.CString(in_file_path)
 	defer C.free(unsafe.Pointer(c_in))
@@ -282,18 +309,22 @@ func Log_decode(in_file_path, out_file_path, priv_key string) bool {
 	return bool(C.__api_log_decode(c_in, c_out, c_key))
 }
 
+// Register_console_callback installs the native console callback.
 func Register_console_callback() {
 	C.__api_register_console_callbacks(C.bq_on_console_callback_ptr())
 }
 
+// Unregister_console_callback removes the native console callback.
 func Unregister_console_callback() {
 	C.__api_unregister_console_callbacks(C.bq_on_console_callback_ptr())
 }
 
+// Set_console_buffer_enable turns the console appender buffer on or off.
 func Set_console_buffer_enable(enable bool) {
 	C.__api_set_console_buffer_enable(C.bool(enable))
 }
 
+// Fetch_and_remove_console_buffer hands the buffered console entries to callback; the bool reports whether the buffer had any.
 func Fetch_and_remove_console_buffer(callback Console_callback) bool {
 	handle := cgo.NewHandle(callback)
 	defer handle.Delete()

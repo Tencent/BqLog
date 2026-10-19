@@ -19,6 +19,9 @@ namespace bq {
 
     protected:
         virtual bq::string get_template_content() const = 0;
+        // Languages that can be imported return their module interface text here; an empty
+        // string means the language has no module entry and no file is generated for it.
+        virtual bq::string get_module_template_content() const { return bq::string(); }
         virtual bq::string format(const bq::string& template_string, const category_node& root_node) const = 0;
 
         static bq::string uint64_to_string(uint64_t value);
@@ -28,5 +31,7 @@ namespace bq {
     public:
         category_log_template_base(const bq::string& class_name);
         bq::string generate(const category_node& root_node) const;
+        // The module interface unit, or an empty string when this language has none.
+        bq::string generate_module(const category_node& root_node) const;
     };
 }

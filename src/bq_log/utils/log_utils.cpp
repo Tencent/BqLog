@@ -13,6 +13,17 @@
 
 namespace bq {
 
+    recovery_capability log_utils::get_recovery_capability()
+    {
+        if (!bq::memory_map::is_platform_support()) {
+            return recovery_capability::no_memory_map;
+        }
+        if (!bq::platform::is_cross_process_file_lock_supported()) {
+            return recovery_capability::no_instance_lock;
+        }
+        return recovery_capability::ready;
+    }
+
     bool log_utils::get_categories_mask_by_config(const bq::array<bq::string> categories_name, const bq::property_value& categories_mask_config, bq::array_inline<uint8_t>& out_categories_mask)
     {
         assert(categories_name.size() == out_categories_mask.size() && "categories mask size must be equal to categories name size");

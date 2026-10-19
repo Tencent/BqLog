@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.22)
 
-set(TARGET_PLATFORM "win64" CACHE STRING "Choose the target platform")
-set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS "win64" "mac" "ios" "android" "linux" "unix")
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt)
+elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
+    include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
+endif()
+
+# A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
+bq_default_target_platform()
 
 set(BUILD_LIB_TYPE "static_lib" CACHE STRING "Choose the build type")
-set_property(CACHE BUILD_LIB_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib")
+set_property(CACHE BUILD_LIB_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib" "both")
 
 if(TARGET_PLATFORM STREQUAL "mac" OR TARGET_PLATFORM STREQUAL "ios")
 set(APPLE_LIB_FORMAT "framework" CACHE STRING "Apple build format")
@@ -15,6 +21,8 @@ OPTION(JAVA_SUPPORT "Support Java" OFF)
 OPTION(NODE_API_SUPPORT "Support Node-API(NodeJs)" OFF)
 OPTION(PYTHON_SUPPORT "Support Python (CPython C Extension)" OFF)
 OPTION(GO_SUPPORT "Support Go (cgo)" OFF)
+# Packagers turn this off so a new compiler warning cannot fail a package build.
+OPTION(BQ_WERROR "Treat compiler warnings as errors" ON)
 
 set(BQ_ENABLE_ASAN_UPPER "")
 if(DEFINED ENV{BQ_ENABLE_ASAN})
@@ -45,11 +53,6 @@ if(DEFINED ENV{BQ_ENABLE_ASAN} AND BQ_ENABLE_ASAN_UPPER MATCHES "^(TRUE|ON|1)$")
     add_compile_definitions(BQ_ASAN_ENABLED)
 endif()
 
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../../../submodules/BqCommon/CMake_utils.txt)
-elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
-    include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
-endif()
 #Parse version from version.cpp
 bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/version.cpp")
 
@@ -67,31 +70,19 @@ endif()
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set(CMAKE_CXX_VISIBILITY_PRESET hidden)
 set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
+# The static library is linked into the consumer's shared objects.
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 if (MSVC)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc /D_HAS_EXCEPTIONS=0 /GR- /utf-8")
     add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
-    add_compile_options(/W4 /WX)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
-    if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        list(APPEND EXTRA_FLAGS -Wshorten-64-to-32)
-        list(APPEND EXTRA_FLAGS -Wno-error=unused-command-line-argument)
-    elseif (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-        list(APPEND EXTRA_FLAGS -Wlogical-op)
-        list(APPEND EXTRA_FLAGS -Wduplicated-branches)
-        list(APPEND EXTRA_FLAGS -Warray-bounds)
-    endif()
+endif()
 
-    add_compile_options(
-            -Wall -Wextra -pedantic -Werror
-            -Wundef -Wshadow -Wstrict-aliasing
-            -Wcast-qual -Wconversion -Wsign-conversion
-            -Wnull-dereference -Wformat=2 -Wuninitialized
-            ${EXTRA_FLAGS}
-    )
-    if (TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
-    endif()
+bq_set_warning_flags()
+
+if (NOT MSVC AND TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
 endif()
 if(ANDROID_STL STREQUAL "none")
     add_compile_definitions(BQ_NO_LIBCPP=1)
@@ -134,7 +125,6 @@ include_directories(
 )
 
 set(ARTIFACTS_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../artifacts/${BUILD_LIB_TYPE}")
-set(INSTALL_OUTPUT_BASE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../install/${BUILD_LIB_TYPE}")
 
 if(TARGET_PLATFORM STREQUAL "android")
     set(ARTIFACTS_SUB_DIR "lib/$<CONFIG>/${ANDROID_ABI}")
@@ -256,23 +246,37 @@ endif()
 
 
 
-set(INSTALL_SUB_DIR "${ARTIFACTS_SUB_DIR}")
+# The caller owns the install shape: a platform driver passes CMAKE_INSTALL_LIBDIR, a package
+# manager passes nothing.
+include(GNUInstallDirs)
 
 message(STATUS "Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
-message(STATUS "Dist Directory:${INSTALL_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}")
+message(STATUS "Install prefix:${CMAKE_INSTALL_PREFIX} libdir:${CMAKE_INSTALL_LIBDIR}")
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 
-#universal binary for mac os, support both Intel cpu and Apple cpu
-if(TARGET_PLATFORM STREQUAL "mac")
+# Universal on Apple unless the caller chose the architectures; a package manager must not get one.
+if(TARGET_PLATFORM STREQUAL "mac" AND NOT DEFINED CMAKE_OSX_ARCHITECTURES)
     set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
 endif()
 
 if(BUILD_LIB_TYPE STREQUAL "static_lib")
     # build static library
     add_library(BqLog STATIC ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+elseif(BUILD_LIB_TYPE STREQUAL "both")
+    # A standard install ships both forms in one package; the consumer picks one.
+    # BqLog stays the shared target so that everything below keeps applying to it.
+    add_library(BqLog SHARED ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+    add_library(BqLogStatic STATIC ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+    set_target_properties(BqLog PROPERTIES OUTPUT_NAME BqLog EXPORT_NAME BqLogShared)
+    set_target_properties(BqLogStatic PROPERTIES OUTPUT_NAME BqLog EXPORT_NAME BqLogStatic)
+    target_compile_definitions(BqLog PRIVATE BQ_DYNAMIC_LIB)
+    if(WIN32)
+        # The shared target's import library is BqLog.lib as well.
+        set_target_properties(BqLogStatic PROPERTIES ARCHIVE_OUTPUT_NAME BqLog_static)
+    endif()
 else()
     # build dynamic library
     add_compile_definitions(BQ_DYNAMIC_LIB)
@@ -305,6 +309,16 @@ else()
     endif()
 endif()
 
+# What an exported consumer sees: the public include root, never the src/ internals.
+target_include_directories(BqLog PUBLIC
+    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+if(BUILD_LIB_TYPE STREQUAL "both")
+    target_include_directories(BqLogStatic PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>
+        $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>)
+endif()
+
 
 if(TARGET_PLATFORM STREQUAL "android")
     find_library(log-lib log)
@@ -331,7 +345,7 @@ elseif(TARGET_PLATFORM STREQUAL "ohos")
     )
 elseif(TARGET_PLATFORM STREQUAL "mac")
     set_xcode_property(BqLog DEBUG_INFORMATION_FORMAT "dwarf-with-dsym" "ALL")
-    if(APPLE_LIB_FORMAT STREQUAL "framework")
+    if(APPLE_LIB_FORMAT STREQUAL "framework" AND NOT BUILD_LIB_TYPE STREQUAL "both")
         set_target_properties(BqLog PROPERTIES
             FRAMEWORK TRUE
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
@@ -353,7 +367,7 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
     
     set_xcode_property(BqLog DEBUG_INFORMATION_FORMAT "dwarf-with-dsym" "ALL")
     
-    if(APPLE_LIB_FORMAT STREQUAL "framework")
+    if(APPLE_LIB_FORMAT STREQUAL "framework" AND NOT BUILD_LIB_TYPE STREQUAL "both")
         set_target_properties(BqLog PROPERTIES
             FRAMEWORK TRUE
             MACOSX_FRAMEWORK_IDENTIFIER com.tencent.BqLog
@@ -433,6 +447,26 @@ elseif(TARGET_PLATFORM STREQUAL "win64")
     endif()
 endif()
 
+# The extra static target of a standard install carries the same link requirements.
+if(BUILD_LIB_TYPE STREQUAL "both")
+    if(TARGET_PLATFORM STREQUAL "android")
+        target_link_libraries(BqLogStatic PRIVATE ${log-lib} ${android-lib})
+    elseif(TARGET_PLATFORM STREQUAL "linux")
+        target_link_libraries(BqLogStatic PRIVATE pthread)
+    elseif(TARGET_PLATFORM STREQUAL "unix")
+        target_link_libraries(BqLogStatic PRIVATE pthread)
+        if(EXECINFO_LIBRARY)
+            target_link_libraries(BqLogStatic PRIVATE ${EXECINFO_LIBRARY})
+        endif()
+    elseif(TARGET_PLATFORM STREQUAL "ohos")
+        target_link_libraries(BqLogStatic PRIVATE ${ACE_NAPI_LIB} ${HILOG_LIB} dl)
+    elseif(TARGET_PLATFORM STREQUAL "win64")
+        if(NOT MSVC)
+            target_link_libraries(BqLogStatic PRIVATE -ldbghelp)
+        endif()
+    endif()
+endif()
+
 add_custom_command(TARGET BqLog POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E remove_directory "${ARTIFACTS_OUTPUT_BASE_DIR}/include"
     COMMAND ${CMAKE_COMMAND} -E copy_directory "${CMAKE_CURRENT_SOURCE_DIR}/../include" "${ARTIFACTS_OUTPUT_BASE_DIR}/include"
@@ -461,23 +495,44 @@ if(NOT TARGET_PLATFORM STREQUAL "ohos")
     )
 endif()
 
-set(CMAKE_INSTALL_PREFIX "${INSTALL_OUTPUT_BASE_DIR}")
+include(CMakePackageConfigHelpers)
 
+# install(EXPORT) does not evaluate $<CONFIG> in DESTINATION, while the drivers set
+# CMAKE_INSTALL_LIBDIR to lib/$<CONFIG>; find_package looks in lib/cmake/<name> either way.
+if(CMAKE_INSTALL_LIBDIR MATCHES "\\$<")
+    set(_bq_package_cmake_dir "lib/cmake/BqLog")
+    # bqlog.pc is written at configure time, before any configuration is known, so it names the
+    # library directory relative to itself instead of carrying $<CONFIG>: the file installs into
+    # <libdir>/pkgconfig, whichever <libdir> the caller asked for.
+    set(BQ_PC_LIBDIR "\${pcfiledir}/..")
+else()
+    set(_bq_package_cmake_dir "${CMAKE_INSTALL_LIBDIR}/cmake/BqLog")
+    set(BQ_PC_LIBDIR "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
+endif()
 
-install(TARGETS BqLog
-    ARCHIVE DESTINATION "${INSTALL_SUB_DIR}"
-    LIBRARY DESTINATION "${INSTALL_SUB_DIR}"
-    RUNTIME DESTINATION "${INSTALL_SUB_DIR}"
-    FRAMEWORK DESTINATION "${INSTALL_SUB_DIR}"
+if(BUILD_LIB_TYPE STREQUAL "both")
+    set(_bq_lib_targets BqLog BqLogStatic)
+else()
+    set(_bq_lib_targets BqLog)
+endif()
+
+# A Windows DLL is a RUNTIME artifact and installs to bin/, as package managers expect; the
+# prebuilt drivers pass CMAKE_INSTALL_BINDIR=lib/<config> to keep the release archive layout.
+install(TARGETS ${_bq_lib_targets}
+    EXPORT BqLogTargets
+    ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+    RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+    FRAMEWORK DESTINATION "${CMAKE_INSTALL_LIBDIR}"
 )
 
-install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/"
-    DESTINATION "${INSTALL_SUB_DIR}"
+install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}"
     FILES_MATCHING PATTERN "*.dSYM"
 )
 
-install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${INSTALL_SUB_DIR}/BqLog.pdb"
-        DESTINATION "${INSTALL_SUB_DIR}"
+install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/BqLog.pdb"
+        DESTINATION "${CMAKE_INSTALL_BINDIR}"
         OPTIONAL
 )
 
@@ -486,15 +541,58 @@ file(GLOB MD_FILES
 )
 
 install(FILES ${MD_FILES}
-    DESTINATION ".."
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
 )
 
 install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../docs"
-    DESTINATION ".."
+    DESTINATION "${CMAKE_INSTALL_DOCDIR}"
 )
 
-install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/include"
-    DESTINATION "."
+install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/include/"
+    DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+# Package discovery: find_package(BqLog) for CMake, pkg-config for everything else.
+install(EXPORT BqLogTargets
+    FILE BqLogTargets.cmake
+    NAMESPACE bqlog::
+    DESTINATION "${_bq_package_cmake_dir}"
+)
+
+configure_package_config_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/../pack/BqLogConfig.cmake.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfig.cmake"
+    INSTALL_DESTINATION "${_bq_package_cmake_dir}"
+    PATH_VARS CMAKE_INSTALL_INCLUDEDIR
+)
+
+write_basic_package_version_file(
+    "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfigVersion.cmake"
+    VERSION ${PROJECT_VERSION}
+    COMPATIBILITY SameMajorVersion
+)
+
+install(FILES
+    "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfig.cmake"
+    "${CMAKE_CURRENT_BINARY_DIR}/BqLogConfigVersion.cmake"
+    DESTINATION "${_bq_package_cmake_dir}"
+)
+
+# bqlog.pc advertises the extra link requirement of a static library. Windows does not link
+# pthread for any target (see the target_link_libraries calls above), so it stays empty there.
+set(BQ_PC_LIBS_PRIVATE "-lpthread")
+if(TARGET_PLATFORM STREQUAL "win64")
+    set(BQ_PC_LIBS_PRIVATE "")
+endif()
+
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/../pack/bqlog.pc.in"
+    "${CMAKE_CURRENT_BINARY_DIR}/bqlog.pc"
+    @ONLY
+)
+
+install(FILES "${CMAKE_CURRENT_BINARY_DIR}/bqlog.pc"
+    DESTINATION "${CMAKE_INSTALL_LIBDIR}/pkgconfig"
 )
 
 

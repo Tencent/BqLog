@@ -21,6 +21,7 @@ import { load_node_sync_core, native_binding } from "./lib_loader_core";
 let native_mod_: native_binding | null = null;
 const proc: any = (globalThis as any)?.process;
 
+/** Binds one native __bq_napi_<name> export; throws when the module or the export is missing. */
 export function native_export(name: string): any {
     const mod = native_mod_;
     if (!mod) throw new Error("native module not loaded");

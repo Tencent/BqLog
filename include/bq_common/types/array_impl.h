@@ -16,9 +16,11 @@
  * \date 2022/08/10
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
+#endif
 #include "bq_common/misc/assert.h"
 #include "bq_common/types/type_tools.h"
 #include "bq_common/types/array_def.h"
@@ -172,7 +174,7 @@ namespace bq {
     }
 
     template <typename T, typename ARRAY>
-    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type *() const
+    BQ_ARRAY_INLINE BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::operator typename BQ_ARRAY_ITER_CLS_NAME<T, ARRAY>::value_type*() const
     {
         return data_;
     }

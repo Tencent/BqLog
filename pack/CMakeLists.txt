@@ -12,6 +12,9 @@ message(STATUS "BqLog Version:${BQ_VERSION}")
 project("${PACKAGE_NAME}Pack" VERSION ${BQ_VERSION} LANGUAGES CXX)
 BQ_DETECT_ARCH(DETECTED_ARCH)
 
+# A driver script passes TARGET_PLATFORM; detect it otherwise.
+bq_default_target_platform()
+
 # ========================================================
 # 1. Always clean the dist directory first
 # ========================================================

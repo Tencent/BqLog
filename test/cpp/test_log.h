@@ -38,11 +38,10 @@ namespace bq {
 						appenders_config.ConsoleAppender.time_zone=localtime
 						appenders_config.ConsoleAppender.levels=[all]
                         log.buffer_size=65535
-                        log.recovery=true
 			            log.thread_mode=sync
 
 			        )"
-                    + snapshot_config);
+                    + bq::string(recovery_available() ? "\nlog.recovery=true\n" : "\nlog.recovery=false\n") + snapshot_config);
         }
 
         static void log_creator_2(bq::string snapshot_config = "")

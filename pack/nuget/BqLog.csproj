@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+
+    <PackageId>BqLog</PackageId>
+    <!-- The managed assembly must not be called BqLog.dll. The native library for Windows is,
+         and a RID-specific publish copies both into the output root, which the SDK rejects with
+         NETSDK1152 ("multiple publish output files with the same relative path"). The native
+         name cannot change: DllImport("BqLog") and the engine plugins all expect it. -->
+    <AssemblyName>BqLog.Managed</AssemblyName>
+    <!-- Placeholder only: releases pass -p:Version= from src/bq_log/global/version.cpp, so the
+         version number is not written down twice. -->
+    <Version>0.0.0</Version>
+    <Authors>Tencent</Authors>
+    <Description>Lightweight, high-performance, cross-language logging library.</Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/Tencent/BqLog</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/Tencent/BqLog</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageTags>logging;log;performance;native;cross-platform</PackageTags>
+  </PropertyGroup>
+
+  <!-- The bindings live with the other wrappers; they are compiled here, never copied. -->
+  <ItemGroup>
+    <Compile Include="../../wrapper/csharp/src/bq/**/*.cs" LinkBase="bq" />
+  </ItemGroup>
+
+  <!-- runtimes/ is produced by collect_runtimes.sh from the prebuilt platform libraries. -->
+  <ItemGroup>
+    <None Include="runtimes/**/*" Pack="true"
+          PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
+    <None Include="PACKAGE_README.md" Pack="true" PackagePath="README.md" />
+  </ItemGroup>
+
+  <!-- Imported by every consumer; the file itself only acts on .NET Framework targets. -->
+  <ItemGroup>
+    <None Include="buildTransitive/BqLog.targets" Pack="true"
+          PackagePath="buildTransitive/BqLog.targets" />
+  </ItemGroup>
+
+</Project>

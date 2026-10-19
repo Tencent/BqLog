@@ -35,13 +35,18 @@ for build_target in "${BUILD_TARGET[@]}"; do
       rm -rf "cmake_build"
       mkdir -p "cmake_build"
       pushd "cmake_build" >/dev/null
+      # CMAKE_INSTALL_* reproduces the prebuilt tarball shape,
+      # install/<libtype>/lib/<config>/<abi>.
       cmake ../../../../src \
         -DOHOS_ARCH="$build_target" \
         -DCMAKE_BUILD_TYPE="$build_config" \
         -DBUILD_LIB_TYPE="$build_lib_type" \
         -DCMAKE_TOOLCHAIN_FILE="$NDK_PATH/build/cmake/ohos.toolchain.cmake" \
         -DTARGET_PLATFORM:STRING=ohos \
-        -DOHOS_STL=c++_static
+        -DOHOS_STL=c++_static \
+        -DCMAKE_INSTALL_PREFIX="../../../../install/$build_lib_type" \
+        -DCMAKE_INSTALL_LIBDIR="lib/$build_config/$build_target" \
+        -DCMAKE_INSTALL_DOCDIR=..
 
       # Build and install
       cmake --build . -- -j"${PARALLEL_JOBS}"

@@ -61,6 +61,22 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 
 ---
 
+## 转义与续行
+
+值取第一个 `=`（没有 `=` 时取第一个 `:`）之后的内容，并去掉首尾空白。
+
+| 写法 | 结果 |
+|------|------|
+| 行尾的 `\` | 值续到下一行 |
+| `\n` | 换行 |
+| `\=`、`\:` | `=`、`:` 本身 |
+
+所以以 `\` 结尾的值会把下一行接上来。值确实要以反斜杠结尾时（比如 `D:\logs\` 这样的 Windows 目录），把这一行放在配置最后一行，或者改用 `/`。
+
+空值（`key=`）会被忽略。
+
+---
+
 ## 详细解释
 
 ### `appenders_config`
@@ -195,6 +211,8 @@ appenders_config.appender_3.file_name=~/bqLog/compress_log
 
 - `true`：当异步日志遇到程序异常退出时，缓冲区中还未落盘的数据会在下次启动后重新写入日志文件。
 - `false`：进程异常退出且未调用 `force_flush()` 时，缓冲中的日志数据将丢失。
+
+少数平台（例如 Solaris）不支持，配置后只打印警告并忽略，见 [`get_recovery_capability()`](./API_REFERENCE_CHS.md#恢复能力查询)。
 
 具体行为详见 [高级用法 — 程序异常退出的数据保护](./ADVANCED_USAGE_CHS.md#3-程序异常退出的数据保护)。
 

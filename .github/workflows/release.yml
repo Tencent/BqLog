@@ -148,7 +148,9 @@ jobs:
           fi
 
       - name: Create GitHub Release (main repo — Tencent/BqLog)
-        uses: softprops/action-gh-release@v3
+        # Pinned to a commit, not a tag: a moved tag would hand this job's release permissions to
+        # whatever it pointed at. Dependabot keeps the pin current.
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           tag_name: ${{ steps.version.outputs.tag }}
           name: ${{ steps.version.outputs.release_name }}
@@ -168,7 +170,9 @@ jobs:
       # pippocao/BqLogFabRelease. GITHUB_TOKEN cannot write across repositories.
       - name: Create GitHub Release (Fab repo — pippocao/BqLogFabRelease)
         if: ${{ hashFiles('release_assets_fab/*') != '' }}
-        uses: softprops/action-gh-release@v3
+        # Pinned to a commit, not a tag: a moved tag would hand this job's release permissions to
+        # whatever it pointed at. Dependabot keeps the pin current.
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3.0.3
         with:
           token: ${{ secrets.FAB_RELEASE_TOKEN }}
           repository: pippocao/BqLogFabRelease
@@ -184,6 +188,42 @@ jobs:
           draft: false
           prerelease: false
           files: release_assets_fab/*
+
+  # The Homebrew formula and the vcpkg port need the checksum of the tag archive, which exists only
+  # once the release job has pushed the tag. They are built here for the upstream PRs and published
+  # as a workflow artifact: the release page should list what users download, this is for whoever
+  # submits the formula and the port upstream.
+  package_manager_files:
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Fill in the release checksums
+        run: |
+          set -euo pipefail
+          VERSION="${{ needs.build.outputs.version }}"
+          TARBALL="$RUNNER_TEMP/Release_${VERSION}.tar.gz"
+          curl -fsSL --retry 5 "https://github.com/Tencent/BqLog/archive/refs/tags/Release_${VERSION}.tar.gz" -o "$TARBALL"
+          bash pack/homebrew/bump.sh "$VERSION" "$TARBALL"
+          bash pack/vcpkg/bump.sh "$VERSION" "$TARBALL"
+          mkdir -p upstream
+          cp pack/homebrew/Formula/bqlog.rb upstream/
+          tar -C pack/vcpkg/ports -czf upstream/vcpkg_port_bqlog.tar.gz bqlog
+          {
+            echo "### Package manager files for ${VERSION}"
+            echo '```ruby'
+            cat upstream/bqlog.rb
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload them as an artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: package_manager_files_${{ needs.build.outputs.version }}
+          path: upstream/
+          if-no-files-found: error
 
   # Source-only Go distribution. No other workflow publishes go_dist.
   prepare_go_module:
@@ -265,12 +305,12 @@ jobs:
         if: runner.os == 'Windows'
         uses: msys2/setup-msys2@v2
         with:
-          msystem: MINGW64
-          install: mingw-w64-x86_64-gcc
+          msystem: UCRT64
+          install: mingw-w64-ucrt-x86_64-gcc
       - name: Add Windows toolchain to PATH
         if: runner.os == 'Windows'
         shell: bash
-        run: echo 'C:/msys64/mingw64/bin' >> "$GITHUB_PATH"
+        run: echo 'C:/msys64/ucrt64/bin' >> "$GITHUB_PATH"
       - name: Download source module
         uses: actions/download-artifact@v8
         with:
@@ -314,7 +354,9 @@ jobs:
           SOURCE_COMMIT: ${{ github.sha }}
           MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
         run: bash build/wrapper/go/publish.sh "$GITHUB_WORKSPACE" "$MODULE_DIRECTORY" "$VERSION" "$SOURCE_COMMIT"
-      - name: Request Go proxy and pkg.go.dev indexing
+      # What users fetch is the proxy. pkg.go.dev picks the version up from the proxy on its own,
+      # sometimes hours later, so its documentation page is not waited for.
+      - name: Verify the version on proxy.golang.org
         timeout-minutes: 10
         working-directory: ${{ runner.temp }}
         env:
@@ -325,38 +367,14 @@ jobs:
           set -euo pipefail
           module_path="$(awk '$1 == "module" { print $2; exit }' "$MODULE_DIRECTORY/go.mod")"
           test -n "$module_path"
-          # pkg.go.dev discovers versions asynchronously through the Go module index.
           for attempt in 1 2 3; do
             if go list -m "$module_path@v$VERSION"; then
-              echo "Requested pkg.go.dev indexing for $module_path@v$VERSION"
+              echo "On the proxy: $module_path@v$VERSION (documentation follows at https://pkg.go.dev/$module_path@v$VERSION)"
               exit 0
             fi
             if (( attempt < 3 )); then sleep 30; fi
           done
-          echo "::error::The Go tag is published, but the official proxy could not fetch it. Rerun this job to retry indexing."
-          exit 1
-      - name: Verify pkg.go.dev documentation
-        timeout-minutes: 20
-        env:
-          VERSION: ${{ needs.prepare_go_module.outputs.version }}
-          MODULE_DIRECTORY: ${{ runner.temp }}/bqlog-go-source
-        run: |
-          set -euo pipefail
-          module_path="$(awk '$1 == "module" { print $2; exit }' "$MODULE_DIRECTORY/go.mod")"
-          test -n "$module_path"
-          page="$RUNNER_TEMP/pkg-go-dev.html"
-          # Indexing is asynchronous; require the exact released version's documentation.
-          for attempt in $(seq 1 30); do
-            if curl --fail --silent --show-error --location --connect-timeout 10 --max-time 20 \
-                "https://pkg.go.dev/$module_path@v$VERSION" -o "$page" \
-                && grep -Fq 'Documentation-overview' "$page"; then
-              echo "Documentation available: https://pkg.go.dev/$module_path@v$VERSION"
-              exit 0
-            fi
-            echo "Waiting for pkg.go.dev indexing ($attempt/30)..."
-            if (( attempt < 30 )); then sleep 30; fi
-          done
-          echo "::error::The Go module is published, but pkg.go.dev documentation is not available yet. Rerun this job to retry verification."
+          echo "::error::The Go tag is published, but proxy.golang.org could not fetch it. Rerun this job to retry."
           exit 1
 
   # Publish Python wheel to PyPI
@@ -390,6 +408,63 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: dist/
+
+  # Publish the .NET package to nuget.org, carrying the prebuilt native libraries.
+  publish_nuget:
+    runs-on: ubuntu-latest
+    needs: [build]
+    permissions:
+      id-token: write  # Required for OIDC Trusted Publishing
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Download the Windows libraries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: windows_*_libs_*
+          path: artifacts_in/
+
+      - name: Download the Linux libraries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: linux_*_libs_*
+          path: artifacts_in/
+
+      # A pattern matching a single artifact is extracted without its own directory, so name it here.
+      - name: Download the macOS libraries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: macos_universal_binary_libs_*
+          path: artifacts_in/macos_universal_binary_libs_${{ needs.build.outputs.version }}/
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Assemble the native libraries
+        run: bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget
+
+      - name: Pack
+        run: dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=${{ needs.build.outputs.version }} -o nuget_out
+
+      # The temporary key lives one hour and one OIDC token yields exactly one key, so the login
+      # sits immediately before the push. No long-lived NUGET_API_KEY is involved.
+      - name: Log in to nuget.org (OIDC -> temporary API key)
+        # Pinned to a commit, not a tag: this job holds id-token:write for nuget.org OIDC.
+        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Publish to nuget.org
+        run: |
+          dotnet nuget push "nuget_out/*.nupkg" \
+            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
 
   # Publish Node.js package to npm (via Trusted Publishing / OIDC)
   publish_npm:

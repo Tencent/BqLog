@@ -13,6 +13,10 @@ using System.Collections.Generic;
 
 namespace bq
 {
+    /// <summary>
+    /// A log whose entries carry a category, so appenders can filter on it; the classes the
+    /// category log generator writes for an application extend this one.
+    /// </summary>
     public class category_log : log
     {
         protected category_log() : base()

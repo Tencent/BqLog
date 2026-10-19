@@ -28,6 +28,9 @@ func main() {
 		os.Exit(-1)
 	}
 
+	// The recovery capability query must be reachable from this wrapper as well.
+	fmt.Println("Recovery capability:", bq.Get_recovery_capability())
+
 	start_console_fetcher()
 
 	tests := []struct {

@@ -13,36 +13,43 @@ import (
 	bq "github.com/Tencent/BqLog/wrapper/go/src/bq"
 )
 
+// demo_category_log_Category is the index of one generated category.
 type demo_category_log_Category uint32
 
 func (c demo_category_log_Category) category_index() uint32 { return uint32(c) }
 
+// demo_category_log_Category_ref is what the level methods accept as a category.
 type demo_category_log_Category_ref interface {
 	category_index() uint32
 }
 
+// demo_category_log_category_root holds the categories below the root.
 type demo_category_log_category_root struct {
 	Node_2 demo_category_log_node_6_node_2 // node_2
 	Node_3 demo_category_log_node_6_node_3 // node_3
 	Node_4 demo_category_log_node_6_node_4 // node_4
 }
 
+// demo_category_log_node_6_node_2 holds the categories below node_2.
 type demo_category_log_node_6_node_2 struct {
 	demo_category_log_Category
 	Node_5 demo_category_log_Category // node_2.node_5
 }
 
+// demo_category_log_node_6_node_3 holds the categories below node_3.
 type demo_category_log_node_6_node_3 struct {
 	demo_category_log_Category
 	Node_6  demo_category_log_Category // node_3.node_6 - comment Test
 	Node_10 demo_category_log_Category // node_3.node_10
 }
 
+// demo_category_log_node_6_node_4 holds the categories below node_4.
 type demo_category_log_node_6_node_4 struct {
 	demo_category_log_Category
 	Node_7 demo_category_log_node_6_node_4_6_node_7 // node_4.node_7
 }
 
+// demo_category_log_node_6_node_4_6_node_7 holds the categories below node_4.node_7.
 type demo_category_log_node_6_node_4_6_node_7 struct {
 	demo_category_log_Category
 	Node_8 demo_category_log_Category // node_4.node_7.node_8
@@ -63,6 +70,7 @@ func new_demo_category_log_category_root() demo_category_log_category_root {
 	return root
 }
 
+// demo_category_log_category_names lists the categories the configuration declared, in index order.
 var demo_category_log_category_names = []string{
 	"",
 	"node_2",
@@ -76,15 +84,18 @@ var demo_category_log_category_names = []string{
 	"node_4.node_7.node_9",
 }
 
+// demo_category_log is a category log whose entries may carry one of the generated categories.
 type demo_category_log struct {
 	*bq.Category_log
 	Cat demo_category_log_category_root
 }
 
+// Create_demo_category_log creates a demo_category_log log object; name and config are the ones bqLog takes.
 func Create_demo_category_log(name, config string) *demo_category_log {
 	return &demo_category_log{Category_log: bq.Create_category_log(name, config, demo_category_log_category_names), Cat: new_demo_category_log_category_root()}
 }
 
+// Get_demo_category_log_by_name returns the existing demo_category_log with that name, or an invalid one.
 func Get_demo_category_log_by_name(name string) *demo_category_log {
 	invalid := &demo_category_log{Category_log: &bq.Category_log{Log: &bq.Log{}}, Cat: new_demo_category_log_category_root()}
 	base := bq.Get_log_by_name(name)
@@ -99,21 +110,32 @@ func Get_demo_category_log_by_name(name string) *demo_category_log {
 	return invalid
 }
 
+// Verbose_c logs at the verbose level in the given category, and reports whether the entry was written.
 func (l *demo_category_log) Verbose_c(category demo_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Verbose_c(category.category_index(), format, args...)
 }
+
+// Debug_c logs at the debug level in the given category, and reports whether the entry was written.
 func (l *demo_category_log) Debug_c(category demo_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Debug_c(category.category_index(), format, args...)
 }
+
+// Info_c logs at the info level in the given category, and reports whether the entry was written.
 func (l *demo_category_log) Info_c(category demo_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Info_c(category.category_index(), format, args...)
 }
+
+// Warning_c logs at the warning level in the given category, and reports whether the entry was written.
 func (l *demo_category_log) Warning_c(category demo_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Warning_c(category.category_index(), format, args...)
 }
+
+// Error_c logs at the error level in the given category, and reports whether the entry was written.
 func (l *demo_category_log) Error_c(category demo_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Error_c(category.category_index(), format, args...)
 }
+
+// Fatal_c logs at the fatal level in the given category, and reports whether the entry was written.
 func (l *demo_category_log) Fatal_c(category demo_category_log_Category_ref, format string, args ...any) bool {
 	return l.Category_log.Fatal_c(category.category_index(), format, args...)
 }

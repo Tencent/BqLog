@@ -23,6 +23,8 @@ import bq.def.*;
 import bq.impl.*;
 
 /**
+ * A log object: create one with {@link #create_log(String, String)}, then log through it or
+ * through one of its categories.
  * @author pippocao
  *
  */
@@ -117,6 +119,13 @@ public class log {
 	/** Receives console log entries. */
     @FunctionalInterface
     public interface console_callback_delegate{
+        /**
+         * Receives one console entry; install it with register_console_callback.
+         * @param log_id The id of the log the entry belongs to.
+         * @param category_idx The index of the entry's category.
+         * @param log_level The level of the entry.
+         * @param content The formatted text of the entry.
+         */
         void callback(long log_id, int category_idx, bq.def.log_level log_level, String content);
     }
     
@@ -138,6 +147,12 @@ public class log {
     protected List<String> categories_name_array_ = null;
     private log_context context_ = null;
     
+    /**
+     * Returns the log object that owns the given native log id; an id the library does
+     * not know returns an empty log object.
+     * @param log_id The native log id.
+     * @return The log object for that id.
+     */
     protected static log get_log_by_id(long log_id)
     {
         log log_inst = new log();
@@ -226,6 +241,15 @@ public class log {
     public static void enable_auto_crash_handle()
     {
         log_invoker.__api_enable_auto_crash_handler();
+    }
+
+    /**
+     * Whether crash recovery can work here, and what is missing when it cannot.
+     * @return One of the recovery_capability values.
+     */
+    public static recovery_capability get_recovery_capability()
+    {
+        return recovery_capability.values()[log_invoker.__api_get_recovery_capability()];
     }
 
     /**
@@ -491,6 +515,13 @@ public class log {
 
 
     //log methods for param count 0
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     protected boolean do_log(log_category_base category, log_level level, String log_format_content)
     {
         final boolean without_stack = is_enable_without_stack_for(category, level);
@@ -517,6 +548,11 @@ public class log {
         return true;
     }
 
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content)
     {
         return do_log(default_category_, log_level.verbose, log_format_content);
@@ -530,24 +566,52 @@ public class log {
     {
         return do_log(default_category_, log_level.debug, log_format_content);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content)
     {
         return do_log(default_category_, log_level.info, log_format_content);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content)
     {
         return do_log(default_category_, log_level.warning, log_format_content);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content)
     {
         return do_log(default_category_, log_level.error, log_format_content);
     } 
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content)
     {
         return do_log(default_category_, log_level.fatal, log_format_content);
     }
 
     //log methods for param count 1
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1)
     {
@@ -581,32 +645,77 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1);
     }
 
     //log methods for param count 2
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2)
     {
@@ -645,32 +754,84 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2);
     }
 
     //log methods for param count 3
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3)
     {
@@ -714,32 +875,91 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3);
     }
 
     //log methods for param count 4
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
@@ -788,32 +1008,98 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4);
     }
 
     //log methods for param count 5
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
@@ -867,32 +1153,105 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5);
     }
 
     //log methods for param count 6
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
@@ -951,32 +1310,112 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6);
     }
 
     //log methods for param count 7
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
@@ -1040,32 +1479,119 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
 
     //log methods for param count 8
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
@@ -1134,32 +1660,126 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
 
     //log methods for param count 9
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
@@ -1233,32 +1853,133 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
 
     //log methods for param count 10
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
@@ -1337,32 +2058,140 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
 
     //log methods for param count 11
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
@@ -1446,32 +2275,147 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
 
     //log methods for param count 12
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
@@ -1560,26 +2504,128 @@ public class log {
         context_.end_copy(this);
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(default_category_, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(default_category_, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(default_category_, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(default_category_, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param p1 The first argument the format string uses.
+     * @param p2 The second argument the format string uses.
+     * @param p3 The third argument the format string uses.
+     * @param p4 The fourth argument the format string uses.
+     * @param p5 The fifth argument the format string uses.
+     * @param p6 The sixth argument the format string uses.
+     * @param p7 The seventh argument the format string uses.
+     * @param p8 The eighth argument the format string uses.
+     * @param p9 The ninth argument the format string uses.
+     * @param p10 The 10th argument the format string uses.
+     * @param p11 The 11th argument the format string uses.
+     * @param p12 The 12th argument the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
@@ -1589,6 +2635,14 @@ public class log {
 	///verbose, debug, info, warning, error, fatal
 	///
     //log methods for variable param count
+    /**
+     * Writes one entry for the given category and level; the level methods forward here.
+     * @param category The category the entry belongs to.
+     * @param level The level of the entry.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     @SuppressWarnings("unchecked")
     protected boolean do_log(log_category_base category, log_level level, String log_format_content, Object... args)
     {
@@ -1634,26 +2688,62 @@ public class log {
         }
         return true;
     }
+    /**
+     * Logs at the verbose level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.verbose, log_format_content, args);
     }
+    /**
+     * Logs at the debug level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.debug, log_format_content, args);
     }
+    /**
+     * Logs at the info level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.info, log_format_content, args);
     }
+    /**
+     * Logs at the warning level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.warning, log_format_content, args);
     }
+    /**
+     * Logs at the error level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.error, log_format_content, args);
     }
+    /**
+     * Logs at the fatal level in this log's default category.
+     * @param log_format_content The format string, in the same syntax as String.format.
+     * @param args The arguments the format string uses.
+     * @return true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(String log_format_content, Object... args)
     {
         return do_log(default_category_, log_level.fatal, log_format_content, args);

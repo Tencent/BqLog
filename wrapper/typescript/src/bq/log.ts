@@ -10,12 +10,14 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 import { log_level } from "./def/log_level";
+import { recovery_capability } from "./def/recovery_capability";
 import { log_invoker } from "./impl/log_invoker";
 // IMPORTANT: this is a build-alias file generated per build.
 // For ESM build it is a copy of lib_loader.esm.txt,
 // for CJS and OHOS build it is lib_loader.ts.
 import { native_export } from "./utils/lib_loader"
 
+/** Signature of the console callback. */
 export type console_callback = (
     log_id: bigint,
     category_idx: number,
@@ -23,6 +25,7 @@ export type console_callback = (
     text: string
 ) => void;
 
+/** A log object: create one with log.create_log, then log through it. */
 export class log {
     private log_id_: bigint = BigInt(0);
     private name_: string = "";
@@ -59,6 +62,13 @@ export class log {
      */
     public static enable_auto_crash_handle(): void {
         log_invoker.__api_enable_auto_crash_handler();
+    }
+
+    /**
+     * Whether crash recovery can work here, and what is missing when it cannot.
+     */
+    public static get_recovery_capability(): recovery_capability {
+        return log_invoker.__api_get_recovery_capability() as recovery_capability;
     }
 
     /**
@@ -279,6 +289,7 @@ export class log {
     public declare fatal: (log_format_content: string, ...args: unknown[]) => boolean;
 }
 
+/** Defines one log method on the prototype from its native export. */
 function defineNativeMethod(proto: any, name: string) {
     const fn = native_export(name);
     if (typeof fn !== 'function') {

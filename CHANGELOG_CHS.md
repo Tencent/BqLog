@@ -2,6 +2,24 @@
 
 [English](CHANGELOG.md)
 
+## [v2.7.0] - 2026-10-11
+- **C++20 模块**：`import bq.log;` 可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。`BqLog_CategoryLogGenerator` 也会为每个类别日志类生成 `.cppm`（`import bq.business_log;`）。见[集成指南](docs/INTEGRATION_GUIDE_CHS.md#c20-模块import)。
+- **无宏的快速模式（C++20）**：模块不导出宏，`import bq.log;` 时快速模式写作 `log.fast_info<"...">(args...)`（以及 `fast_verbose` … `fast_fatal`），Category 可作为第一个模板参数。开销与 `BQ_LOG_FAST_*` 相同，IDE 支持完整，调用点不绑定日志对象。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
+- **包管理器**：Homebrew（`brew install bqlog`，含库和工具）、vcpkg（`tools` feature 提供工具）、NuGet（C# 绑定加六个平台的原生库）。CMake 安装提供 `find_package(BqLog)` 与 pkg-config。
+- **多进程**：多个进程可以写同一个目录，各自拥有独立的恢复数据；`log.recovery=false` 的日志不再访问磁盘。
+- **恢复**：恢复窗口从最近 2 次运行扩大到 16 次；新增 `bq::log::get_recovery_capability()`（所有 wrapper 都有），查询平台是否支持恢复。
+- **兼容性**：ABI 有变化，头文件、wrapper 与库需要一起升级。旧版 `BqLog_CategoryLogGenerator` 生成的类别日志不再能编译（它用的空基类宏现在是 `BQ_EBCO`），需要重新生成。Windows 上 `cmake --install` 现在把 `BqLog.dll` 装到 `bin/`；发布包的目录结构不变。
+- **问题修复**：
+  - 快速模式：多线程同时首次调用时调用点可能初始化两次；格式注册表没有上限。
+  - 恢复：批处理中途崩溃会重放整批；续写段里的快速日志 meta 重启后可能丢失；文本文件恢复后没有写 `RECOVER END` 标记（[#90](https://github.com/Tencent/BqLog/pull/90)）。
+  - 格式化：浮点数的符号、舍入与范围（[#82](https://github.com/Tencent/BqLog/pull/82)）；超过 10 个字符的格式说明（[#83](https://github.com/Tencent/BqLog/pull/83)）；整数的符号、`0x`/`0b`/八进制前缀、补零与居中填充（[#89](https://github.com/Tencent/BqLog/pull/89)、[#91](https://github.com/Tencent/BqLog/pull/91)）。
+  - 时区：`UTC-0:30` 丢失负号，越界的偏移被接受（[#84](https://github.com/Tencent/BqLog/pull/84)）。
+  - 配置：续行在最后一行会卡死，遇到空行会中止（[#86](https://github.com/Tencent/BqLog/pull/86)）。
+  - 解码器：格式错误的文件、短写和断开的段链现在直接报错，而不是输出部分内容（[#81](https://github.com/Tencent/BqLog/pull/81)、[#85](https://github.com/Tencent/BqLog/issues/85)）。
+  - 宽字符串：读取 UTF-16/UTF-32 参数时可能越过内存页末尾。
+  - 预编译桌面库缺少 Go bridge。
+- **感谢 [@mvanslobbe](https://github.com/mvanslobbe)** 贡献的 [#81](https://github.com/Tencent/BqLog/pull/81)、[#82](https://github.com/Tencent/BqLog/pull/82)、[#83](https://github.com/Tencent/BqLog/pull/83)、[#84](https://github.com/Tencent/BqLog/pull/84)、[#86](https://github.com/Tencent/BqLog/pull/86)、[#89](https://github.com/Tencent/BqLog/pull/89)、[#90](https://github.com/Tencent/BqLog/pull/90)、[#91](https://github.com/Tencent/BqLog/pull/91)。
+
 ## [v2.6.0] - 2026-10-05
 - **C++ 专属的快速模式**：新增 `BQ_LOG_FAST_VERBOSE` … `BQ_LOG_FAST_FATAL`。写出的日志和 `log.info` 等普通模式完全一样，但调用线程上的工作直接内联在调用点：判断级别、写时间戳和原始参数。同一个宏也支持 Category：`BQ_LOG_FAST_INFO(log, log.cat.xxx, "...", ...)`，带不带 Category 由编译期决定，开销相同。代价：内存稍多一点；它是宏，IDE 代码提示体验差一点；每个调用点的日志对象和格式串固定。详见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-mode)。
 - **性能提升：普通模式的日志线程**：`log.info` 等级别函数在调用线程上执行的指令减少约 16%；被关闭的级别现在只需一次内存读取和一次位测试。

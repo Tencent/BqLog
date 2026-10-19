@@ -8,6 +8,48 @@
 
 ## C++（动态库 / 静态库 / 源码）
 
+- **Homebrew（macOS / Linux）**
+
+  ```bash
+  brew install bqlog
+  ```
+
+  该包默认包含 `BqLog_CategoryLogGenerator` 与 `BqLog_LogDecoder` 两个命令行工具。之后即可通过 CMake 或 pkg-config 找到该包：
+
+  ```cmake
+  find_package(BqLog REQUIRED)
+  target_link_libraries(your_target PRIVATE bqlog::BqLogShared)   # 或 bqlog::BqLogStatic
+  ```
+
+  ```bash
+  pkg-config --cflags --libs bqlog
+  ```
+
+- **vcpkg（Windows / Linux / macOS）**
+
+  ```bash
+  vcpkg install bqlog
+  vcpkg install "bqlog[tools]"   # 同时安装命令行工具（默认不装），位于 installed/<triplet>/tools/bqlog/
+  ```
+
+  manifest 模式在 `vcpkg.json` 中写 `{ "name": "bqlog", "features": ["tools"] }`。静态库还是动态库由 triplet 决定，目标名为 `bqlog::BqLog`。
+
+- **CMake FetchContent**
+
+  不使用包管理器时：
+
+  ```cmake
+  include(FetchContent)
+  FetchContent_Declare(BqLog
+      GIT_REPOSITORY https://github.com/Tencent/BqLog.git
+      GIT_TAG Release_2.7.0)
+  FetchContent_MakeAvailable(BqLog)
+
+  target_link_libraries(your_target PRIVATE BqLog)
+  ```
+
+  `BUILD_LIB_TYPE` 可选 `static_lib`（默认）、`dynamic_lib` 或 `both`。
+
 - **动态库**
   下载 `dynamic_lib_{version}` 压缩包：
   - 将 `dynamic_lib/include` 目录添加到头文件搜索路径；
@@ -26,6 +68,43 @@
   - 如需启用 Java / NAPI（Node.js / HarmonyOS ArkTS）支持，以及系统链接库与部分宏定义，请参考 `/src/CMakeLists.txt`（如果觉得难以理解，建议求助AI提炼）。
   - 当存在 NAPI 环境（Node.js 或 HarmonyOS ArkTS）或需要 Java / C# 调用时，不推荐以「纯 C++ 源码」直接集成，因为需要手动处理初始化和库加载流程；更推荐使用预编译包及对应 wrapper。
 
+### C++20 模块（`import`）
+
+```cpp
+import bq.log;
+```
+
+模块接口单元 `bq_log/bq.log.cppm` 随头文件分发，由你的工程编译。CMake 3.28 及以上（Ninja 或 Visual Studio 生成器）：
+
+```cmake
+find_package(BqLog REQUIRED)
+
+target_sources(your_target PRIVATE FILE_SET CXX_MODULES
+    BASE_DIRS "${BQLOG_INCLUDE_DIR}"
+    FILES "${BQLOG_MODULE_FILE}")
+target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
+```
+
+支持的编译器：Clang 16+、MSVC 19.34+、GCC 15+（GCC 14 编译该模块时会触发内部编译器错误）。GCC 还需要 `-fmodules-ts`。
+
+**GCC 16 已知问题：** 在 `import bq.log;` 之后 include C 头文件（`<string.h>` 就会踩），可能被判成 `redefinition of 'strstr'`（或 `memcpy`）。这是 GCC 16 的回归：同样代码在 GCC 15、Clang、MSVC 上都正常。规避方法：把系统头文件写在 import 之前。
+
+```cpp
+#include <string.h> // 系统头文件放前面
+import bq.log;
+```
+
+不用 CMake 时（以 clang 为例）：
+
+```bash
+clang++ -std=c++20 -x c++-module --precompile -I$PREFIX/include $PREFIX/include/bq_log/bq.log.cppm -o bq.log.pcm
+clang++ -std=c++20 -c bq.log.pcm -o bq.log.o
+clang++ -std=c++20 -fmodule-file=bq.log=bq.log.pcm -c app.cpp
+clang++ bq.log.o app.o -lBqLog -o app
+```
+
+模块不导出宏，所以 `import` 时快速模式写成 `log.fast_info<"...">(args...)`。
+
 ---
 
 ## C#（Unity / 团结引擎 / .NET）
@@ -33,7 +112,16 @@
 - **Unity / 团结引擎**
   完整引擎集成步骤请见 [游戏引擎集成指南](./ENGINE_INTEGRATION_CHS.md)。
 
-- **.NET**
+- **.NET —— NuGet**
+
+  ```bash
+  dotnet add package BqLog
+  ```
+
+  包内含 C# 绑定以及 `win-x64`、`win-arm64`、`linux-x64`、`linux-arm64`、`osx-x64`、`osx-arm64`
+  的原生库。
+
+- **.NET —— 手工集成**
   - 下载对应平台的动态库包 `{os}_{arch}_libs_{version}`，引入其中动态库；
   - 将 C# wrapper 源码加入工程 —— 可以直接使用仓库下 `/wrapper/csharp/src`，也可以从 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `c#_wrapper_{version}` 预打包的源码包。
 
@@ -376,6 +464,8 @@ log.info("Hello Java! value: {}", 3.14);
 ---
 
 ## Go
+
+- **预编译库**：不用 cgo 编译源码、而是链接预编译库时，请使用发布页上的桌面平台（Windows / Linux / macOS）包，其中已包含 Go bridge。
 
 通过 Go Modules 安装：
 

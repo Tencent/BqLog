@@ -143,13 +143,16 @@ const bq::array<bq::string>& get_categories_name_array() const;
    ./BqLog_CategoryLogGenerator business_log /path/to/BussinessCategories.txt ./
    ```
 
-   将在当前目录下生成 5 个文件：
+   将在当前目录下生成多个文件：
 
   - `business_log.h`（C++ header wrapper）
+  - `business_log.cppm`（C++20 模块单元，用 `import bq.business_log;` 代替 include 头文件）
   - `business_log.java`（Java wrapper）
   - `business_log.cs`（C# wrapper）
   - `business_log.ts`（TypeScript wrapper）
   - `business_log_for_UE.h`（配合 UE 工程，可在蓝图中引用 Category）
+
+  模块名就是类名加 `bq.` 前缀：`bq::business_log` 对应 `import bq.business_log;`。
 
 4. 在工程中引入这些文件，即可使用带 Category 的日志类。
    例如 C++：
@@ -166,6 +169,21 @@ const bq::array<bq::string>& get_categories_name_array() const;
 
    对 `my_log.cat` 使用 `.` 补全，即可获得事先定义好的 Category 列表。
    如不传递 Category 参数，则默认使用 `*default`。
+
+### C++20 模块方式
+
+`.cppm` 与 `.h` 是同一个类，只是改为 import：
+
+```cpp
+import bq.log;
+import bq.business_log;
+
+bq::business_log my_log = bq::business_log::create_log("MyLog", config);
+my_log.info(my_log.cat.Shop.Seller, "Log2");
+my_log.fast_info<my_log.cat.Shop, "fast {}">(1);
+```
+
+把 `business_log.cppm` 按 `bq.log.cppm` 的方式加入构建即可。同一个工程里头文件和模块二选一。
 
 ---
 
@@ -198,6 +216,12 @@ static void enable_auto_crash_handle();
 当该项为 `true` 时，BqLog 在部分平台上会尝试使用平台特性，尽量保证异步缓冲区中的内容在磁盘上有临时存根；下一次启动时，可以进行「复盘」，尽量恢复未完全落盘的日志。
 
 具体实现细节依赖操作系统能力，会在未来版本中持续增强。
+
+少数平台（例如 Solaris）不支持恢复（可用 [`get_recovery_capability()`](./API_REFERENCE_CHS.md#恢复能力查询) 查询），此时日志照常工作、不启用恢复，并打印：
+
+```
+[Bq]log <name>: recovery needs a cross-process file lock and this platform has none, so recovery stays off
+```
 
 ---
 

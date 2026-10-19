@@ -38,19 +38,21 @@ bool bq::appender_decoder_helper::decode(const bq::string& in_file_path, const b
         result = bq::api::__api_log_decoder_decode(handle, &log_text);
         if (result == bq::appender_decode_result::eof) {
             break;
-        } else if (result != bq::appender_decode_result::success) {
-            bq::util::log_device_console(log_level::error, "create decoder failed, result : ");
+        }
+        if (result != bq::appender_decode_result::success) {
+            bq::util::log_device_console(log_level::error, "decode log file failed, result :%" PRId32, static_cast<int32_t>(result));
             return false;
-        } else {
-            if (output_handle) {
-                file_manager_cache.write_file(output_handle, log_text.str, log_text.len);
-                file_manager_cache.write_file(output_handle, "\n", 1);
-            } else {
-            }
+        }
+        // A short write leaves an output file that looks complete, so it has to fail the decode.
+        if (file_manager_cache.write_file(output_handle, log_text.str, log_text.len) != log_text.len
+            || file_manager_cache.write_file(output_handle, "\n", 1) != 1) {
+            bq::util::log_device_console(log_level::error, "write decoded log failed: %s", path.c_str());
+            return false;
         }
     }
-    if (output_handle) {
-        file_manager_cache.flush_file(output_handle);
+    if (!file_manager_cache.flush_file(output_handle)) {
+        bq::util::log_device_console(log_level::error, "flush decoded log failed: %s", path.c_str());
+        return false;
     }
     return true;
 }

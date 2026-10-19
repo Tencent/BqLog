@@ -14,12 +14,15 @@ import { log } from "./bq/log";
 import { category_log } from "./bq/category_log";
 import { log_category_base } from "./bq/def/log_category_base"
 import { log_decoder, appender_decode_result } from "./bq/tools/log_decoder"
+import { recovery_capability } from "./bq/def/recovery_capability"
 
+/** Entry point of the package; the same names the native library exposes. */
 export const bq = {
     log: log,
     category_log: category_log,
     log_category_base: log_category_base,
     log_level: log_level,
     log_decoder: log_decoder,
-    appender_decode_result: appender_decode_result
+    appender_decode_result: appender_decode_result,
+    recovery_capability: recovery_capability
 } as const;

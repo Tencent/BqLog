@@ -17,6 +17,9 @@ using bq.impl;
 
 namespace bq
 {
+    /// <summary>
+    /// A log object: create one with <c>log.create_log</c>, then log through it.
+    /// </summary>
     public class @log
     {
         private static log_category_base default_category_ = new log_category_base();
@@ -139,6 +142,14 @@ namespace bq
         public static void enable_auto_crash_handle()
         {
             log_invoker.__api_enable_auto_crash_handler();
+        }
+
+        /// <summary>
+        /// Whether crash recovery can work here, and what is missing when it cannot.
+        /// </summary>
+        public static recovery_capability get_recovery_capability()
+        {
+            return (recovery_capability)log_invoker.__api_get_recovery_capability();
         }
 
         /// <summary>

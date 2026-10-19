@@ -45,27 +45,58 @@ const (
 	arg_type_string_utf8 uint8 = 17
 )
 
-func Nil() Arg          { return Arg{typ: arg_type_null} }
+// Nil returns an Arg holding null.
+func Nil() Arg { return Arg{typ: arg_type_null} }
+
+// Ptr returns an Arg holding a raw pointer.
 func Ptr(v uintptr) Arg { return Arg{typ: arg_type_pointer, pod: uint64(v)} }
+
+// Bool returns an Arg holding v.
 func Bool(v bool) Arg {
 	if v {
 		return Arg{typ: arg_type_bool, pod: 1}
 	}
 	return Arg{typ: arg_type_bool}
 }
-func I8(v int8) Arg     { return Arg{typ: arg_type_int8, pod: uint64(uint8(v))} }
-func U8(v uint8) Arg    { return Arg{typ: arg_type_uint8, pod: uint64(v)} }
-func I16(v int16) Arg   { return Arg{typ: arg_type_int16, pod: uint64(uint16(v))} }
-func U16(v uint16) Arg  { return Arg{typ: arg_type_uint16, pod: uint64(v)} }
-func I32(v int32) Arg   { return Arg{typ: arg_type_int32, pod: uint64(uint32(v))} }
-func U32(v uint32) Arg  { return Arg{typ: arg_type_uint32, pod: uint64(v)} }
-func I64(v int64) Arg   { return Arg{typ: arg_type_int64, pod: uint64(v)} }
-func U64(v uint64) Arg  { return Arg{typ: arg_type_uint64, pod: v} }
-func Int(v int) Arg     { return I64(int64(v)) }
-func Uint(v uint) Arg   { return U64(uint64(v)) }
+
+// I8 returns an Arg holding an 8-bit signed integer.
+func I8(v int8) Arg { return Arg{typ: arg_type_int8, pod: uint64(uint8(v))} }
+
+// U8 returns an Arg holding an 8-bit unsigned integer.
+func U8(v uint8) Arg { return Arg{typ: arg_type_uint8, pod: uint64(v)} }
+
+// I16 returns an Arg holding a 16-bit signed integer.
+func I16(v int16) Arg { return Arg{typ: arg_type_int16, pod: uint64(uint16(v))} }
+
+// U16 returns an Arg holding a 16-bit unsigned integer.
+func U16(v uint16) Arg { return Arg{typ: arg_type_uint16, pod: uint64(v)} }
+
+// I32 returns an Arg holding a 32-bit signed integer.
+func I32(v int32) Arg { return Arg{typ: arg_type_int32, pod: uint64(uint32(v))} }
+
+// U32 returns an Arg holding a 32-bit unsigned integer.
+func U32(v uint32) Arg { return Arg{typ: arg_type_uint32, pod: uint64(v)} }
+
+// I64 returns an Arg holding a 64-bit signed integer.
+func I64(v int64) Arg { return Arg{typ: arg_type_int64, pod: uint64(v)} }
+
+// U64 returns an Arg holding a 64-bit unsigned integer.
+func U64(v uint64) Arg { return Arg{typ: arg_type_uint64, pod: v} }
+
+// Int returns an Arg holding v as an int64.
+func Int(v int) Arg { return I64(int64(v)) }
+
+// Uint returns an Arg holding v as a uint64.
+func Uint(v uint) Arg { return U64(uint64(v)) }
+
+// F32 returns an Arg holding a 32-bit floating point number.
 func F32(v float32) Arg { return Arg{typ: arg_type_float, pod: uint64(math.Float32bits(v))} }
+
+// F64 returns an Arg holding a 64-bit floating point number.
 func F64(v float64) Arg { return Arg{typ: arg_type_double, pod: math.Float64bits(v)} }
-func Str(v string) Arg  { return Arg{typ: arg_type_string_utf8, pod: uint64(len(v)), str: v} }
+
+// Str returns an Arg holding the string v.
+func Str(v string) Arg { return Arg{typ: arg_type_string_utf8, pod: uint64(len(v)), str: v} }
 
 // Convert each value once, only after level/category filtering. Built-in values
 // retain their native types so BqLog still performs formatting asynchronously.

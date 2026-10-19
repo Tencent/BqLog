@@ -47,7 +47,9 @@ namespace bq {
 
     bq::string category_log_template_go::category_types(const category_node& node, const bq::string& type_name) const
     {
-        bq::string code = "type " + type_name + " struct {\n";
+        const bq::string& node_path = node.full_name().trim().is_empty() ? bq::string("the root") : node.full_name();
+        bq::string code = "// " + type_name + " holds the categories below " + node_path + ".\n";
+        code += "type " + type_name + " struct {\n";
         if (node.parent()) {
             code += "\t" + class_name_ + "_Category\n";
         }
@@ -112,10 +114,12 @@ import (
     bq "github.com/Tencent/BqLog/wrapper/go/src/bq"
 )
 
+// ${CLASS_NAME}_Category is the index of one generated category.
 type ${CLASS_NAME}_Category uint32
 
 func (c ${CLASS_NAME}_Category) category_index() uint32 { return uint32(c) }
 
+// ${CLASS_NAME}_Category_ref is what the level methods accept as a category.
 type ${CLASS_NAME}_Category_ref interface {
     category_index() uint32
 }
@@ -126,18 +130,22 @@ func new_${CLASS_NAME}_category_root() ${CLASS_NAME}_category_root {
 ${CATEGORY_INIT}    return root
 }
 
+// ${CLASS_NAME}_category_names lists the categories the configuration declared, in index order.
 var ${CLASS_NAME}_category_names = []string{
 ${CATEGORY_NAMES}}
 
+// ${CLASS_NAME} is a category log whose entries may carry one of the generated categories.
 type ${CLASS_NAME} struct {
     *bq.Category_log
     Cat ${CLASS_NAME}_category_root
 }
 
+// Create_${CLASS_NAME} creates a ${CLASS_NAME} log object; name and config are the ones bqLog takes.
 func Create_${CLASS_NAME}(name, config string) *${CLASS_NAME} {
     return &${CLASS_NAME}{Category_log: bq.Create_category_log(name, config, ${CLASS_NAME}_category_names), Cat: new_${CLASS_NAME}_category_root()}
 }
 
+// Get_${CLASS_NAME}_by_name returns the existing ${CLASS_NAME} with that name, or an invalid one.
 func Get_${CLASS_NAME}_by_name(name string) *${CLASS_NAME} {
     invalid := &${CLASS_NAME}{Category_log: &bq.Category_log{Log: &bq.Log{}}, Cat: new_${CLASS_NAME}_category_root()}
     base := bq.Get_log_by_name(name)
@@ -152,21 +160,27 @@ func Get_${CLASS_NAME}_by_name(name string) *${CLASS_NAME} {
     return invalid
 }
 
+// Verbose_c logs at the verbose level in the given category, and reports whether the entry was written.
 func (l *${CLASS_NAME}) Verbose_c(category ${CLASS_NAME}_Category_ref, format string, args ...any) bool {
     return l.Category_log.Verbose_c(category.category_index(), format, args...)
 }
+// Debug_c logs at the debug level in the given category, and reports whether the entry was written.
 func (l *${CLASS_NAME}) Debug_c(category ${CLASS_NAME}_Category_ref, format string, args ...any) bool {
     return l.Category_log.Debug_c(category.category_index(), format, args...)
 }
+// Info_c logs at the info level in the given category, and reports whether the entry was written.
 func (l *${CLASS_NAME}) Info_c(category ${CLASS_NAME}_Category_ref, format string, args ...any) bool {
     return l.Category_log.Info_c(category.category_index(), format, args...)
 }
+// Warning_c logs at the warning level in the given category, and reports whether the entry was written.
 func (l *${CLASS_NAME}) Warning_c(category ${CLASS_NAME}_Category_ref, format string, args ...any) bool {
     return l.Category_log.Warning_c(category.category_index(), format, args...)
 }
+// Error_c logs at the error level in the given category, and reports whether the entry was written.
 func (l *${CLASS_NAME}) Error_c(category ${CLASS_NAME}_Category_ref, format string, args ...any) bool {
     return l.Category_log.Error_c(category.category_index(), format, args...)
 }
+// Fatal_c logs at the fatal level in the given category, and reports whether the entry was written.
 func (l *${CLASS_NAME}) Fatal_c(category ${CLASS_NAME}_Category_ref, format string, args ...any) bool {
     return l.Category_log.Fatal_c(category.category_index(), format, args...)
 }

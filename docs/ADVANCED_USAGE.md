@@ -150,13 +150,16 @@ Generation steps are as follows:
    ./BqLog_CategoryLogGenerator business_log /path/to/BussinessCategories.txt ./
    ```
 
-   Will generate 5 files in current directory:
+   Will generate several files in current directory:
 
-  - `business_log.h` (C++ header wrapper)
-  - `business_log.java` (Java wrapper)
-  - `business_log.cs` (C# wrapper)
-  - `business_log.ts` (TypeScript wrapper)
-  - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
+   - `business_log.h` (C++ header wrapper)
+   - `business_log.cppm` (C++20 module unit: `import bq.business_log;` instead of the header)
+   - `business_log.java` (Java wrapper)
+   - `business_log.cs` (C# wrapper)
+   - `business_log.ts` (TypeScript wrapper)
+   - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
+
+   The module name is the class name with a `bq.` prefix: `bq::business_log` is `import bq.business_log;`.
 
 4. Import these files in project to use Log class with Category.
    For example C++:
@@ -174,7 +177,22 @@ Generation steps are as follows:
    Use `.` completion on `my_log.cat` to get pre-defined Category list.
    If Category parameter is not passed, `*default` is used by default.
 
----
+   ### C++20 module entry
+
+   The `.cppm` is the same class as the `.h`, imported instead of included:
+
+   ```cpp
+   import bq.log;
+   import bq.business_log;
+
+   bq::business_log my_log = bq::business_log::create_log("MyLog", config);
+   my_log.info(my_log.cat.Shop.Seller, "Log2");
+   my_log.fast_info<my_log.cat.Shop, "fast {}">(1);
+   ```
+
+   Add `business_log.cppm` to your build the same way as `bq.log.cppm`. Use either the header or the module in a project, not both.
+
+   ---
 
 <a id="3-data-protection-on-abnormal-exit"></a>
 
@@ -210,6 +228,12 @@ Refer to configuration item [`log.recovery`](./CONFIGURATION.md).
 When this item is `true`, BqLog will try to use platform features on some platforms to ensure content in asynchronous buffer has temporary stub on disk; next time startup, "recovery" can be performed to try to restore logs not fully flushed to disk.
 
 Specific implementation details depend on operating system capabilities and will be continuously enhanced in future versions.
+
+On the few platforms without support (Solaris, for example), see [`get_recovery_capability()`](./API_REFERENCE.md#recovery-capability), the log runs without recovery and prints:
+
+```
+[Bq]log <name>: recovery needs a cross-process file lock and this platform has none, so recovery stays off
+```
 
 ---
 

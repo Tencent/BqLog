@@ -173,6 +173,27 @@ Use it on hot paths. For everything else, the normal mode is the better default,
 - **Weaker IDE hints.** These are macros, so code completion and parameter hints are not as helpful as with the member functions of the normal mode. Argument types are still checked at compile time.
 
 [Categories](./ADVANCED_USAGE.md#2-log-objects-with-category-support) are supported: when the second argument is `log.cat.xxx` the entry goes to that category, when it is the format string the default category is used. Which one is decided at compile time, so a call with a category is as fast as one without. Supported arguments are the same as in the normal mode. When a level is configured to print a stack trace (`log.print_stack_levels`) or the log runs in sync mode, a fast mode call quietly falls back to the normal mode, so the output stays correct; it is just not faster in that case.
+
+<a id="fast-info"></a>
+
+##### Macro-free fast log (C++20)
+
+From C++20 the fast path is also available as a member function template, with the format string as a template argument:
+
+```cpp
+log_obj.fast_info<"Hello {}, count={}">("world", 42);
+log_obj.fast_error<"Error code: {}">(err_code);
+// fast_verbose, fast_debug, fast_info, fast_warning, fast_error, fast_fatal
+
+// With a category: the category first, then the format string
+my_category_log.fast_info<my_category_log.cat.Shop.Seller, "order {} paid">(order_id);
+```
+
+It writes the same entries as `BQ_LOG_FAST_*` at the same cost. Unlike the macros, a call site is not bound to one log object, and IDE completion and compiler diagnostics work normally. This is also the fast log available through `import bq.log;`, since modules do not export macros.
+
+The format string may be `""`, `u8""`, `u""`, `U""` or `L""`. With MSVC, compile narrow non-ASCII literals with `/utf-8`.
+
+Each distinct format string becomes part of a symbol name, so unstripped binaries grow faster than with the macros; strip release builds as usual.
 </details>
 
 <details>
@@ -369,6 +390,68 @@ bq.Enable_auto_crash_handle()
 </details>
 
 See also: [Advanced Usage — Data protection on abnormal exit](./ADVANCED_USAGE.md#3-data-protection-on-abnormal-exit) and [`log.recovery` config](./CONFIGURATION.md).
+
+### Recovery capability
+
+Whether `log.recovery=true` is supported on the current platform:
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+bq::recovery_capability capability = bq::log::get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>Native C ABI</b></summary>
+
+```c
+bq_recovery_capability __api_get_recovery_capability(void);
+```
+</details>
+
+<details>
+<summary><b>Java / Kotlin</b></summary>
+
+```java
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>C#</b></summary>
+
+```csharp
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>TypeScript</b></summary>
+
+```typescript
+const capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+capability = log.get_recovery_capability()
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+capability := bq.Get_recovery_capability()
+```
+</details>
+
+`ready` means recovery is available; any other value names what is missing.
 
 ---
 
@@ -662,7 +745,7 @@ bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 
 ### Offline command-line decoder
 
-Download `{os}_{arch}_tools_{version}` from Releases:
+Download `{os}_{arch}_tools_{version}` from Releases, or install it with a package manager: `brew install bqlog` puts it on the `PATH`; vcpkg needs `vcpkg install "bqlog[tools]"` and installs it under `installed/<triplet>/tools/bqlog/`.
 
 ```bash
 ./BqLog_LogDecoder FileToDecode [-o OutputFile] [-k PrivateKeyFile]

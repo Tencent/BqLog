@@ -17,19 +17,22 @@
  *
  */
 
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
 #include <ctype.h>
 #include <wchar.h>
+#endif
 #include "bq_common/types/type_tools.h"
 #include "bq_common/types/type_traits.h"
 
 namespace bq {
+    BQ_MODULE_EXPORT_BEGIN
     namespace string_tools {
         template <typename T, typename = void>
-        struct __has_value_type : bq::false_type { };
+        struct __has_value_type : bq::false_type {};
 
         template <typename T>
-        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type { };
+        struct __has_value_type<T, bq::void_t<typename T::value_type>> : bq::true_type {};
 
         template <typename T>
         struct is_c_str_compatible : bq::bool_type<bq::string::template is_std_string_compatible<T>::value || bq::u16string::template is_std_string_compatible<T>::value || bq::u32string::template is_std_string_compatible<T>::value> {
@@ -57,7 +60,7 @@ namespace bq {
          * when the input is a string literal.
          */
         template <typename T>
-        static BQ_FUNC_RETURN_CONSTEXPR size_t constexpr_len(const T* str)
+        BQ_FUNC_RETURN_CONSTEXPR size_t constexpr_len(const T* str)
         {
             size_t i = 0;
             while (str[i] != 0) {
@@ -66,26 +69,12 @@ namespace bq {
             return i;
         }
 
-#ifdef BQ_ASAN_ENABLED
-        template <typename T>
-        BQ_NO_ASAN static T get_value_by_address_safe(const T* addr)
-        {
-            return *addr;
-        }
-#else
-        template <typename T>
-        bq_forceinline T get_value_by_address_safe(const T* addr)
-        {
-            return *addr;
-        }
-#endif
-
         /**
          * @brief SWAR (SIMD Within A Register) implementation for UTF-16.
          * Processes 4 characters (8 bytes) per iteration using bit manipulation
          * to detect the null terminator.
          */
-        static bq_forceinline size_t u16_len_rt(const char16_t* s)
+        bq_forceinline size_t u16_len_rt(const char16_t* s)
         {
             const char16_t* p = s;
             // Align to 8-byte boundary
@@ -95,15 +84,15 @@ namespace bq {
                 p++;
             }
 
-            const uint64_t* chunk = reinterpret_cast<const uint64_t*>(p);
             const uint64_t mask = 0x8000800080008000ULL;
             const uint64_t low_bit = 0x0001000100010001ULL;
 
+            // memcpy instead of a uint64_t pointer: the string is not a uint64_t object
             while (true) {
-                uint64_t v = get_value_by_address_safe(chunk);
+                uint64_t v;
+                memcpy(&v, p, sizeof(v));
                 // Zero detection logic: (v - 0x0001) & ~v & 0x8000
                 if ((v - low_bit) & ~v & mask) {
-                    p = reinterpret_cast<const char16_t*>(chunk);
                     if (p[0] == 0)
                         return static_cast<size_t>(p - s);
                     if (p[1] == 0)
@@ -113,7 +102,7 @@ namespace bq {
                     if (p[3] == 0)
                         return static_cast<size_t>(p + 3 - s);
                 }
-                chunk++;
+                p += 4;
             }
         }
 
@@ -121,7 +110,7 @@ namespace bq {
          * @brief SWAR implementation for UTF-32.
          * Processes 2 characters (8 bytes) per iteration.
          */
-        static bq_forceinline size_t u32_len_rt(const char32_t* s)
+        bq_forceinline size_t u32_len_rt(const char32_t* s)
         {
             const char32_t* p = s;
             while ((reinterpret_cast<uintptr_t>(p) & 7) != 0) {
@@ -130,20 +119,19 @@ namespace bq {
                 p++;
             }
 
-            const uint64_t* chunk = reinterpret_cast<const uint64_t*>(p);
             const uint64_t mask = 0x8000000080000000ULL;
             const uint64_t low_bit = 0x0000000100000001ULL;
 
             while (true) {
-                uint64_t v = get_value_by_address_safe(chunk);
+                uint64_t v;
+                memcpy(&v, p, sizeof(v));
                 if ((v - low_bit) & ~v & mask) {
-                    p = reinterpret_cast<const char32_t*>(chunk);
                     if (p[0] == 0)
                         return static_cast<size_t>(p - s);
                     if (p[1] == 0)
                         return static_cast<size_t>(p + 1 - s);
                 }
-                chunk++;
+                p += 2;
             }
         }
 
@@ -224,6 +212,12 @@ namespace bq {
             if (!str) {
                 return 0;
             }
+#ifdef BQ_ASAN_ENABLED
+            // Every dispatcher below reads more than one character at a time -- SWAR for u16/u32,
+            // and the compiler's own expansion of the builtins for char/wchar_t -- and can step
+            // past the terminator. The sanitizer build walks character by character instead.
+            return constexpr_len(str);
+#else
 #if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             BQ_CONSTEXPR_IF(__builtin_constant_p(*str))
             {
@@ -232,9 +226,10 @@ namespace bq {
             else
             {
 #endif
-                return string_len_dispatch < CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t) > ::exec(str);
+                return string_len_dispatch<CHAR_TYPE, sizeof(char16_t) == sizeof(wchar_t)>::exec(str);
 #if BQ_GCC_CLANG_BUILTIN(__builtin_constant_p)
             }
+#endif
 #endif
         }
         template <typename CHAR_TYPE, size_t N>
@@ -305,7 +300,7 @@ namespace bq {
         }
 
         template <typename CHAR_TYPE>
-        struct inner_empty_str_def { };
+        struct inner_empty_str_def {};
         template <>
         struct inner_empty_str_def<char> {
             static const char* value() { return ""; }
@@ -323,4 +318,5 @@ namespace bq {
             static const char32_t* value() { return U""; }
         };
     }
+    BQ_MODULE_EXPORT_END
 }

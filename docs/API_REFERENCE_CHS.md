@@ -173,6 +173,27 @@ BQ_LOG_FAST_INFO(my_category_log, my_category_log.cat.Shop.Seller, "order {} pai
 - **IDE 代码提示体验差一些。** 这是宏，代码补全和参数提示不如普通模式的成员函数好用。参数类型仍然会在编译期检查。
 
 支持 [Category](./ADVANCED_USAGE_CHS.md#2-支持分类category的-log-对象)：第二个参数是 `log.cat.xxx` 时按该 Category 输出，是格式串时用默认 Category。是哪一种在编译期决定，带 Category 的调用和不带的一样快。支持的参数类型和普通模式相同。如果某个级别配置了打印调用栈（`log.print_stack_levels`），或者日志对象是同步模式，快速模式的调用会自动退回普通模式，输出依然正确，只是这种情况下不会更快。
+
+<a id="fast-info"></a>
+
+##### 无宏的快速模式（C++20）
+
+从 C++20 起，快速模式也可以写成成员函数模板，格式串作为模板参数：
+
+```cpp
+log_obj.fast_info<"Hello {}, count={}">("world", 42);
+log_obj.fast_error<"Error code: {}">(err_code);
+// fast_verbose、fast_debug、fast_info、fast_warning、fast_error、fast_fatal
+
+// 带 Category：Category 在前，格式串在后
+my_category_log.fast_info<my_category_log.cat.Shop.Seller, "order {} paid">(order_id);
+```
+
+写出的日志和开销都与 `BQ_LOG_FAST_*` 相同。区别是调用点不绑定某个日志对象，IDE 补全和编译器诊断也都正常。模块不导出宏，所以 `import bq.log;` 时用的就是这个接口。
+
+格式串可以写成 `""`、`u8""`、`u""`、`U""` 或 `L""`。MSVC 下窄字符串里有非 ASCII 字符时，请加 `/utf-8`。
+
+每个不同的格式串都会进入符号名，未 strip 的二进制会比宏版本大一些；Release 照常 strip 即可。
 </details>
 
 <details>
@@ -369,6 +390,68 @@ bq.Enable_auto_crash_handle()
 </details>
 
 另见：[高级用法 — 程序异常退出的数据保护](./ADVANCED_USAGE_CHS.md#3-程序异常退出的数据保护) 和 [`log.recovery` 配置](./CONFIGURATION_CHS.md)。
+
+### 恢复能力查询
+
+查询当前平台是否支持 `log.recovery=true`：
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+bq::recovery_capability capability = bq::log::get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>原生 C ABI</b></summary>
+
+```c
+bq_recovery_capability __api_get_recovery_capability(void);
+```
+</details>
+
+<details>
+<summary><b>Java / Kotlin</b></summary>
+
+```java
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>C#</b></summary>
+
+```csharp
+bq.def.recovery_capability capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>TypeScript</b></summary>
+
+```typescript
+const capability = bq.log.get_recovery_capability();
+```
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+capability = log.get_recovery_capability()
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+capability := bq.Get_recovery_capability()
+```
+</details>
+
+返回 `ready` 表示支持，其它值说明缺少什么。
 
 ---
 
@@ -662,7 +745,7 @@ bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 
 ### 离线命令行解码器
 
-从 Releases 下载 `{os}_{arch}_tools_{version}`：
+从 Releases 下载 `{os}_{arch}_tools_{version}`，或用包管理器安装：`brew install bqlog` 直接放进 `PATH`；vcpkg 需 `vcpkg install "bqlog[tools]"`，装在 `installed/<triplet>/tools/bqlog/`。
 
 ```bash
 ./BqLog_LogDecoder 要解码的文件 [-o 输出文件] [-k 私钥文件]

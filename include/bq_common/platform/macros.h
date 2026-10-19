@@ -279,6 +279,15 @@
 #define BQ_CPP_23 1
 #endif
 
+// Empty base class optimization: some MSVC compilers do not enable it by default. It lives here,
+// with the other language-level macros, because a macro is not exported by a module: a generated
+// category module needs it and can only reach it by including this macro-only header.
+#ifdef BQ_VISUAL_STUDIO
+#define BQ_EBCO __declspec(empty_bases)
+#else
+#define BQ_EBCO
+#endif
+
 #if defined(BQ_GCC) || defined(BQ_CLANG)
 #define BQ_SUPPRESS_NULL_DEREF_BEGIN() \
     _Pragma("GCC diagnostic push")     \

@@ -40,15 +40,18 @@ namespace bq {
     bq::string category_log_template_java::get_category_class_code_recursive(const category_node& node, const bq::string& tab, uint64_t& index) const
     {
         bq::string node_class_name = class_name_ + "_" + node.name();
-        bq::string code = tab + "public static class " + node_class_name + " extends " + class_name_ + "_category_base\n";
+        bq::string code = tab + "/** The " + node.full_name() + " category and the categories below it. */\n";
+        code += tab + "public static class " + node_class_name + " extends " + class_name_ + "_category_base\n";
         code += tab + "{\n";
         ++index;
+        code += tab + "    /** Creates the " + node.full_name() + " category. */\n";
         code += tab + "    public " + node_class_name + "(){index = " + uint64_to_string(index) + "L;}\n";
 
         for (const auto& child : node.get_all_children()) {
             code += get_category_class_code_recursive(*child, tab + "    ", index);
         }
         code += tab + "}\n";
+        code += tab + "/** The " + node.full_name() + " category. */\n";
         code += tab + "public " + node_class_name + " " + node.name() + " = new " + node_class_name + "();     //" + node.full_name();
         if (!node.comment().trim().is_empty()) {
             code += "    //" + node.comment();
@@ -67,8 +70,11 @@ namespace bq {
 
     bq::string category_log_template_java::get_category_class_root_define_code(const category_node& root_node) const
     {
-        bq::string code = "public static class " + class_name_ + "_category_root\n";
+        bq::string code = "/** The categories declared by the category configuration. */\n";
+        code += "public static class " + class_name_ + "_category_root\n";
         code += "{\n";
+        code += "    /** Creates the category tree. */\n";
+        code += "    public " + class_name_ + "_category_root() {}\n";
         uint64_t index = 0;
         for (const auto& child : root_node.get_all_children()) {
             code += get_category_class_code_recursive(*child, "    ", index);
@@ -96,7 +102,7 @@ namespace bq {
 import bq.def.*;
 import bq.impl.log_invoker;
 
-/*!
+/**
  * Generated Wrapper For ${CLASS_NAME}
  *
  * This is a category_log that supports attaching a category to each log entry.
@@ -171,104 +177,393 @@ public class ${CLASS_NAME} extends category_log{
     
 
     //log methods for param count 0
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content)
     {
         return do_log(category, log_level.verbose, log_format_content);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content)
     {
         return do_log(category, log_level.debug, log_format_content);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content)
     {
         return do_log(category, log_level.info, log_format_content);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content)
     {
         return do_log(category, log_level.warning, log_format_content);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content)
     {
         return do_log(category, log_level.error, log_format_content);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content)
     {
         return do_log(category, log_level.fatal, log_format_content);
     }
 
     //log methods for param count 1
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1)
     {
         return do_log(category, log_level.verbose, log_format_content, p1);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1)
     {
         return do_log(category, log_level.debug, log_format_content, p1);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1)
     {
         return do_log(category, log_level.info, log_format_content, p1);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1)
     {
         return do_log(category, log_level.warning, log_format_content, p1);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1)
     {
         return do_log(category, log_level.error, log_format_content, p1);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1)
     {
         return do_log(category, log_level.fatal, log_format_content, p1);
     }
-
+)"
+R"(
     //log methods for param count 2
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2);
     }
 
     //log methods for param count 3
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3);
@@ -276,104 +571,587 @@ public class ${CLASS_NAME} extends category_log{
 
 )";
         content += R"(    //log methods for param count 4
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4);
     }
-
+)"
+R"(
     //log methods for param count 5
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5);
     }
-
+)"
+R"(
     //log methods for param count 6
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6);
     }
-
+)"
+R"(
     //log methods for param count 7
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7);
@@ -381,104 +1159,779 @@ public class ${CLASS_NAME} extends category_log{
 
 )";
         content += R"(    //log methods for param count 8
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8);
     }
-
+)"
+R"(
     //log methods for param count 9
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9);
     }
-
+)"
+R"(
     //log methods for param count 10
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10);
     }
-
+)"
+R"(
     //log methods for param count 11
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11);
@@ -486,53 +1939,316 @@ public class ${CLASS_NAME} extends category_log{
 
 )";
         content += R"(    //log methods for param count 12
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @param p12
+     *             The 12th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.verbose, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @param p12
+     *             The 12th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.debug, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @param p12
+     *             The 12th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.info, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @param p12
+     *             The 12th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.warning, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @param p12
+     *             The 12th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.error, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param p1
+     *             The first argument the format string uses.
+     * @param p2
+     *             The second argument the format string uses.
+     * @param p3
+     *             The third argument the format string uses.
+     * @param p4
+     *             The fourth argument the format string uses.
+     * @param p5
+     *             The fifth argument the format string uses.
+     * @param p6
+     *             The sixth argument the format string uses.
+     * @param p7
+     *             The seventh argument the format string uses.
+     * @param p8
+     *             The eighth argument the format string uses.
+     * @param p9
+     *             The ninth argument the format string uses.
+     * @param p10
+     *             The 10th argument the format string uses.
+     * @param p11
+     *             The 11th argument the format string uses.
+     * @param p12
+     *             The 12th argument the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object p1, Object p2, Object p3, Object p4, Object p5, Object p6, Object p7, Object p8, Object p9, Object p10, Object p11, Object p12)
     {
         return do_log(category, log_level.fatal, log_format_content, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11, p12);
     }
-
-    ///Core log functions with category param, there are 6 log levels:
-    ///verbose, debug, info, warning, error, fatal
+)"
+R"(
+    /**
+     * Logs at the verbose level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param args
+     *             The arguments the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean verbose(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
         return do_log(category, log_level.verbose, log_format_content, args);
     }
+    /**
+     * Logs at the debug level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param args
+     *             The arguments the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean debug(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
         return do_log(category, log_level.debug, log_format_content, args);
     }
+    /**
+     * Logs at the info level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param args
+     *             The arguments the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean info(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
         return do_log(category, log_level.info, log_format_content, args);
     }
+    /**
+     * Logs at the warning level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param args
+     *             The arguments the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean warning(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
         return do_log(category, log_level.warning, log_format_content, args);
     }
+    /**
+     * Logs at the error level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param args
+     *             The arguments the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean error(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
         return do_log(category, log_level.error, log_format_content, args);
     }
+    /**
+     * Logs at the fatal level in the given category.
+     * @param category
+     *             The category the entry belongs to, one of the fields of the generated cat object.
+     * @param log_format_content
+     *             The format string, in the same syntax as String.format.
+     * @param args
+     *             The arguments the format string uses.
+     * @return
+     *             true if the entry was written; false if the level is disabled or the buffer is full.
+     */
     public boolean fatal(${CLASS_NAME}_category_base category, String log_format_content, Object... args)
     {
         return do_log(category, log_level.fatal, log_format_content, args);
@@ -551,6 +2267,7 @@ public class ${CLASS_NAME} extends category_log{
     }
     ${CATEGORY_ROOT_CLASS}
     
+    /** The categories this log can attach to an entry; pass one to the level methods. */
     public final ${CLASS_NAME}_category_root cat = new ${CLASS_NAME}_category_root();
 }
 )";

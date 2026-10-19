@@ -81,17 +81,21 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
 
 // ----------------------------- helper: encode Python args into log buffer -----------------------------
 
-static const uint8_t TYPE_NULL    = static_cast<uint8_t>(bq::log_arg_type_enum::null_type);
-static const uint8_t TYPE_BOOL    = static_cast<uint8_t>(bq::log_arg_type_enum::bool_type);
-static const uint8_t TYPE_INT64   = static_cast<uint8_t>(bq::log_arg_type_enum::int64_type);
-static const uint8_t TYPE_DOUBLE  = static_cast<uint8_t>(bq::log_arg_type_enum::double_type);
-static const uint8_t TYPE_STR16   = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
+static const uint8_t TYPE_NULL = static_cast<uint8_t>(bq::log_arg_type_enum::null_type);
+static const uint8_t TYPE_BOOL = static_cast<uint8_t>(bq::log_arg_type_enum::bool_type);
+static const uint8_t TYPE_INT64 = static_cast<uint8_t>(bq::log_arg_type_enum::int64_type);
+static const uint8_t TYPE_DOUBLE = static_cast<uint8_t>(bq::log_arg_type_enum::double_type);
+static const uint8_t TYPE_STR16 = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
 
 static inline uint32_t align4(uint32_t v) { return (v + 3u) & ~3u; }
 
 // Pre-calculate args size and cache converted values
 struct py_arg_cache {
-    enum arg_kind { ARG_NULL, ARG_BOOL, ARG_INT64, ARG_DOUBLE, ARG_STR16 };
+    enum arg_kind { ARG_NULL,
+        ARG_BOOL,
+        ARG_INT64,
+        ARG_DOUBLE,
+        ARG_STR16 };
     arg_kind kind;
     union {
         bool bool_val;
@@ -102,7 +106,8 @@ struct py_arg_cache {
     uint32_t str_byte_len; // byte length of UTF-16 data (excluding null terminator)
 };
 
-static bool prepare_arg(PyObject* arg, py_arg_cache* cache) {
+static bool prepare_arg(PyObject* arg, py_arg_cache* cache)
+{
     cache->str_data = nullptr;
     cache->str_byte_len = 0;
 
@@ -180,7 +185,8 @@ static bool prepare_arg(PyObject* arg, py_arg_cache* cache) {
     return true;
 }
 
-static uint32_t calc_arg_storage_size(const py_arg_cache* cache) {
+static uint32_t calc_arg_storage_size(const py_arg_cache* cache)
+{
     // Storage layout per BqLog binary format (INCLUDE_TYPE_INFO=true).
     // Each arg's storage is 4-byte aligned (align_4).
     //   null:   4 bytes type header only                            -> align4(4)  = 4
@@ -203,13 +209,16 @@ static uint32_t calc_arg_storage_size(const py_arg_cache* cache) {
     return 0u;
 }
 
-static void write_arg_to_buffer(const py_arg_cache* cache, uint8_t* dest) {
+static void write_arg_to_buffer(const py_arg_cache* cache, uint8_t* dest)
+{
     // Binary format matches bq_log_wrapper_tools.h _type_copy<true>
     switch (cache->kind) {
     case py_arg_cache::ARG_NULL: {
         // null: just 4 bytes type header, byte 0 = type
         dest[0] = TYPE_NULL;
-        dest[1] = 0; dest[2] = 0; dest[3] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        dest[3] = 0;
         break;
     }
     case py_arg_cache::ARG_BOOL: {
@@ -223,21 +232,27 @@ static void write_arg_to_buffer(const py_arg_cache* cache, uint8_t* dest) {
     case py_arg_cache::ARG_INT64: {
         // pod size>2: 4-byte type header + 8 bytes data
         dest[0] = TYPE_INT64;
-        dest[1] = 0; dest[2] = 0; dest[3] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        dest[3] = 0;
         memcpy(dest + 4, &cache->int64_val, 8);
         break;
     }
     case py_arg_cache::ARG_DOUBLE: {
         // pod size>2: 4-byte type header + 8 bytes data
         dest[0] = TYPE_DOUBLE;
-        dest[1] = 0; dest[2] = 0; dest[3] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        dest[3] = 0;
         memcpy(dest + 4, &cache->double_val, 8);
         break;
     }
     case py_arg_cache::ARG_STR16: {
         // string: 4-byte type header + 4-byte uint32 length + string data
         dest[0] = TYPE_STR16;
-        dest[1] = 0; dest[2] = 0; dest[3] = 0;
+        dest[1] = 0;
+        dest[2] = 0;
+        dest[3] = 0;
         memcpy(dest + 4, &cache->str_byte_len, 4);
         if (cache->str_byte_len > 0u && cache->str_data) {
             memcpy(dest + 8, cache->str_data, cache->str_byte_len);
@@ -247,7 +262,8 @@ static void write_arg_to_buffer(const py_arg_cache* cache, uint8_t* dest) {
     }
 }
 
-static void free_arg_cache(py_arg_cache* cache) {
+static void free_arg_cache(py_arg_cache* cache)
+{
     if (cache->kind == py_arg_cache::ARG_STR16 && cache->str_data) {
         free(cache->str_data);
         cache->str_data = nullptr;
@@ -257,21 +273,34 @@ static void free_arg_cache(py_arg_cache* cache) {
 // ----------------------------- exported Python functions -----------------------------
 
 // get_log_version() -> str
-static PyObject* py_get_log_version(PyObject* self, PyObject* args) {
-    (void)self; (void)args;
+static PyObject* py_get_log_version(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
     const char* ver = bq::api::__api_get_log_version();
     return PyUnicode_FromString(ver ? ver : "");
 }
 
 // enable_auto_crash_handler() -> None
-static PyObject* py_enable_auto_crash_handler(PyObject* self, PyObject* args) {
-    (void)self; (void)args;
+static PyObject* py_enable_auto_crash_handler(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
     bq::api::__api_enable_auto_crash_handler();
     Py_RETURN_NONE;
 }
 
+// get_recovery_capability() -> int
+static PyObject* py_get_recovery_capability(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
+    return PyLong_FromLong(static_cast<long>(bq::api::__api_get_recovery_capability()));
+}
+
 // create_log(name: str, config: str, categories_count: int, categories: list[str] | None) -> int
-static PyObject* py_create_log(PyObject* self, PyObject* args) {
+static PyObject* py_create_log(PyObject* self, PyObject* args)
+{
     (void)self;
     const char* log_name = nullptr;
     const char* config = nullptr;
@@ -338,7 +367,8 @@ static PyObject* py_create_log(PyObject* self, PyObject* args) {
 }
 
 // log_reset_config(log_name: str, config: str) -> bool
-static PyObject* py_log_reset_config(PyObject* self, PyObject* args) {
+static PyObject* py_log_reset_config(PyObject* self, PyObject* args)
+{
     (void)self;
     const char* log_name = nullptr;
     const char* config = nullptr;
@@ -350,7 +380,8 @@ static PyObject* py_log_reset_config(PyObject* self, PyObject* args) {
 }
 
 // log_write(log_id: int, level: int, category_idx: int, format_str: str, *args) -> bool
-static PyObject* py_log_write(PyObject* self, PyObject* args) {
+static PyObject* py_log_write(PyObject* self, PyObject* args)
+{
     (void)self;
     Py_ssize_t nargs = PyTuple_Size(args);
     if (nargs < 4) {
@@ -360,14 +391,17 @@ static PyObject* py_log_write(PyObject* self, PyObject* args) {
     }
 
     uint64_t log_id = PyLong_AsUnsignedLongLong(PyTuple_GetItem(args, 0));
-    if (PyErr_Occurred()) return nullptr;
+    if (PyErr_Occurred())
+        return nullptr;
 
     int64_t level_raw = PyLong_AsLongLong(PyTuple_GetItem(args, 1));
-    if (PyErr_Occurred()) return nullptr;
+    if (PyErr_Occurred())
+        return nullptr;
     uint8_t level = static_cast<uint8_t>(level_raw);
 
     uint64_t cat_raw = PyLong_AsUnsignedLongLong(PyTuple_GetItem(args, 2));
-    if (PyErr_Occurred()) return nullptr;
+    if (PyErr_Occurred())
+        return nullptr;
     uint32_t category_idx = static_cast<uint32_t>(cat_raw);
 
     PyObject* format_str_obj = PyTuple_GetItem(args, 3);
@@ -416,37 +450,36 @@ static PyObject* py_log_write(PyObject* self, PyObject* args) {
 
     Py_BEGIN_ALLOW_THREADS
 
-    write_handle = bq::api::__api_log_write_begin(
-        log_id,
-        level,
-        category_idx,
-        static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type),
-        fmt_byte_len,
-        nullptr, // zero-copy: we write format data manually
-        total_args_size
-    );
+        write_handle = bq::api::__api_log_write_begin(
+            log_id,
+            level,
+            category_idx,
+            static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type),
+            fmt_byte_len,
+            nullptr, // zero-copy: we write format data manually
+            total_args_size);
 
-    if (write_handle.result == bq::enum_buffer_result_code::success) {
-        // Write format string data
-        if (fmt_byte_len > 0u) {
-            memcpy(write_handle.format_data_addr, fmt_data, fmt_byte_len);
-        }
-
-        // Write args data
-        if (extra_args_count > 0 && arg_caches) {
-            uint8_t* args_addr = write_handle.format_data_addr + align4(fmt_byte_len);
-            for (Py_ssize_t i = 0; i < extra_args_count; ++i) {
-                write_arg_to_buffer(&arg_caches[i], args_addr);
-                args_addr += calc_arg_storage_size(&arg_caches[i]);
-                free_arg_cache(&arg_caches[i]);
+        if (write_handle.result == bq::enum_buffer_result_code::success) {
+            // Write format string data
+            if (fmt_byte_len > 0u) {
+                memcpy(write_handle.format_data_addr, fmt_data, fmt_byte_len);
             }
-            free(arg_caches);
-            arg_caches = nullptr;
-        }
 
-        bq::api::__api_log_write_finish(log_id, write_handle);
-        write_ok = true;
-    }
+            // Write args data
+            if (extra_args_count > 0 && arg_caches) {
+                uint8_t* args_addr = write_handle.format_data_addr + align4(fmt_byte_len);
+                for (Py_ssize_t i = 0; i < extra_args_count; ++i) {
+                    write_arg_to_buffer(&arg_caches[i], args_addr);
+                    args_addr += calc_arg_storage_size(&arg_caches[i]);
+                    free_arg_cache(&arg_caches[i]);
+                }
+                free(arg_caches);
+                arg_caches = nullptr;
+            }
+
+            bq::api::__api_log_write_finish(log_id, write_handle);
+            write_ok = true;
+        }
 
     Py_END_ALLOW_THREADS
 
@@ -465,7 +498,8 @@ static PyObject* py_log_write(PyObject* self, PyObject* args) {
 }
 
 // set_appender_enable(log_id: int, appender_name: str, enable: bool) -> None
-static PyObject* py_set_appender_enable(PyObject* self, PyObject* args) {
+static PyObject* py_set_appender_enable(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     const char* appender_name = nullptr;
@@ -478,14 +512,17 @@ static PyObject* py_set_appender_enable(PyObject* self, PyObject* args) {
 }
 
 // get_logs_count() -> int
-static PyObject* py_get_logs_count(PyObject* self, PyObject* args) {
-    (void)self; (void)args;
+static PyObject* py_get_logs_count(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
     uint32_t count = bq::api::__api_get_logs_count();
     return PyLong_FromUnsignedLong(static_cast<unsigned long>(count));
 }
 
 // get_log_id_by_index(index: int) -> int
-static PyObject* py_get_log_id_by_index(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_id_by_index(PyObject* self, PyObject* args)
+{
     (void)self;
     uint32_t index = 0;
     if (!PyArg_ParseTuple(args, "I", &index)) {
@@ -496,7 +533,8 @@ static PyObject* py_get_log_id_by_index(PyObject* self, PyObject* args) {
 }
 
 // get_log_name_by_id(log_id: int) -> str | None
-static PyObject* py_get_log_name_by_id(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_name_by_id(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     if (!PyArg_ParseTuple(args, "K", &log_id_ull)) {
@@ -510,7 +548,8 @@ static PyObject* py_get_log_name_by_id(PyObject* self, PyObject* args) {
 }
 
 // get_log_categories_count(log_id: int) -> int
-static PyObject* py_get_log_categories_count(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_categories_count(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     if (!PyArg_ParseTuple(args, "K", &log_id_ull)) {
@@ -521,7 +560,8 @@ static PyObject* py_get_log_categories_count(PyObject* self, PyObject* args) {
 }
 
 // get_log_category_name_by_index(log_id: int, index: int) -> str | None
-static PyObject* py_get_log_category_name_by_index(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_category_name_by_index(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     uint32_t index = 0;
@@ -536,7 +576,8 @@ static PyObject* py_get_log_category_name_by_index(PyObject* self, PyObject* arg
 }
 
 // get_log_merged_log_level_bitmap_by_log_id(log_id: int) -> int
-static PyObject* py_get_log_merged_log_level_bitmap_by_log_id(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_merged_log_level_bitmap_by_log_id(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     if (!PyArg_ParseTuple(args, "K", &log_id_ull)) {
@@ -551,7 +592,8 @@ static PyObject* py_get_log_merged_log_level_bitmap_by_log_id(PyObject* self, Py
 }
 
 // get_log_category_masks_array_by_log_id(log_id: int, category_count: int) -> list[int]
-static PyObject* py_get_log_category_masks_array_by_log_id(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_category_masks_array_by_log_id(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     uint32_t category_count = 0;
@@ -561,7 +603,8 @@ static PyObject* py_get_log_category_masks_array_by_log_id(PyObject* self, PyObj
     const uint8_t* masks = bq::api::__api_get_log_category_masks_array_by_log_id(
         static_cast<uint64_t>(log_id_ull));
     PyObject* list = PyList_New(static_cast<Py_ssize_t>(category_count));
-    if (!list) return nullptr;
+    if (!list)
+        return nullptr;
     for (uint32_t i = 0; i < category_count; ++i) {
         PyList_SetItem(list, static_cast<Py_ssize_t>(i),
             PyLong_FromLong(masks ? static_cast<long>(masks[i]) : 0L));
@@ -570,7 +613,8 @@ static PyObject* py_get_log_category_masks_array_by_log_id(PyObject* self, PyObj
 }
 
 // get_log_print_stack_level_bitmap_by_log_id(log_id: int) -> int
-static PyObject* py_get_log_print_stack_level_bitmap_by_log_id(PyObject* self, PyObject* args) {
+static PyObject* py_get_log_print_stack_level_bitmap_by_log_id(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     if (!PyArg_ParseTuple(args, "K", &log_id_ull)) {
@@ -585,7 +629,8 @@ static PyObject* py_get_log_print_stack_level_bitmap_by_log_id(PyObject* self, P
 }
 
 // log_device_console(level: int, content: str) -> None
-static PyObject* py_log_device_console(PyObject* self, PyObject* args) {
+static PyObject* py_log_device_console(PyObject* self, PyObject* args)
+{
     (void)self;
     int32_t level = 0;
     const char* content = nullptr;
@@ -597,20 +642,22 @@ static PyObject* py_log_device_console(PyObject* self, PyObject* args) {
 }
 
 // force_flush(log_id: int) -> None
-static PyObject* py_force_flush(PyObject* self, PyObject* args) {
+static PyObject* py_force_flush(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     if (!PyArg_ParseTuple(args, "K", &log_id_ull)) {
         return nullptr;
     }
     Py_BEGIN_ALLOW_THREADS
-    bq::api::__api_force_flush(static_cast<uint64_t>(log_id_ull));
+        bq::api::__api_force_flush(static_cast<uint64_t>(log_id_ull));
     Py_END_ALLOW_THREADS
     Py_RETURN_NONE;
 }
 
 // get_file_base_dir(base_dir_type: int) -> str
-static PyObject* py_get_file_base_dir(PyObject* self, PyObject* args) {
+static PyObject* py_get_file_base_dir(PyObject* self, PyObject* args)
+{
     (void)self;
     int32_t base_dir_type = 0;
     if (!PyArg_ParseTuple(args, "i", &base_dir_type)) {
@@ -621,7 +668,8 @@ static PyObject* py_get_file_base_dir(PyObject* self, PyObject* args) {
 }
 
 // reset_base_dir(base_dir_type: int, dir: str) -> None
-static PyObject* py_reset_base_dir(PyObject* self, PyObject* args) {
+static PyObject* py_reset_base_dir(PyObject* self, PyObject* args)
+{
     (void)self;
     int32_t base_dir_type = 0;
     const char* dir = nullptr;
@@ -633,7 +681,8 @@ static PyObject* py_reset_base_dir(PyObject* self, PyObject* args) {
 }
 
 // log_decoder_create(path: str, priv_key: str) -> tuple(int, int)
-static PyObject* py_log_decoder_create(PyObject* self, PyObject* args) {
+static PyObject* py_log_decoder_create(PyObject* self, PyObject* args)
+{
     (void)self;
     const char* path = nullptr;
     const char* priv_key = nullptr;
@@ -643,13 +692,14 @@ static PyObject* py_log_decoder_create(PyObject* self, PyObject* args) {
     uint32_t handle = 0;
     bq::appender_decode_result result;
     Py_BEGIN_ALLOW_THREADS
-    result = bq::api::__api_log_decoder_create(path, priv_key, &handle);
+        result = bq::api::__api_log_decoder_create(path, priv_key, &handle);
     Py_END_ALLOW_THREADS
     return Py_BuildValue("(iI)", static_cast<int>(result), handle);
 }
 
 // log_decoder_decode(handle: int) -> tuple(int, str)
-static PyObject* py_log_decoder_decode(PyObject* self, PyObject* args) {
+static PyObject* py_log_decoder_decode(PyObject* self, PyObject* args)
+{
     (void)self;
     uint32_t handle = 0;
     if (!PyArg_ParseTuple(args, "I", &handle)) {
@@ -658,27 +708,29 @@ static PyObject* py_log_decoder_decode(PyObject* self, PyObject* args) {
     bq::_api_string_def text = { nullptr, 0 };
     bq::appender_decode_result result;
     Py_BEGIN_ALLOW_THREADS
-    result = bq::api::__api_log_decoder_decode(handle, &text);
+        result = bq::api::__api_log_decoder_decode(handle, &text);
     Py_END_ALLOW_THREADS
     const char* text_str = (result == bq::appender_decode_result::success && text.str) ? text.str : "";
     return Py_BuildValue("(is)", static_cast<int>(result), text_str);
 }
 
 // log_decoder_destroy(handle: int) -> None
-static PyObject* py_log_decoder_destroy(PyObject* self, PyObject* args) {
+static PyObject* py_log_decoder_destroy(PyObject* self, PyObject* args)
+{
     (void)self;
     uint32_t handle = 0;
     if (!PyArg_ParseTuple(args, "I", &handle)) {
         return nullptr;
     }
     Py_BEGIN_ALLOW_THREADS
-    bq::api::__api_log_decoder_destroy(handle);
+        bq::api::__api_log_decoder_destroy(handle);
     Py_END_ALLOW_THREADS
     Py_RETURN_NONE;
 }
 
 // log_decode(in_path: str, out_path: str, priv_key: str) -> bool
-static PyObject* py_log_decode(PyObject* self, PyObject* args) {
+static PyObject* py_log_decode(PyObject* self, PyObject* args)
+{
     (void)self;
     const char* in_path = nullptr;
     const char* out_path = nullptr;
@@ -688,13 +740,14 @@ static PyObject* py_log_decode(PyObject* self, PyObject* args) {
     }
     bool ok;
     Py_BEGIN_ALLOW_THREADS
-    ok = bq::api::__api_log_decode(in_path, out_path, priv_key);
+        ok = bq::api::__api_log_decode(in_path, out_path, priv_key);
     Py_END_ALLOW_THREADS
     return PyBool_FromLong(ok ? 1L : 0L);
 }
 
 // register_console_callback(callback) -> None
-static PyObject* py_register_console_callback(PyObject* self, PyObject* args) {
+static PyObject* py_register_console_callback(PyObject* self, PyObject* args)
+{
     (void)self;
     PyObject* callback = nullptr;
     if (!PyArg_ParseTuple(args, "O", &callback)) {
@@ -722,8 +775,10 @@ static PyObject* py_register_console_callback(PyObject* self, PyObject* args) {
 }
 
 // unregister_console_callback() -> None
-static PyObject* py_unregister_console_callback(PyObject* self, PyObject* args) {
-    (void)self; (void)args;
+static PyObject* py_unregister_console_callback(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
     if (py_console_callback) {
         bq::api::__api_unregister_console_callbacks(on_console_callback);
         Py_DECREF(py_console_callback);
@@ -733,7 +788,8 @@ static PyObject* py_unregister_console_callback(PyObject* self, PyObject* args) 
 }
 
 // set_console_buffer_enable(enable: bool) -> None
-static PyObject* py_set_console_buffer_enable(PyObject* self, PyObject* args) {
+static PyObject* py_set_console_buffer_enable(PyObject* self, PyObject* args)
+{
     (void)self;
     int32_t enable = 0;
     if (!PyArg_ParseTuple(args, "p", &enable)) {
@@ -761,7 +817,8 @@ static void BQ_STDCALL py_console_buffer_fetch_callback(
     int32_t length)
 {
     py_fetch_ctx* ctx = static_cast<py_fetch_ctx*>(pass_through_param);
-    if (!ctx || !ctx->py_callback) return;
+    if (!ctx || !ctx->py_callback)
+        return;
 
     PyObject* cb_args = Py_BuildValue("(Kiisi)",
         (unsigned long long)log_id,
@@ -780,7 +837,8 @@ static void BQ_STDCALL py_console_buffer_fetch_callback(
 }
 
 // fetch_and_remove_console_buffer(callback) -> bool
-static PyObject* py_fetch_and_remove_console_buffer(PyObject* self, PyObject* args) {
+static PyObject* py_fetch_and_remove_console_buffer(PyObject* self, PyObject* args)
+{
     (void)self;
     PyObject* callback = nullptr;
     if (!PyArg_ParseTuple(args, "O", &callback)) {
@@ -799,7 +857,8 @@ static PyObject* py_fetch_and_remove_console_buffer(PyObject* self, PyObject* ar
 }
 
 // take_snapshot_string(log_id: int, time_zone_config: str) -> str
-static PyObject* py_take_snapshot_string(PyObject* self, PyObject* args) {
+static PyObject* py_take_snapshot_string(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     const char* tz_config = nullptr;
@@ -809,7 +868,7 @@ static PyObject* py_take_snapshot_string(PyObject* self, PyObject* args) {
     bq::_api_string_def snapshot_def = { nullptr, 0 };
     uint64_t log_id = static_cast<uint64_t>(log_id_ull);
     Py_BEGIN_ALLOW_THREADS
-    bq::api::__api_take_snapshot_string(log_id, tz_config, &snapshot_def);
+        bq::api::__api_take_snapshot_string(log_id, tz_config, &snapshot_def);
     Py_END_ALLOW_THREADS
     PyObject* result = PyUnicode_FromString(snapshot_def.str ? snapshot_def.str : "");
     bq::api::__api_release_snapshot_string(log_id, &snapshot_def);
@@ -817,7 +876,8 @@ static PyObject* py_take_snapshot_string(PyObject* self, PyObject* args) {
 }
 
 // get_stack_trace(skip_frame_count: int) -> str
-static PyObject* py_get_stack_trace(PyObject* self, PyObject* args) {
+static PyObject* py_get_stack_trace(PyObject* self, PyObject* args)
+{
     (void)self;
     uint32_t skip = 0;
     if (!PyArg_ParseTuple(args, "I", &skip)) {
@@ -829,7 +889,8 @@ static PyObject* py_get_stack_trace(PyObject* self, PyObject* args) {
 }
 
 // is_enable_for(log_id: int, category_idx: int, level: int) -> bool
-static PyObject* py_is_enable_for(PyObject* self, PyObject* args) {
+static PyObject* py_is_enable_for(PyObject* self, PyObject* args)
+{
     (void)self;
     unsigned long long log_id_ull = 0;
     uint32_t category_idx = 0;
@@ -851,8 +912,10 @@ static PyObject* py_is_enable_for(PyObject* self, PyObject* args) {
 // uninit() -> None
 // Called during interpreter shutdown. Must unregister the console callback
 // to prevent the C++ worker thread from calling into Python after Py_Finalize.
-static PyObject* py_uninit(PyObject* self, PyObject* args) {
-    (void)self; (void)args;
+static PyObject* py_uninit(PyObject* self, PyObject* args)
+{
+    (void)self;
+    (void)args;
     // Unregister console callback first (blocks until in-flight callbacks drain)
     if (py_console_callback) {
         bq::api::__api_unregister_console_callbacks(on_console_callback);
@@ -866,37 +929,38 @@ static PyObject* py_uninit(PyObject* self, PyObject* args) {
 // ----------------------------- module definition -----------------------------
 
 static PyMethodDef bqlog_methods[] = {
-    {"get_log_version", py_get_log_version, METH_NOARGS, "Get BqLog version string"},
-    {"enable_auto_crash_handler", py_enable_auto_crash_handler, METH_NOARGS, "Enable auto crash handler"},
-    {"create_log", py_create_log, METH_VARARGS, "Create a log object"},
-    {"log_reset_config", py_log_reset_config, METH_VARARGS, "Reset log configuration"},
-    {"log_write", py_log_write, METH_VARARGS, "Write a log entry"},
-    {"set_appender_enable", py_set_appender_enable, METH_VARARGS, "Enable/disable an appender"},
-    {"get_logs_count", py_get_logs_count, METH_NOARGS, "Get the count of log objects"},
-    {"get_log_id_by_index", py_get_log_id_by_index, METH_VARARGS, "Get log id by index"},
-    {"get_log_name_by_id", py_get_log_name_by_id, METH_VARARGS, "Get log name by id"},
-    {"get_log_categories_count", py_get_log_categories_count, METH_VARARGS, "Get log categories count"},
-    {"get_log_category_name_by_index", py_get_log_category_name_by_index, METH_VARARGS, "Get log category name by index"},
-    {"get_log_merged_log_level_bitmap_by_log_id", py_get_log_merged_log_level_bitmap_by_log_id, METH_VARARGS, "Get merged log level bitmap"},
-    {"get_log_category_masks_array_by_log_id", py_get_log_category_masks_array_by_log_id, METH_VARARGS, "Get category masks array"},
-    {"get_log_print_stack_level_bitmap_by_log_id", py_get_log_print_stack_level_bitmap_by_log_id, METH_VARARGS, "Get print stack level bitmap"},
-    {"log_device_console", py_log_device_console, METH_VARARGS, "Output to device console"},
-    {"force_flush", py_force_flush, METH_VARARGS, "Force flush log buffer"},
-    {"get_file_base_dir", py_get_file_base_dir, METH_VARARGS, "Get file base directory"},
-    {"reset_base_dir", py_reset_base_dir, METH_VARARGS, "Reset base directory"},
-    {"log_decoder_create", py_log_decoder_create, METH_VARARGS, "Create a log decoder"},
-    {"log_decoder_decode", py_log_decoder_decode, METH_VARARGS, "Decode a log entry"},
-    {"log_decoder_destroy", py_log_decoder_destroy, METH_VARARGS, "Destroy a log decoder"},
-    {"log_decode", py_log_decode, METH_VARARGS, "Decode a log file to text file"},
-    {"register_console_callback", py_register_console_callback, METH_VARARGS, "Register console callback"},
-    {"unregister_console_callback", py_unregister_console_callback, METH_NOARGS, "Unregister console callback"},
-    {"set_console_buffer_enable", py_set_console_buffer_enable, METH_VARARGS, "Enable/disable console buffer"},
-    {"fetch_and_remove_console_buffer", py_fetch_and_remove_console_buffer, METH_VARARGS, "Fetch and remove console buffer entry"},
-    {"take_snapshot_string", py_take_snapshot_string, METH_VARARGS, "Take snapshot string"},
-    {"get_stack_trace", py_get_stack_trace, METH_VARARGS, "Get stack trace"},
-    {"is_enable_for", py_is_enable_for, METH_VARARGS, "Check if log level is enabled for category"},
-    {"uninit", py_uninit, METH_NOARGS, "Uninitialize BqLog (flush all)"},
-    {nullptr, nullptr, 0, nullptr}
+    { "get_log_version", py_get_log_version, METH_NOARGS, "Get BqLog version string" },
+    { "enable_auto_crash_handler", py_enable_auto_crash_handler, METH_NOARGS, "Enable auto crash handler" },
+    { "get_recovery_capability", py_get_recovery_capability, METH_NOARGS, "What this platform offers for crash recovery" },
+    { "create_log", py_create_log, METH_VARARGS, "Create a log object" },
+    { "log_reset_config", py_log_reset_config, METH_VARARGS, "Reset log configuration" },
+    { "log_write", py_log_write, METH_VARARGS, "Write a log entry" },
+    { "set_appender_enable", py_set_appender_enable, METH_VARARGS, "Enable/disable an appender" },
+    { "get_logs_count", py_get_logs_count, METH_NOARGS, "Get the count of log objects" },
+    { "get_log_id_by_index", py_get_log_id_by_index, METH_VARARGS, "Get log id by index" },
+    { "get_log_name_by_id", py_get_log_name_by_id, METH_VARARGS, "Get log name by id" },
+    { "get_log_categories_count", py_get_log_categories_count, METH_VARARGS, "Get log categories count" },
+    { "get_log_category_name_by_index", py_get_log_category_name_by_index, METH_VARARGS, "Get log category name by index" },
+    { "get_log_merged_log_level_bitmap_by_log_id", py_get_log_merged_log_level_bitmap_by_log_id, METH_VARARGS, "Get merged log level bitmap" },
+    { "get_log_category_masks_array_by_log_id", py_get_log_category_masks_array_by_log_id, METH_VARARGS, "Get category masks array" },
+    { "get_log_print_stack_level_bitmap_by_log_id", py_get_log_print_stack_level_bitmap_by_log_id, METH_VARARGS, "Get print stack level bitmap" },
+    { "log_device_console", py_log_device_console, METH_VARARGS, "Output to device console" },
+    { "force_flush", py_force_flush, METH_VARARGS, "Force flush log buffer" },
+    { "get_file_base_dir", py_get_file_base_dir, METH_VARARGS, "Get file base directory" },
+    { "reset_base_dir", py_reset_base_dir, METH_VARARGS, "Reset base directory" },
+    { "log_decoder_create", py_log_decoder_create, METH_VARARGS, "Create a log decoder" },
+    { "log_decoder_decode", py_log_decoder_decode, METH_VARARGS, "Decode a log entry" },
+    { "log_decoder_destroy", py_log_decoder_destroy, METH_VARARGS, "Destroy a log decoder" },
+    { "log_decode", py_log_decode, METH_VARARGS, "Decode a log file to text file" },
+    { "register_console_callback", py_register_console_callback, METH_VARARGS, "Register console callback" },
+    { "unregister_console_callback", py_unregister_console_callback, METH_NOARGS, "Unregister console callback" },
+    { "set_console_buffer_enable", py_set_console_buffer_enable, METH_VARARGS, "Enable/disable console buffer" },
+    { "fetch_and_remove_console_buffer", py_fetch_and_remove_console_buffer, METH_VARARGS, "Fetch and remove console buffer entry" },
+    { "take_snapshot_string", py_take_snapshot_string, METH_VARARGS, "Take snapshot string" },
+    { "get_stack_trace", py_get_stack_trace, METH_VARARGS, "Get stack trace" },
+    { "is_enable_for", py_is_enable_for, METH_VARARGS, "Check if log level is enabled for category" },
+    { "uninit", py_uninit, METH_NOARGS, "Uninitialize BqLog (flush all)" },
+    { nullptr, nullptr, 0, nullptr }
 };
 
 // ----------------------------- auto-registration -----------------------------

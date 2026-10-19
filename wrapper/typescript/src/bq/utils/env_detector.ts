@@ -10,8 +10,10 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
+/** Which JavaScript runtime the wrapper is running in. */
 export type runtime_kind = "node" | "ohos" | "unknown";
 const proc: any = (globalThis as any)?.process;
+/** Reports which runtime the wrapper is running in. */
 export function detect_runtime(): runtime_kind {
   const is_node = typeof proc !== "undefined"
       && !!(proc as any).versions

@@ -17,6 +17,7 @@
 //
 
 // Basic includes
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <errno.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -26,11 +27,23 @@
 #include <stdint.h>
 #include <inttypes.h>
 #include <ctype.h>
-#include <math.h>
 #include <time.h>
+#endif
+
+// Declarations between these two markers make up the interface of the C++20 module
+// (see include/bq_log/bq.log.cppm). They are empty unless a module is being built,
+// which defines them as `export {` and `}` before including any header; the include
+// entry sees exactly the same declarations with the same linkage.
+// An export block takes namespace scoped declarations only, so internal linkage helpers and
+// the bodies in *_impl.h stay outside it: a class carries its own members when it is exported.
+#ifndef BQ_MODULE_EXPORT_BEGIN
+#define BQ_MODULE_EXPORT_BEGIN
+#define BQ_MODULE_EXPORT_END
+#endif
 
 #include "bq_common/misc/assert.h"
 #include "bq_common/platform/macros.h"
+#include "bq_common/platform/inline_intrinsics.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas" // some pragma is not valid for all GCC versions
@@ -45,6 +58,9 @@
 #include "bq_common/types/string.h"
 #include "bq_common/types/hash_map.h"
 #include "bq_common/types/basic_types.h"
+// This one is a public header bq.log uses too, so a module build must reach it the
+// same way the include build does.
+#include "bq_common/platform/fast_clock.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop
 #endif

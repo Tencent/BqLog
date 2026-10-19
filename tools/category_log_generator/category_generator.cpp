@@ -94,6 +94,13 @@ namespace bq {
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".h"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".h").c_str());
 
+        // The C++20 module entry beside the header: same class, importable.
+        bq::string module_code = cpp.generate_module(root_node);
+        if (!module_code.is_empty()) {
+            bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".cppm"), module_code);
+            bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".cppm").c_str());
+        }
+
         category_log_template_csharp csharp(class_name);
         code = csharp.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".cs"), code);

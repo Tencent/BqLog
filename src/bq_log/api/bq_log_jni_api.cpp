@@ -43,6 +43,16 @@ JNIEXPORT void JNICALL Java_bq_impl_log_1invoker__1_1api_1enable_1auto_1crash_1h
 
 /*
  * Class:     bq_impl_log_invoker
+ * Method:    __api_get_recovery_capability
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1recovery_1capability(JNIEnv*, jclass)
+{
+    return (jint)bq::api::__api_get_recovery_capability();
+}
+
+/*
+ * Class:     bq_impl_log_invoker
  * Method:    __api_create_log
  * Signature: (Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;)J
  */

@@ -14,6 +14,7 @@
 
 #include "bq_log/api/bq_log_napi.h"
 #if defined(BQ_NAPI)
+#include <math.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/global/log_vars.h"
@@ -30,8 +31,7 @@ struct console_msg_head {
     uint32_t length;
 } BQ_PACK_END
 
-    void
-    console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
+void console_callback_handler(napi_env env, napi_ref js_cb_ref, void* param)
 {
     console_msg_head* msg = nullptr;
     bool from_buffer = (param == static_cast<void*>(&bq::log_global_vars::get().console_msg_buffer_));
@@ -103,6 +103,13 @@ BQ_NAPI_DEF(enable_auto_crash_handler, napi_env, env, napi_callback_info, info)
     (void)info;
     bq::log::enable_auto_crash_handle();
     return bq::make_napi_undefined(env);
+}
+
+// get_recovery_capability(): number
+BQ_NAPI_DEF(get_recovery_capability, napi_env, env, napi_callback_info, info)
+{
+    (void)info;
+    return bq::make_napi_u32(env, static_cast<uint32_t>(bq::api::__api_get_recovery_capability()));
 }
 
 // create_log(name: string, config: string, categories_count: number, categories: string[]): bigint

@@ -38,7 +38,8 @@ namespace write_thread_cost {
 
     enum class write_mode {
         normal, // log.info(...)
-        fast // BQ_LOG_FAST_INFO(...)
+        fast, // BQ_LOG_FAST_INFO(...)
+        fast_info // log.fast_info<"...">(...), C++20 only
     };
 
     // Busy waits rather than sleeping: a sleep would let the core clock down and bill the wake-up to the next batch.
@@ -56,10 +57,17 @@ namespace write_thread_cost {
             for (uint64_t i = 0; i < MESSAGES_PER_ITERATION; ++i) {
                 log_obj.info("Logging iteration: {}, message: {}, double: {}", iteration, i, value);
             }
-        } else {
+        } else if (mode == write_mode::fast) {
             for (uint64_t i = 0; i < MESSAGES_PER_ITERATION; ++i) {
                 BQ_LOG_FAST_INFO(log_obj, "Logging iteration: {}, message: {}, double: {}", iteration, i, value);
             }
+        } else {
+#if defined(BQ_CPP_20)
+            // same format string and arguments as the macro above, so the two are comparable
+            for (uint64_t i = 0; i < MESSAGES_PER_ITERATION; ++i) {
+                log_obj.fast_info<"Logging iteration: {}, message: {}, double: {}">(iteration, i, value);
+            }
+#endif
         }
     }
 
@@ -101,8 +109,10 @@ namespace write_thread_cost {
             size_t rank = static_cast<size_t>(p / 100.0 * static_cast<double>(samples.size()));
             return samples[std::min(rank, samples.size() - 1)];
         };
+        const char* mode_label = mode == write_mode::normal ? "log.info()         "
+                                                            : (mode == write_mode::fast ? "BQ_LOG_FAST_INFO() " : "log.fast_info<>()  ");
         std::cout << std::fixed << std::setprecision(1);
-        std::cout << (mode == write_mode::normal ? "log.info()         " : "BQ_LOG_FAST_INFO() ")
+        std::cout << mode_label
                   << "| threads " << thread_count << " | ns per log | 50th " << percentile(50) << " | 75th " << percentile(75)
                   << " | 90th " << percentile(90) << " | 95th " << percentile(95) << " | 99th " << percentile(99)
                   << " | 99.9th " << percentile(99.9) << " | worst " << samples.back() << std::endl;
@@ -121,9 +131,15 @@ namespace write_thread_cost {
         bq::log::force_flush_all_logs();
         run(log_obj, write_mode::normal, 1);
         run(log_obj, write_mode::fast, 1);
+#if defined(BQ_CPP_20)
+        run(log_obj, write_mode::fast_info, 1);
+#endif
         if (thread_count > 1) {
             run(log_obj, write_mode::normal, thread_count);
             run(log_obj, write_mode::fast, thread_count);
+#if defined(BQ_CPP_20)
+            run(log_obj, write_mode::fast_info, thread_count);
+#endif
         }
         std::cout << "============================================================" << std::endl
                   << std::endl;

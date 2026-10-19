@@ -15,7 +15,15 @@ import bq.def.*;
 import java.util.*;
 import java.util.AbstractMap.SimpleEntry;
 
+/**
+ * Factories for the parameter wrappers the packer fills in without boxing. A helper takes a
+ * wrapper out of the calling thread's pool, records the type tag and the value, and the packing
+ * code gives it back once the entry is written.
+ */
 public class param {
+	/** Not instantiable: every helper in this class is static. */
+	private param() {
+	}
 	
 	/*
 	 * Java does not have implicit type conversions or value-type structs like C#, 
@@ -59,6 +67,10 @@ public class param {
     	return new SimpleEntry<int[], long[]>(new int[1], new long[2]);
     }
 	
+	/**
+	 * Gives a wrapper back to the calling thread's pool, ready for the next no_boxing() call.
+	 * @param wrapper_obj The wrapper the packing code has finished with.
+	 */
 	public static void return_param_wrapper_to_pool(Map.Entry<int[], long[]> wrapper_obj)
 	{
 		Stack<Map.Entry<int[], long[]>> list_local = pool.get();
@@ -67,6 +79,11 @@ public class param {
 	}
 
 	
+	/**
+	 * Packs a boolean without boxing it.
+	 * @param obj The value to log.
+	 * @return A pooled wrapper holding the value, for one of the log methods.
+	 */
 	public static Map.Entry<int[], long[]> no_boxing(boolean obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -76,6 +93,11 @@ public class param {
 		return wrapper_obj;
     }
 
+    /**
+     * Packs a char without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(char obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -85,6 +107,11 @@ public class param {
 		return wrapper_obj;
     }
 
+    /**
+     * Packs a byte without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(byte obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -94,6 +121,11 @@ public class param {
 		return wrapper_obj;
     }
     
+    /**
+     * Packs a short without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(short obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -103,6 +135,11 @@ public class param {
 		return wrapper_obj;
     }
     
+    /**
+     * Packs an int without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(int obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -112,6 +149,11 @@ public class param {
 		return wrapper_obj;
     }
     
+    /**
+     * Packs a long without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(long obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -121,6 +163,11 @@ public class param {
 		return wrapper_obj;
     }
     
+    /**
+     * Packs a float without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(float obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();
@@ -130,6 +177,11 @@ public class param {
 		return wrapper_obj;
     }
     
+    /**
+     * Packs a double without boxing it.
+     * @param obj The value to log.
+     * @return A pooled wrapper holding the value, for one of the log methods.
+     */
     public static Map.Entry<int[], long[]> no_boxing(double obj)
     {
 		Map.Entry<int[], long[]> wrapper_obj = get_param_wrapper_from_pool();

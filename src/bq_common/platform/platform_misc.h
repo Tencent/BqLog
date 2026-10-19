@@ -134,6 +134,20 @@ namespace bq {
 
         bool unlock_file(const platform_file_handle& file_handle); // undo file write exclusive
 
+        enum class instance_lock_result {
+            locked,
+            held_by_other,
+            error,
+        };
+
+        // Whether a file can be locked until its open description closes, which keeps a second process out.
+        bool is_cross_process_file_lock_supported();
+
+        // Non-blocking lock, exclusive between runtimes in one process; released with the description.
+        // The lock file is never deleted.
+        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle);
+        void unlock_instance_file(platform_file_handle& handle);
+
         bq::string get_lexically_path(const bq::string& original_path);
 
         bool is_absolute(const string& path);

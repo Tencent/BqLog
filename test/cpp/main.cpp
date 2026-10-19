@@ -16,6 +16,7 @@
 #include "bq_common_test/test_hash_map.h"
 #include "test_bounded_hash_cache.h"
 #include "test_compressed_cache.h"
+#include "test_string_serialize.h"
 #include "bq_common_test/test_string.h"
 #include "bq_common_test/test_file_manager.h"
 #include "bq_common_test/test_property.h"
@@ -24,8 +25,13 @@
 #include "bq_common_test/test_fast_clock.h"
 #include "test_miso_ring_buffer.h"
 #include "test_siso_ring_buffer.h"
+#include "test_instance_storage.h"
+#include "test_meta_registry.h"
 #include "test_log_buffer.h"
 #include "test_fast_log.h"
+#if defined(BQ_CPP_20)
+#include "test_fast_info.h"
+#endif
 #include "test_log_appender.h"
 #include "test_log.h"
 #include "test_layout.h"
@@ -112,9 +118,15 @@ int32_t main_logic()
     TEST_GROUP_BEGIN(Bq_Log_Test);
     TEST_GROUP(Bq_Log_Test, bq::test, test_bounded_hash_cache);
     TEST_GROUP(Bq_Log_Test, bq::test, test_compressed_cache);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_string_serialize);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", 0));
+    TEST_GROUP(Bq_Log_Test, bq::test, test_instance_storage);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_meta_registry);
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_fast_log);
+#if defined(BQ_CPP_20)
+    TEST_GROUP(Bq_Log_Test, bq::test, test_fast_info);
+#endif
     TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
     TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
@@ -140,8 +152,15 @@ int32_t main_logic()
     }
 }
 
+// the suite registers more formats than the mobile cap; the refusal path is covered by test_set_max_entries tests
+static void prepare_test_meta_registry()
+{
+    bq::meta_registry::instance().test_set_max_entries(1u << 20);
+}
+
 int32_t main(int32_t argc, char** argv)
 {
+    prepare_test_meta_registry();
     if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {
         bq::test::test_fast_clock clock_test;
         auto result = clock_test.test();
@@ -154,12 +173,45 @@ int32_t main(int32_t argc, char** argv)
         result.output("test_fast_log");
         return result.is_all_pass() ? 0 : -1;
     }
+    if (argc > 1 && strcmp(argv[1], "--appender-only") == 0) {
+        bq::test::test_log_appender appender_test;
+        auto result = appender_test.test();
+        result.output("test_log_appender");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--log-only") == 0) {
+        bq::test::test_log log_test;
+        auto result = log_test.test();
+        result.output("test_log");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--instance-only") == 0) {
+        bq::test::test_instance_storage instance_test;
+        auto result = instance_test.test();
+        result.output("test_instance_storage");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--meta-only") == 0) {
+        bq::test::test_meta_registry meta_test;
+        auto result = meta_test.test();
+        result.output("test_meta_registry");
+        return result.is_all_pass() ? 0 : -1;
+    }
+#if defined(BQ_CPP_20)
+    if (argc > 1 && strcmp(argv[1], "--fast-info-only") == 0) {
+        bq::test::test_fast_info fast_info_test;
+        auto result = fast_info_test.test();
+        result.output("test_fast_info");
+        return result.is_all_pass() ? 0 : -1;
+    }
+#endif
     return main_logic();
 }
 
 #if defined(BQ_ANDROID)
 int32_t test_main()
 {
+    prepare_test_meta_registry();
     return main_logic();
 }
 #endif
