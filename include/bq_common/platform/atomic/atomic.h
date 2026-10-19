@@ -19,15 +19,6 @@
  * we exclude STL and libc++ to reduce the final executable and library file size
  */
 
-// This header sits inside the public include chain, so it must not include the entry header:
-// bq_common_public_include.h pulls in fast_clock.h, which is written in terms of the templates
-// declared below and would then be read before they exist. Only what this file is written in
-// terms of is included here, and the module markers the entry would supply are declared the
-// same way it does.
-#ifndef BQ_MODULE_EXPORT_BEGIN
-#define BQ_MODULE_EXPORT_BEGIN
-#define BQ_MODULE_EXPORT_END
-#endif
 #include "bq_common/types/type_traits.h"
 
 namespace bq {
