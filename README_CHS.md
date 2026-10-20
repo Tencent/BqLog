@@ -23,7 +23,7 @@
 [![npm](https://img.shields.io/npm/v/@pippocao/bqlog?logo=npm&label=npm&style=flat)](https://www.npmjs.com/package/@pippocao/bqlog)
 [![ohpm](https://img.shields.io/badge/ohpm-bqlog-blue?style=flat)](https://ohpm.openharmony.cn/#/cn/detail/bqlog)
 [![Go](https://img.shields.io/badge/Go-go%2Fv2-00ADD8?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)
-[![vcpkg](https://img.shields.io/badge/vcpkg-in%20review-lightgrey?logo=vcpkg&style=flat)](https://github.com/microsoft/vcpkg/pull/54463)
+[![vcpkg](https://img.shields.io/badge/vcpkg-2.7.0-blue?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
 [![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
 [![Unreal](https://img.shields.io/badge/Unreal-Fab-0E1128?logo=unrealengine&style=flat)](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)
 
@@ -105,7 +105,7 @@
 | 生态 | 安装命令 | 库 | 命令行工具 | 平台主页 |
 |------|---------|:--:|:---------:|----------|
 | [**Homebrew**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ | [formulae.brew.sh](https://formulae.brew.sh/formula/bqlog) |
-| [**vcpkg**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>Windows · Linux · macOS<br>*（port 审核中）* | `vcpkg install bqlog` | ✅ | `bqlog[tools]` | [vcpkg.io](https://vcpkg.io/en/package/bqlog) |
+| [**vcpkg**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>Windows · Linux · macOS | `vcpkg install bqlog` | ✅ | `bqlog[tools]` | [vcpkg.io](https://vcpkg.io/en/package/bqlog.html) |
 | [**NuGet**](docs/INTEGRATION_GUIDE_CHS.md#cunity--团结引擎--net)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
 | [**Maven Central — Java**](docs/INTEGRATION_GUIDE_CHS.md#javaserver--desktop)<br>Java · Kotlin · 服务端 | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) |
 | [**Maven Central — Android**](docs/INTEGRATION_GUIDE_CHS.md#android)<br>Android · Kotlin | `implementation("com.tencent.bqlog:android:2.+")` | ✅ | — | [com.tencent.bqlog:android](https://central.sonatype.com/artifact/com.tencent.bqlog/android) |
