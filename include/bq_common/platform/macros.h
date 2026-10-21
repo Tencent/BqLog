@@ -81,7 +81,7 @@
 #define BQ_VISUAL_STUDIO 1
 #endif
 
-#if defined(_M_ARM64) || defined(__aarch64__)
+#if defined(_M_ARM64) || defined(_M_ARM64EC) || defined(__aarch64__)
 #define BQ_ARM 1
 #define BQ_ARM_64 1
 #define BQ_ARM_V8 1 // ARMv8-A

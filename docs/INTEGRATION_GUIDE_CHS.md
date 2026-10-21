@@ -34,22 +34,6 @@
 
   manifest 模式在 `vcpkg.json` 中写 `{ "name": "bqlog", "features": ["tools"] }`。静态库还是动态库由 triplet 决定，目标名为 `bqlog::BqLog`。
 
-- **CMake FetchContent**
-
-  不使用包管理器时：
-
-  ```cmake
-  include(FetchContent)
-  FetchContent_Declare(BqLog
-      GIT_REPOSITORY https://github.com/Tencent/BqLog.git
-      GIT_TAG Release_2.7.0)
-  FetchContent_MakeAvailable(BqLog)
-
-  target_link_libraries(your_target PRIVATE BqLog)
-  ```
-
-  `BUILD_LIB_TYPE` 可选 `static_lib`（默认）、`dynamic_lib` 或 `both`。
-
 - **动态库**
   下载 `dynamic_lib_{version}` 压缩包：
   - 将 `dynamic_lib/include` 目录添加到头文件搜索路径；

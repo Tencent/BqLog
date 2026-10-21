@@ -2,6 +2,10 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.7.1] - 2026-10-21
+- **Bug fix**: (fast mode throughput) the throughput regression against 2.6.0.
+- **Code conventions**: a few include-order fixes.
+
 ## [v2.7.0] - 2026-10-11
 - **C++20 modules**: `import bq.log;` as an alternative to `#include "bq_log/bq_log.h"`, with no change to the logging code. `BqLog_CategoryLogGenerator` also writes a `.cppm` for each category log class (`import bq.business_log;`). See [Integration Guide](docs/INTEGRATION_GUIDE.md#c20-modules-import).
 - **Macro-free fast log (C++20)**: modules do not export macros, so with `import bq.log;` the fast mode is written as `log.fast_info<"...">(args...)` (plus `fast_verbose` … `fast_fatal`), with an optional category as the first template argument. Same cost as `BQ_LOG_FAST_*`, real IDE support, and not bound to one log object per call site. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).

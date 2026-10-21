@@ -937,36 +937,41 @@ namespace bq {
                 // fresh storage for the relaunched run: the previous one was owned by the
                 // scope that just ended, so config.storage above is dangling now
                 auto recovery_storage = bq::log_storage::create(config.log_name, true);
-                config.storage = recovery_storage.get();
-                bq::log_buffer recovered(config);
-                uint32_t recovered_count = 0;
-                bool ordered_after_prefix = true;
-                uint32_t expected_next = consume_before_crash;
-                for (;;) {
-                    auto handle = recovered.read_chunk();
-                    if (handle.result != enum_buffer_result_code::success) {
-                        break;
-                    }
-                    bq::scoped_log_buffer_handle<log_buffer> scoped(recovered, handle);
-                    if (handle.data_size >= sizeof(uint32_t)) {
-                        const uint32_t value = *reinterpret_cast<const uint32_t*>(handle.data_addr);
-                        if (value < expected_next) {
-                            // a replayed record from before the crash point: at-least-once allows it
-                            continue;
+                // separate scopes: a hang in one of these two destructors must name itself
+                {
+                    config.storage = recovery_storage.get();
+                    bq::log_buffer recovered(config);
+                    uint32_t recovered_count = 0;
+                    bool ordered_after_prefix = true;
+                    uint32_t expected_next = consume_before_crash;
+                    for (;;) {
+                        auto handle = recovered.read_chunk();
+                        if (handle.result != enum_buffer_result_code::success) {
+                            break;
                         }
-                        if (value != expected_next) {
-                            ordered_after_prefix = false;
+                        bq::scoped_log_buffer_handle<log_buffer> scoped(recovered, handle);
+                        if (handle.data_size >= sizeof(uint32_t)) {
+                            const uint32_t value = *reinterpret_cast<const uint32_t*>(handle.data_addr);
+                            if (value < expected_next) {
+                                // a replayed record from before the crash point: at-least-once allows it
+                                continue;
+                            }
+                            if (value != expected_next) {
+                                ordered_after_prefix = false;
+                            }
+                            expected_next = value + 1;
+                            ++recovered_count;
                         }
-                        expected_next = value + 1;
-                        ++recovered_count;
                     }
+                    // nothing after the crash point may be missing: at-least-once, never lost
+                    result.add_result(ordered_after_prefix,
+                        "recovery snapshot: recovered tail is contiguous after the consumed prefix");
+                    result.add_result(recovered_count + consume_before_crash >= records_in_batch || recovered_count > 0,
+                        "recovery snapshot: recovered the unread tail (%" PRIu32 " records)", recovered_count);
+                    test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test end...\n");
+                    test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot: releasing the buffer...\n");
                 }
-                // nothing after the crash point may be missing: at-least-once, never lost
-                result.add_result(ordered_after_prefix,
-                    "recovery snapshot: recovered tail is contiguous after the consumed prefix");
-                result.add_result(recovered_count + consume_before_crash >= records_in_batch || recovered_count > 0,
-                    "recovery snapshot: recovered the unread tail (%" PRIu32 " records)", recovered_count);
-                test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot test end...\n");
+                test_output_dynamic(bq::log_level::info, "[log buffer] recovery snapshot: releasing the storage...\n");
             }
 
             class fast_mode_test_thread : public bq::platform::thread {

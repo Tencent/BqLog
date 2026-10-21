@@ -58,8 +58,8 @@
 #include "bq_common/types/string.h"
 #include "bq_common/types/hash_map.h"
 #include "bq_common/types/basic_types.h"
-// This one is a public header bq.log uses too, so a module build must reach it the
-// same way the include build does.
+// atomic.h must stay before fast_clock.h: fast_clock.h is written in terms of the atomic templates.
+#include "bq_common/platform/atomic/atomic.h"
 #include "bq_common/platform/fast_clock.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop

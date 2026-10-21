@@ -37,6 +37,7 @@
 #include "test_layout.h"
 #include "test_disk_full.h"
 #include <locale.h>
+#include <stdlib.h>
 #if defined(BQ_WIN)
 #include <windows.h>
 #elif defined(BQ_POSIX)
@@ -47,23 +48,43 @@
 pthread_t main_thread_id = 0;
 #endif
 
+// CI kills the job at its limit, so this fires first: the slowest runner (arm64 gcc asan) needs
+// about 230 minutes for the Debug binary. A tighter budget passes --timeout-minutes.
+static uint64_t test_time_out_minutes = 300;
+
+static void parse_time_out_argument(int32_t argc, char** argv)
+{
+    constexpr const char* prefix = "--timeout-minutes=";
+    constexpr size_t prefix_len = sizeof("--timeout-minutes=") - 1;
+    for (int32_t i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], prefix, prefix_len) != 0) {
+            continue;
+        }
+        const int32_t minutes = atoi(argv[i] + prefix_len);
+        if (minutes > 0) {
+            test_time_out_minutes = static_cast<uint64_t>(minutes);
+        }
+    }
+}
+
 class time_out_monitor_thread : public bq::platform::thread {
 protected:
     void run() override
     {
-        auto start_epoch = bq::platform::high_performance_epoch_ms();
-        constexpr uint64_t time_out = 720 * 60 * 1000;
-        while (true) {
-            if (is_cancelled()) {
-                break;
-            }
-            if (start_epoch + time_out < bq::platform::high_performance_epoch_ms()) {
+        const uint64_t time_out_minutes = test_time_out_minutes;
+        const auto start_epoch = bq::platform::high_performance_epoch_ms();
+        while (!is_cancelled()) {
+            if (start_epoch + time_out_minutes * 60 * 1000 < bq::platform::high_performance_epoch_ms()) {
                 test_output_dynamic(bq::log_level::error, "test time out, please check your test code!\n");
+                printf("test time out after %u minutes in %s\n",
+                    static_cast<uint32_t>(time_out_minutes), bq::test::current_test_case());
+                fflush(stdout);
 #ifdef BQ_POSIX
-                pthread_kill(main_thread_id, SIGUSR2);
-#else
-                assert(false && "auto test time out!");
+                pthread_kill(main_thread_id, SIGUSR2); // the handler prints the stack trace of the running thread
 #endif
+                bq::platform::thread::sleep(1000);
+                // A core dump names every thread; a stuck join would otherwise run to the job limit
+                abort();
             }
             bq::platform::thread::sleep(500);
         }
@@ -77,8 +98,7 @@ void sig_handler(int)
     bq::api::__api_get_stack_trace(&stack_trace_str, 0);
     printf("timeout:stack_trace:%s", stack_trace_str.str);
     fflush(stdout);
-    bq::platform::thread::sleep(1000);
-    assert(false && "auto test time out!");
+    // the monitor thread dumps the core a second later, so the handler only has to report
 }
 #endif
 
@@ -160,6 +180,9 @@ static void prepare_test_meta_registry()
 
 int32_t main(int32_t argc, char** argv)
 {
+    // a pipe (CI) would buffer the output in blocks, which hides the running case for minutes
+    setvbuf(stdout, nullptr, _IOLBF, 0);
+    parse_time_out_argument(argc, argv);
     prepare_test_meta_registry();
     if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {
         bq::test::test_fast_clock clock_test;

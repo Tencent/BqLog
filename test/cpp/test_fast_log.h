@@ -18,6 +18,8 @@
 #include "bq_log/types/meta/meta_registry.h"
 #include "test_category_log.h"
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
 #include <thread>
 #include <vector>
 #include <initializer_list>
@@ -1192,30 +1194,32 @@ namespace bq {
                 }
             };
 
+            // Blocking wait: yield-spinning starves the two cores of the emulated BSD runners.
             class race_barrier {
-                std::atomic<int32_t> arrived_;
-                std::atomic<int32_t> phase_;
+                std::mutex mutex_;
+                std::condition_variable cv_;
                 const int32_t total_;
+                int32_t arrived_ = 0;
+                int32_t phase_ = 0;
 
             public:
                 explicit race_barrier(int32_t total)
-                    : arrived_(0)
-                    , phase_(0)
-                    , total_(total)
+                    : total_(total)
                 {
                 }
 
                 void wait()
                 {
-                    const int32_t phase = phase_.load(std::memory_order_acquire);
-                    if (arrived_.fetch_add(1) + 1 == total_) {
-                        arrived_.store(0, std::memory_order_relaxed);
-                        phase_.store(phase + 1, std::memory_order_release);
-                    } else {
-                        while (phase_.load(std::memory_order_acquire) == phase) {
-                            std::this_thread::yield();
-                        }
+                    std::unique_lock<std::mutex> lock(mutex_);
+                    const int32_t phase = phase_;
+                    if (++arrived_ < total_) {
+                        cv_.wait(lock, [this, phase]() { return phase_ != phase; });
+                        return;
                     }
+                    arrived_ = 0;
+                    ++phase_;
+                    lock.unlock();
+                    cv_.notify_all();
                 }
             };
 
@@ -1358,10 +1362,11 @@ namespace bq {
                 // instance-level), so measure the delta around this test's sites
                 const uint32_t registers_before = bq::meta_registry::instance().test_register_count();
 #if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE)
-                constexpr int32_t thread_count = 16;
+                const int32_t thread_count = 16;
                 typedef race_table<3, 25> sites;
 #else
-                constexpr int32_t thread_count = 64;
+                // The emulated BSD runners have two cores; 64 threads there only reach the scheduler.
+                const int32_t thread_count = std::thread::hardware_concurrency() >= 8 ? 64 : 8;
                 typedef race_table<24, 40> sites;
 #endif
                 constexpr int32_t rounds = 3;
@@ -1394,8 +1399,10 @@ namespace bq {
                         registers, sites::count);
                 }
                 const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                const uint32_t expected_records = static_cast<uint32_t>(sites::count)
+                    * static_cast<uint32_t>(thread_count) * static_cast<uint32_t>(rounds);
                 bq::array<uint32_t> seen;
-                seen.fill_uninitialized(static_cast<size_t>(sites::count) * thread_count);
+                seen.fill_uninitialized(static_cast<size_t>(sites::count) * static_cast<size_t>(thread_count));
                 memset(&seen[0], 0, seen.size() * sizeof(uint32_t));
                 uint32_t total_lines = 0;
                 uint32_t bad_lines = 0;
@@ -1422,9 +1429,8 @@ namespace bq {
                     ++seen[static_cast<size_t>(static_cast<uint32_t>(site) * static_cast<uint32_t>(thread_count) + static_cast<uint32_t>(tid))];
                 }
                 result.add_result(bad_lines == 0, "site race: no unexpected lines (%u)", bad_lines);
-                result.add_result(total_lines == static_cast<uint32_t>(sites::count) * thread_count * rounds,
-                    "site race: every record written (%u of %u)", total_lines,
-                    static_cast<uint32_t>(sites::count) * thread_count * rounds);
+                result.add_result(total_lines == expected_records,
+                    "site race: every record written (%u of %u)", total_lines, expected_records);
                 uint32_t missing = 0;
                 uint32_t duplicated = 0;
                 for (size_t i = 0; i < seen.size(); ++i) {
@@ -1435,9 +1441,78 @@ namespace bq {
                 result.add_result(duplicated == 0, "site race: no duplicated records (%u combos over)", duplicated);
             }
 
+            static constexpr int32_t live_meta_records = 400;
+
+            static void test_live_meta_other_thread(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_live_meta_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                bq::log log = bq::log::create_log(name, (bq::string("log.buffer_size=65536\n")
+                    + "log.high_perform_mode_freq_threshold_per_second=1\n"
+                    + "appenders_config.test.type=text_file\n"
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n").c_str());
+                result.add_result(log.is_valid(), "live meta: log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                // one record per format registers the site, then this thread is gone for good
+                std::thread registrar([&log]() {
+                    BQ_LOG_FAST_INFO(log, "live meta a {}", int32_t(0));
+                    BQ_LOG_FAST_INFO(log, "live meta b {}", int32_t(0));
+                    BQ_LOG_FAST_INFO(log, "live meta c {} {}", int32_t(0), int32_t(0));
+                    BQ_LOG_FAST_INFO(log, "live meta d");
+                });
+                registrar.join();
+                for (int32_t i = 0; i < live_meta_records; ++i) {
+                    switch (i & 3) {
+                    case 0:
+                        BQ_LOG_FAST_INFO(log, "live meta a {}", i);
+                        break;
+                    case 1:
+                        BQ_LOG_FAST_INFO(log, "live meta b {}", i);
+                        break;
+                    case 2:
+                        BQ_LOG_FAST_INFO(log, "live meta c {} {}", i, i);
+                        break;
+                    default:
+                        BQ_LOG_FAST_INFO(log, "live meta d");
+                        break;
+                    }
+                }
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                int32_t missing = 0;
+                for (int32_t i = 0; i < live_meta_records; ++i) {
+                    char message[64];
+                    switch (i & 3) {
+                    case 0:
+                        snprintf(message, sizeof(message), "live meta a %d\n", i);
+                        break;
+                    case 1:
+                        snprintf(message, sizeof(message), "live meta b %d\n", i);
+                        break;
+                    case 2:
+                        snprintf(message, sizeof(message), "live meta c %d %d\n", i, i);
+                        break;
+                    default:
+                        snprintf(message, sizeof(message), "live meta d\n");
+                        break;
+                    }
+                    if (data.find(message) == bq::string::npos) {
+                        ++missing;
+                    }
+                }
+                result.add_result(missing == 0, "live meta: every record decodes (%d missing)", missing);
+            }
+
             test_result test() override
             {
                 test_result result;
+                test_live_meta_other_thread(result);
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_text_%" PRIu64,
                     bq::platform::high_performance_epoch_ms());

@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md)
 
+## [v2.7.1] - 2026-10-21
+- **问题修复**：（快速模式吞吐）性能对比2.6.0下降的问题
+- **代码规范性**: 一些include顺序修复
+
 ## [v2.7.0] - 2026-10-11
 - **C++20 模块**：`import bq.log;` 可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。`BqLog_CategoryLogGenerator` 也会为每个类别日志类生成 `.cppm`（`import bq.business_log;`）。见[集成指南](docs/INTEGRATION_GUIDE_CHS.md#c20-模块import)。
 - **无宏的快速模式（C++20）**：模块不导出宏，`import bq.log;` 时快速模式写作 `log.fast_info<"...">(args...)`（以及 `fast_verbose` … `fast_fatal`），Category 可作为第一个模板参数。开销与 `BQ_LOG_FAST_*` 相同，IDE 支持完整，调用点不绑定日志对象。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
