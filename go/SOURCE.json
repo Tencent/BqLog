@@ -1,11 +1,11 @@
 {
-  "version": "2.7.0",
+  "version": "2.7.1",
   "module": "github.com/Tencent/BqLog/go/v2",
-  "source_commit": "373577c674cfcb2537857c2a38108575cf0b81a3",
+  "source_commit": "c34827b0399dd36de312e158e4aa2f1847da611e",
   "sources": [
     {
       "path": "include/bq_common/bq_common_public_include.h",
-      "sha256": "1d4edfa3a1d8ed1e6af8964ce2a1cdf456f353346c2f10974d5fc8e7d542f626"
+      "sha256": "110a480e0ac65abb224b485e6fc2f3f516deef4a1b1423b8026a17582a96142a"
     },
     {
       "path": "include/bq_common/misc/assert.h",
@@ -21,11 +21,11 @@
     },
     {
       "path": "include/bq_common/platform/atomic/_inner_atomic_msvc.h",
-      "sha256": "0b23abfeedd7aab95b8403f8ef2520d72173bdf50c4d8b954dd0387a025d3ab9"
+      "sha256": "5f9facd04dcb785e4205b0d0091730e03b67aa2fd0261f8cbc3ef00669185a50"
     },
     {
       "path": "include/bq_common/platform/atomic/atomic.h",
-      "sha256": "8ef31e662cb65142febcc546289c5dbd6052ed7d7c07208018b2a24afe037652"
+      "sha256": "538114d76e1f32f24a2106894aa960d3864c79856da72e00977a5ec38ab747c2"
     },
     {
       "path": "include/bq_common/platform/build_type.h",
@@ -45,7 +45,7 @@
     },
     {
       "path": "include/bq_common/platform/macros.h",
-      "sha256": "a55292ab826a16dde8a855575030a584a0d742877e84198f08e0677a4ae0d53f"
+      "sha256": "cbbf1afc9c5c4bcefa941d8390e86d997ae544fea9c662baa679eaf4c0eb0457"
     },
     {
       "path": "include/bq_common/types/allocator.h",
@@ -141,7 +141,7 @@
     },
     {
       "path": "include/bq_log/misc/bq_log_fast_info.h",
-      "sha256": "20705bb63e7c28ec62691a4e40169fea548e415a1fe97f25e0fcb2cb6960f414"
+      "sha256": "54fc2db5fac4965f5714a6b900ebd7b0bbd8c09295677d4d4cbd37ac26becaa0"
     },
     {
       "path": "include/bq_log/misc/bq_log_fast_inline.h",
@@ -437,7 +437,7 @@
     },
     {
       "path": "src/bq_common/utils/property_ex.cpp",
-      "sha256": "bda606772eb216571da9e213d749b9ef38fac4c3866111743387089bca3788ca"
+      "sha256": "d0bc3f690f9d998bdeebff6effce1cd4e6890861557f16b822bad3d027fa0dda"
     },
     {
       "path": "src/bq_common/utils/property_ex.h",
@@ -501,7 +501,7 @@
     },
     {
       "path": "src/bq_log/global/version.cpp",
-      "sha256": "c3e43f5a5acdb5ef2f2e3ba479d0c68ff6d89513fdfaa1c332222a8202ca0140"
+      "sha256": "f740705f8bf27902471a4acb970ccf0023e6413d7180e800f9b87d45c6f375dc"
     },
     {
       "path": "src/bq_log/global/version.h",
@@ -541,7 +541,7 @@
     },
     {
       "path": "src/bq_log/log/appender/appender_file_compressed.cpp",
-      "sha256": "eff3a61de882e92b44792d6065b57e62f83f8f07386bf1239cc50d4d1e8f1fc0"
+      "sha256": "661b90c158b87429e09e20862733ea51fbc9ea3b1f59f8964571d3fda7a2c90f"
     },
     {
       "path": "src/bq_log/log/appender/appender_file_compressed.h",
@@ -565,7 +565,7 @@
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_compressed.cpp",
-      "sha256": "3f7d3730d3041da917ad49a9ea3301a44a0e70422cacfce896c18f262bee5593"
+      "sha256": "b42a78b18a2d80a1684ed7ee512d25719796623ddc01e497d54e253d327a3cc0"
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_compressed.h",
@@ -589,7 +589,7 @@
     },
     {
       "path": "src/bq_log/log/layout.cpp",
-      "sha256": "dad01431ed57ec7c60de0c20918d3bbcfa42a237cb14daf9e70c887f1e38769f"
+      "sha256": "f59efde94a077a13305a63bd1d2d1737707aaa8bcc4503f45eb1ddf6a023b96f"
     },
     {
       "path": "src/bq_log/log/layout.h",
@@ -613,7 +613,7 @@
     },
     {
       "path": "src/bq_log/log/log_manager.cpp",
-      "sha256": "f41ae95394b93f586e79e5b8b483261db277d209549ca61c74a2a5e171dcece2"
+      "sha256": "e53491710cfa139035c2c9ae5a6ffbcc6aaf09cb169337514d7417b0b6ef5620"
     },
     {
       "path": "src/bq_log/log/log_manager.h",
@@ -621,7 +621,7 @@
     },
     {
       "path": "src/bq_log/log/log_record_reader.cpp",
-      "sha256": "c2a1bde5350ce0978b642a155f495fed2c0ca2005563bd14d683224e73e9026d"
+      "sha256": "4a75faadc2039bb55337978ef0e3e00c09ab90e958f6e503ae65dcf8392446a0"
     },
     {
       "path": "src/bq_log/log/log_record_reader.h",
@@ -673,11 +673,11 @@
     },
     {
       "path": "src/bq_log/types/buffer/log_buffer.cpp",
-      "sha256": "d62fc2da74544d208717114733bebc6f7dbe91468f99ec8e6baff8b76c2a31f9"
+      "sha256": "3df65867aade63a57bc0b64c1c19ff8eff130d57a940b4d7663d6162dbc8fe08"
     },
     {
       "path": "src/bq_log/types/buffer/log_buffer.h",
-      "sha256": "e98475a96cd2e6ad7669f9433235c384ef834733896470b12c022d9c3c3263f7"
+      "sha256": "5387115e1e0c06cf122d8044fb6b679feaaadd63df4b302418ba3524d9fe90f3"
     },
     {
       "path": "src/bq_log/types/buffer/log_buffer_defs.h",
@@ -693,7 +693,7 @@
     },
     {
       "path": "src/bq_log/types/buffer/miso_ring_buffer.cpp",
-      "sha256": "fb9d63602c9888329430f040e703ca140ad0a5c0ed847665d735cdf8756f771b"
+      "sha256": "029de0005edad95036645e7334bd8709a999e0105f96794202d04bc556cc0711"
     },
     {
       "path": "src/bq_log/types/buffer/miso_ring_buffer.h",
@@ -725,15 +725,15 @@
     },
     {
       "path": "src/bq_log/types/meta/meta_registry.cpp",
-      "sha256": "ab4c1b4e7b422a77c6ba9d7305ad18d1c28f07d2b22226e73f03bab4afa5bcca"
+      "sha256": "0fd4a649ac5d6ad13dbd12c5c79a8ea5523cb9d49672e6a48e469e1df1a19456"
     },
     {
       "path": "src/bq_log/types/meta/meta_registry.h",
-      "sha256": "25b2e2cf07928c0df533447aa14f54e680e06472d5e09073603574fcb083b6e1"
+      "sha256": "3e9e64927c2c91cccbb666d911b78f0d4c08d4af325a0ff6160abdb5afad4952"
     },
     {
       "path": "src/bq_log/types/storage/instance_storage.cpp",
-      "sha256": "c283ccbbbfc431a1e4004db5ace3b4f69c35682c591cc161a375a2408c225017"
+      "sha256": "733d1693b8fc4a446df280dbd50b0350735aaf6d8ccb4b546fb31e73f1aef119"
     },
     {
       "path": "src/bq_log/types/storage/instance_storage.h",

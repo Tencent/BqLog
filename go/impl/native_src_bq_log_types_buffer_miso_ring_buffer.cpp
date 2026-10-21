@@ -90,6 +90,10 @@ namespace bq {
             break;
         case bq::create_memory_map_result::use_existed:
             if (!try_recover_from_exist_memory_map()) {
+                // a checksum mismatch only means the config changed; anything else is damaged data
+                if (head_->log_checksum_ == config_.calculate_check_sum()) {
+                    bq::util::log_device_console(bq::log_level::error, "lp buffer recovery failed, its unread logs are lost, log_name:%s", config_.log_name.c_str());
+                }
                 init_with_memory_map();
             }
             break;
@@ -223,7 +227,6 @@ namespace bq {
 #endif
             return handle;
         }
-        return handle;
     }
 
     void miso_ring_buffer::commit_write_chunk(const log_buffer_write_handle& handle)
@@ -265,7 +268,6 @@ namespace bq {
                 block_ref.chunk_head.status = block_status::unused;
                 head_->read_cursor_cache_ += block_count;
                 continue;
-                break;
             case block_status::unused:
                 handle.result = enum_buffer_result_code::err_empty_log_buffer;
                 break;
@@ -475,7 +477,6 @@ namespace bq {
                 break;
             default:
                 return false;
-                break;
             }
             uint32_t total_size_parsed = static_cast<uint32_t>(current_cursor - head_->read_cursor_cache_);
             if (total_size_parsed == aligned_blocks_count_) {

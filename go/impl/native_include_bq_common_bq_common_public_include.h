@@ -58,8 +58,8 @@
 #include "native_include_bq_common_types_string.h"
 #include "native_include_bq_common_types_hash_map.h"
 #include "native_include_bq_common_types_basic_types.h"
-// This one is a public header bq.log uses too, so a module build must reach it the
-// same way the include build does.
+// atomic.h must stay before fast_clock.h: fast_clock.h is written in terms of the atomic templates.
+#include "native_include_bq_common_platform_atomic_atomic.h"
 #include "native_include_bq_common_platform_fast_clock.h"
 #if defined(BQ_GCC)
 #pragma GCC diagnostic pop

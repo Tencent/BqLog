@@ -63,7 +63,6 @@ namespace bq {
             break;
         default:
             return false;
-            break;
         }
         char* end;
         double number = 0;
@@ -150,7 +149,6 @@ namespace bq {
         switch (keys.size()) {
         case 0:
             return;
-            break;
         case 1: {
             string new_key = keys[0];
             property_value pv = move(parse_to_property_value(root, key, value));

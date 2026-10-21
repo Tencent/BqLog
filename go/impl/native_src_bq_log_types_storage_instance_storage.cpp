@@ -34,7 +34,9 @@ namespace bq {
             util::log_device_console(log_level::warning, "bqlog instance storage disabled: cannot create directory %s", (base + "/locks").c_str());
             return nullptr;
         }
-        for (uint32_t k = 0;; ++k) {
+        // bounded: a file system whose locks always report "held by another" must not spin here
+        constexpr uint32_t max_instances = 64;
+        for (uint32_t k = 0; k < max_instances; ++k) {
             char name[48];
             snprintf(name, sizeof(name), "/locks/p%" PRIu32 ".lock", k);
             platform::platform_file_handle h;
@@ -78,6 +80,8 @@ namespace bq {
             vars.instance_storage_ = bq::move(inst);
             return vars.instance_storage_.get();
         }
+        util::log_device_console(log_level::warning, "bqlog instance storage disabled: no free instance lock under %s", base.c_str());
+        return nullptr;
     }
 
     instance_storage* instance_storage::get()

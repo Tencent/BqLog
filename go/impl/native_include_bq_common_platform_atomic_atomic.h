@@ -19,7 +19,7 @@
  * we exclude STL and libc++ to reduce the final executable and library file size
  */
 
-#include "native_include_bq_common_bq_common_public_include.h"
+#include "native_include_bq_common_types_type_traits.h"
 
 namespace bq {
     BQ_MODULE_EXPORT_BEGIN

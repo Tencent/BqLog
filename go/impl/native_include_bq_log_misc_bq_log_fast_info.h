@@ -55,8 +55,7 @@ namespace bq {
 
         // v = meta_addr | (1u << level) once registered, 0 while unregistered. The meta arena entry
         // is 64-byte aligned, so the low 6 bits are free for the enabled-level bit; publishing the
-        // address and the bit in ONE store keeps the hot path free of any acquire (a relaxed read
-        // of v is a plain load everywhere) and removes the two-field publication order problem
+        // address and the bit in ONE store removes the two-field publication order problem
         // entirely: there is no "half registered" state to observe. Read-read coherence on this
         // single atomic object then guarantees the value used to write the record head is the same
         // non-zero value the branch tested.
@@ -73,18 +72,6 @@ namespace bq {
         template <fixed_format F, uint8_t LEVEL, uint32_t CAT, uint8_t... WIRE>
         fast_info_site fast_info_site_holder<F, LEVEL, CAT, WIRE...>::site = { 0 };
 
-        bq_forceinline uint64_t load_site_v(const fast_info_site& site)
-        {
-            return BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed();
-        }
-
-        // release so a thread that later observes a non-zero v is ordered after the registration's
-        // writes (the store only ever publishes the final value once, keeping it simple)
-        bq_forceinline void store_site_v(fast_info_site& site, uint64_t v)
-        {
-            BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).store_release(v);
-        }
-
         template <fixed_format F, bq::log_level LEVEL, uint32_t CAT, typename... Args>
         BQ_FAST_INFO_HIDDEN bq_noinline bool fast_slow(fast_info_site& site, const bq::log& l, typename bq::fast_slow_arg<Args>::type... args);
 
@@ -92,7 +79,11 @@ namespace bq {
         bq_forceinline bool fast_impl(const bq::log& l, const Args&... args)
         {
             auto& site = fast_info_site_holder<F, static_cast<uint8_t>(LEVEL), CAT, fast_wire_of<Args>()...>::site;
-            const uint64_t v = load_site_v(site);
+            // A registers the format and publishes the site, B writes a record through it, C reads
+            // that record in the appender. With a relaxed read B has no edge from A, so C would
+            // dereference an entry A may not have published to it; the acquire here orders B after
+            // A, and the ring buffer's release/acquire passes that edge on to C.
+            const uint64_t v = BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_acquire();
             const uint32_t word = log_access::level_words(l)[CAT];
             // no arguments: the record is just the head, so nothing to size or fill
             if constexpr (sizeof...(Args) == 0) {
@@ -146,15 +137,15 @@ namespace bq {
             }
             using traits = fast_format_traits<F>;
             const typename traits::char_type(&format)[traits::char_count] = fixed_format_chars<F>::data.value;
-            if (load_site_v(site) == fast_site_refused) {
+            if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() == fast_site_refused) {
                 return l.do_log(CAT, LEVEL, format, args...);
             }
             if (log_access::buffer_id(l) == 0 || l.is_stack_trace_enabled_for(LEVEL)) {
                 return l.do_log(CAT, LEVEL, format, args...);
             }
-            if (load_site_v(site) == 0) {
+            if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() == 0) {
                 bq::fast_inline::site_init_guard guard(&site);
-                if (load_site_v(site) == 0) {
+                if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() == 0) {
                     // normalized the way init_fast_log_site does it: type_copy writes a 4-byte
                     // length and then the UTF-8/UTF-16 bytes the registry stores
                     alignas(8) uint8_t format_bytes[traits::buffer_size];
@@ -167,14 +158,14 @@ namespace bq {
                         reinterpret_cast<const char*>(format_bytes + sizeof(uint32_t)),
                         static_cast<uint32_t>(format_size), wire::count ? wire::values : nullptr, wire::count);
                     if (meta == 0) {
-                        store_site_v(site, fast_site_refused);
+                        BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).store_release(fast_site_refused);
                         return l.do_log(CAT, LEVEL, format, args...);
                     }
                     // one store publishes both the arena address and the enabled-level bit
-                    store_site_v(site, meta | (UINT64_C(1) << static_cast<uint32_t>(LEVEL)));
+                    BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).store_release(meta | (UINT64_C(1) << static_cast<uint32_t>(LEVEL)));
                 }
             }
-            const uint64_t site_value = load_site_v(site);
+            const uint64_t site_value = BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_acquire();
             if (site_value == fast_site_refused) {
                 return l.do_log(CAT, LEVEL, format, args...);
             }

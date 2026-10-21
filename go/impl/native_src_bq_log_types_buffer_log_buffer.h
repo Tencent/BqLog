@@ -394,6 +394,9 @@ namespace bq {
                 uint16_t version_ = 0;
                 bool is_in_recovery_reading_ = true;
                 bq::array<bq::hash_map<void*, uint32_t>> recovery_records_; // <tls_buffer_info_ptr, seq> for each version, only works when reading recovering data
+                // per version: contexts found by prepare_and_fix_recovery_data / contexts replayed
+                bq::array<uint32_t> recovery_found_counts_;
+                bq::array<uint32_t> recovery_replayed_counts_;
 #ifdef BQ_UNIT_TEST
                 bq::array<bq::hash_map<void*, bq::hash_map<uint32_t, uint16_t>>> recovery_seq_records_;
 #endif

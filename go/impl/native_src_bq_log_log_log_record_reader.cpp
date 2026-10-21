@@ -9,7 +9,6 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "native_src_bq_log_log_log_record_reader.h"
-#include "native_src_bq_log_types_meta_meta_registry.h"
 
 namespace bq {
     const log_thread_info* log_record_reader::get_block_thread_info(const log_buffer& buffer)
@@ -61,8 +60,7 @@ namespace bq {
         // the low bits of the address carry the fast_info enabled-level mask
         const uint64_t meta_addr = head.format_meta_addr & ~bq::fast_meta_addr_mask();
         if (version == buffer.get_version()) {
-            // live record: synchronize with the registering thread once, then read its entry
-            format = bq::meta_registry::instance().resolve_live(meta_addr);
+            format = reinterpret_cast<const fast_format_meta*>(static_cast<uintptr_t>(meta_addr));
         } else {
             // resolve_fast_log_meta already returns the meta pointer; no cast needed
             format = buffer.resolve_fast_log_meta(version, meta_addr);

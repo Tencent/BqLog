@@ -47,7 +47,6 @@ bq::appender_decode_result bq::appender_decoder_compressed::decode_private()
             default:
                 bq::util::log_device_console_plain_text(bq::log_level::error, "decode compressed log file failed, invalid template sub type");
                 return appender_decode_result::failed_decode_error;
-                break;
             }
             break;
         case bq::appender_file_compressed::item_type::log_entry:
@@ -56,7 +55,6 @@ bq::appender_decode_result bq::appender_decoder_compressed::decode_private()
         default:
             bq::util::log_device_console(log_level::error, "decode compressed log file failed, unknown data item type %" PRId32, (int32_t)type);
             return appender_decode_result::failed_io_error;
-            break;
         }
         if (type == bq::appender_file_compressed::item_type::log_entry) {
             break;
@@ -265,7 +263,6 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_log_entry(cons
         case bq::log_arg_type_enum::unsupported_type:
             bq::util::log_device_console(bq::log_level::error, "decode compressed log file failed : non_primitivi_type is not supported yet, type:%" PRId32, (int32_t)type_info);
             return appender_decode_result::failed_decode_error;
-            break;
         case bq::log_arg_type_enum::null_type:
             raw_cursor += 4;
             break;

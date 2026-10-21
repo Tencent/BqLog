@@ -216,7 +216,6 @@ namespace bq {
                 default:
                     context.log_parse_fail_reason("decode compressed log file failed, invalid log template sub type");
                     return false;
-                    break;
                 }
                 break;
             case bq::appender_file_compressed::log_entry:
@@ -226,10 +225,8 @@ namespace bq {
                 break;
             default:
                 return false;
-                break;
             }
         }
-        return false;
     }
 
     bq::tuple<bool, appender_file_compressed::item_type, appender_file_base::read_with_cache_handle> appender_file_compressed::read_item_data(parse_file_context& context)
