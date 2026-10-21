@@ -1040,7 +1040,7 @@ jobs:
 
   dragonflyBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -1087,7 +1087,7 @@ jobs:
             ls -l
             
             set +e
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=45  # a hang must not run to the job limit
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=100  # the Debug binary needs ~82 minutes here
             EXIT_CODE=$?
             set -e
 

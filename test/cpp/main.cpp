@@ -48,9 +48,9 @@
 pthread_t main_thread_id = 0;
 #endif
 
-// CI kills the job at its own limit, so this has to fire well before it: the slowest emulated
-// platform needs 82 minutes for this binary inside a 240 minute job, and 12 hours never fired.
-static uint64_t test_time_out_minutes = 150;
+// CI kills the job at its limit, so this fires first: the slowest runner (arm64 gcc asan) needs
+// about 230 minutes for the Debug binary. A tighter budget passes --timeout-minutes.
+static uint64_t test_time_out_minutes = 300;
 
 static void parse_time_out_argument(int32_t argc, char** argv)
 {
