@@ -761,6 +761,7 @@ jobs:
   #Unix-FreeBSD
   freeBSD_x86_64:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -805,6 +806,7 @@ jobs:
   freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
@@ -882,6 +884,7 @@ jobs:
   #Unix-Solaris
   solaris_x86_64_GCC:
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
@@ -971,6 +974,7 @@ jobs:
 
   omnisOS_x86_64_GCC:
     runs-on: ubuntu-latest
+    timeout-minutes: 150
     strategy:
       fail-fast: false
       matrix:
@@ -1036,6 +1040,7 @@ jobs:
 
   dragonflyBSD_x86_64:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -1074,6 +1079,8 @@ jobs:
             exit 1
           run: |
             set -e -x
+            # the whole suite needs ~20 minutes here, so a hang must not run to the job limit
+            export BQ_TEST_TIMEOUT_MINUTES=45
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
 
@@ -1116,6 +1123,7 @@ jobs:
 
   openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -1230,6 +1238,7 @@ jobs:
   openBSD_arm64_Clang:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true'}}
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
@@ -1276,6 +1285,7 @@ jobs:
 
   netBSD_x86_64:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
@@ -1350,6 +1360,7 @@ jobs:
   netBSD_arm64_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ubuntu-latest
+    timeout-minutes: 300
     strategy:
       fail-fast: false
       matrix:
@@ -1798,6 +1809,7 @@ jobs:
   java_wrapper_freebsd_x86_64:
     name: java_wrapper (freebsd_x86_64)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -2086,6 +2098,7 @@ jobs:
   python_test_freebsd_x86_64:
     name: python_wrapper (freebsd_x86_64)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
@@ -2209,6 +2222,7 @@ jobs:
   go_wrapper_freebsd_x86_64:
     name: go_wrapper (freebsd_x86_64)
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5

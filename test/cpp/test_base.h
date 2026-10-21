@@ -43,6 +43,13 @@ namespace bq {
 
         extern void add_to_test_output_str(bool is_dynamic, bq::log_level level, const char* format, ...);
 
+        // the case that is running, so a timeout or a core dump can name it
+        inline const char*& current_test_case()
+        {
+            static const char* name = "<none>";
+            return name;
+        }
+
 #define test_output(LEVEL, FORMAT)                                          \
     {                                                                       \
         bq::test::add_to_test_output_str(false, LEVEL, FORMAT);             \
@@ -94,6 +101,7 @@ namespace bq {
 
 #define TEST_GROUP(group_name, name_space, test_type_name)                             \
     {                                                                                  \
+        bq::test::current_test_case() = #test_type_name;                               \
         name_space::test_type_name inst_##test_type_name;                              \
         bq::test::test_result result__##test_type_name = inst_##test_type_name.test(); \
         result__##test_type_name.output(#test_type_name);                              \
