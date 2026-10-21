@@ -13,8 +13,8 @@
 # Writes the url and sha256 of a release into Formula/bqlog.rb.
 #
 # Usage: bash bump.sh <version> [tarball]
-#   bash bump.sh 2.7.0                    downloads the Release_2.7.0 archive from GitHub
-#   bash bump.sh 2.7.0 Release_2.7.0.tar.gz
+#   bash bump.sh 2.7.1                    downloads the Release_2.7.1 archive from GitHub
+#   bash bump.sh 2.7.1 Release_2.7.1.tar.gz
 # BQ_FORMULA_URL overrides the url written into the formula (CI points it at a local file).
 set -euo pipefail
 

@@ -34,22 +34,6 @@
 
   In manifest mode, list `{ "name": "bqlog", "features": ["tools"] }` in `vcpkg.json`. The triplet decides static or shared; the target is `bqlog::BqLog`.
 
-- **CMake FetchContent**
-
-  Without a package manager:
-
-  ```cmake
-  include(FetchContent)
-  FetchContent_Declare(BqLog
-      GIT_REPOSITORY https://github.com/Tencent/BqLog.git
-      GIT_TAG Release_2.7.0)
-  FetchContent_MakeAvailable(BqLog)
-
-  target_link_libraries(your_target PRIVATE BqLog)
-  ```
-
-  `BUILD_LIB_TYPE` selects `static_lib` (default), `dynamic_lib` or `both`.
-
 - **Dynamic library**
   Download `dynamic_lib_{version}` archive:
   - Add `dynamic_lib/include` directory to your header search path;

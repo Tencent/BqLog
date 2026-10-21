@@ -13,8 +13,8 @@
 # Writes the version and the SHA512 of a release into ports/bqlog.
 #
 # Usage: bash bump.sh <version> [tarball]
-#   bash bump.sh 2.7.0                    downloads the Release_2.7.0 archive from GitHub
-#   bash bump.sh 2.7.0 Release_2.7.0.tar.gz
+#   bash bump.sh 2.7.1                    downloads the Release_2.7.1 archive from GitHub
+#   bash bump.sh 2.7.1 Release_2.7.1.tar.gz
 set -euo pipefail
 
 VERSION="${1:?usage: bump.sh <version> [tarball]}"

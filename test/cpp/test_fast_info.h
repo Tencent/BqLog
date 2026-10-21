@@ -525,6 +525,45 @@ namespace bq {
                     "fast_info: concurrent first calls lose no record (%u of %d)", found, concurrent_site_count);
             }
 
+            static void test_live_meta_other_thread(test_result& result)
+            {
+                const bq::string name = make_name("live_meta");
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                const bq::string config = bq::string("appenders_config.test.type=text_file\n")
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n"
+                    + "log.high_perform_mode_freq_threshold_per_second=1\n";
+                bq::log log = bq::log::create_log(name, config);
+                result.add_result(log.is_valid(), "fast_info: live meta log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                constexpr int32_t site_count = 4;
+                constexpr int32_t record_count = 200;
+                // one record per site registers it; this thread is gone before any of the rest
+                std::thread registrar([&log]() {
+                    for (int32_t s = 0; s < site_count; ++s) {
+                        hit_site(log, s, -1);
+                    }
+                });
+                registrar.join();
+                for (int32_t i = 0; i < record_count; ++i) {
+                    hit_site(log, i % site_count, i);
+                }
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                uint32_t missing = 0;
+                for (int32_t i = 0; i < record_count; ++i) {
+                    char needle[48];
+                    snprintf(needle, sizeof(needle), "race site %d value %d", i % site_count, i);
+                    missing += data.find(needle) == bq::string::npos ? 1U : 0U;
+                }
+                result.add_result(missing == 0,
+                    "fast_info: live site keeps every record (%u missing)", missing);
+            }
+
             // 9. crash recovery: records written by fast_info come back with their format
             static void test_recovery(test_result& result)
             {
@@ -638,6 +677,7 @@ namespace bq {
                 test_special_logs(result);
                 test_category(result);
                 test_concurrent_first_call(result);
+                test_live_meta_other_thread(result);
                 test_recovery(result);
                 return result;
             }

@@ -1435,9 +1435,78 @@ namespace bq {
                 result.add_result(duplicated == 0, "site race: no duplicated records (%u combos over)", duplicated);
             }
 
+            static constexpr int32_t live_meta_records = 400;
+
+            static void test_live_meta_other_thread(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_live_meta_%" PRIu64, bq::platform::high_performance_epoch_ms());
+                const bq::string file_name = bq::string("fast_mode_output/") + name;
+                bq::log log = bq::log::create_log(name, (bq::string("log.buffer_size=65536\n")
+                    + "log.high_perform_mode_freq_threshold_per_second=1\n"
+                    + "appenders_config.test.type=text_file\n"
+                    + "appenders_config.test.levels=[all]\n"
+                    + "appenders_config.test.file_name=" + file_name + "\n"
+                    + "appenders_config.test.base_dir_type=0\n"
+                    + "appenders_config.test.enable_rolling_log_file=false\n").c_str());
+                result.add_result(log.is_valid(), "live meta: log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                // one record per format registers the site, then this thread is gone for good
+                std::thread registrar([&log]() {
+                    BQ_LOG_FAST_INFO(log, "live meta a {}", int32_t(0));
+                    BQ_LOG_FAST_INFO(log, "live meta b {}", int32_t(0));
+                    BQ_LOG_FAST_INFO(log, "live meta c {} {}", int32_t(0), int32_t(0));
+                    BQ_LOG_FAST_INFO(log, "live meta d");
+                });
+                registrar.join();
+                for (int32_t i = 0; i < live_meta_records; ++i) {
+                    switch (i & 3) {
+                    case 0:
+                        BQ_LOG_FAST_INFO(log, "live meta a {}", i);
+                        break;
+                    case 1:
+                        BQ_LOG_FAST_INFO(log, "live meta b {}", i);
+                        break;
+                    case 2:
+                        BQ_LOG_FAST_INFO(log, "live meta c {} {}", i, i);
+                        break;
+                    default:
+                        BQ_LOG_FAST_INFO(log, "live meta d");
+                        break;
+                    }
+                }
+                log.force_flush();
+                const bq::string data = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_name + "_1.log", 0));
+                int32_t missing = 0;
+                for (int32_t i = 0; i < live_meta_records; ++i) {
+                    char message[64];
+                    switch (i & 3) {
+                    case 0:
+                        snprintf(message, sizeof(message), "live meta a %d\n", i);
+                        break;
+                    case 1:
+                        snprintf(message, sizeof(message), "live meta b %d\n", i);
+                        break;
+                    case 2:
+                        snprintf(message, sizeof(message), "live meta c %d %d\n", i, i);
+                        break;
+                    default:
+                        snprintf(message, sizeof(message), "live meta d\n");
+                        break;
+                    }
+                    if (data.find(message) == bq::string::npos) {
+                        ++missing;
+                    }
+                }
+                result.add_result(missing == 0, "live meta: every record decodes (%d missing)", missing);
+            }
+
             test_result test() override
             {
                 test_result result;
+                test_live_meta_other_thread(result);
                 char name[96];
                 snprintf(name, sizeof(name), "fast_mode_text_%" PRIu64,
                     bq::platform::high_performance_epoch_ms());

@@ -22,20 +22,6 @@ namespace bq {
         constexpr uint32_t meta_record_head_size = 64;
         constexpr uint32_t meta_record_entry_head_size = 16;
         constexpr uint32_t meta_arena_block_size = 64 * 1024;
-
-        // Direct-mapped TLS cache of live meta addresses this thread already synchronized with.
-        // Meta entries are 64B aligned, so addr >> 6 is a compact slot index.
-        constexpr uint32_t live_sync_cache_size = 64;
-
-        struct live_sync_cache {
-            uint64_t addrs[live_sync_cache_size];
-        };
-
-        live_sync_cache& get_live_sync_cache()
-        {
-            static BQ_TLS live_sync_cache cache = {};
-            return cache;
-        }
     }
 
     meta_registry& meta_registry::instance()
@@ -469,23 +455,6 @@ namespace bq {
         }
         auto hit = rv->map.find(arena_addr);
         return hit != rv->map.end() ? hit->value() : nullptr;
-    }
-
-    const fast_format_meta* meta_registry::resolve_live(uint64_t meta_addr)
-    {
-        const uint64_t addr = meta_addr & ~bq::fast_meta_addr_mask();
-        if (addr == 0) {
-            return nullptr;
-        }
-        uint64_t& slot = get_live_sync_cache().addrs[(addr >> 6) & (live_sync_cache_size - 1)];
-        if (slot != addr) {
-            // First sighting of this address in this thread: order against the registering thread.
-            // The registry lock is held across arena_alloc + memcpy of the entry, so acquiring it
-            // makes the entry's content visible even on hardware without multi-copy atomicity.
-            bq::platform::scoped_spin_lock guard(lock_);
-            slot = addr;
-        }
-        return reinterpret_cast<const fast_format_meta*>(static_cast<uintptr_t>(addr));
     }
 
 #if defined(BQ_UNIT_TEST)
