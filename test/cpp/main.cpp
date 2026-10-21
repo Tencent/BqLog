@@ -50,32 +50,28 @@ pthread_t main_thread_id = 0;
 
 // CI kills the job at its own limit, so this has to fire well before it: the slowest emulated
 // platform needs 82 minutes for this binary inside a 240 minute job, and 12 hours never fired.
-static uint64_t test_time_out_minutes()
+static uint64_t test_time_out_minutes = 150;
+
+static void parse_time_out_argument(int32_t argc, char** argv)
 {
-    constexpr uint64_t default_minutes = 150;
-#ifdef BQ_MSVC
-    char* env = nullptr;
-    size_t env_size = 0;
-    if (_dupenv_s(&env, &env_size, "BQ_TEST_TIMEOUT_MINUTES") != 0 || !env) {
-        return default_minutes;
+    constexpr const char* prefix = "--timeout-minutes=";
+    constexpr size_t prefix_len = sizeof("--timeout-minutes=") - 1;
+    for (int32_t i = 1; i < argc; ++i) {
+        if (strncmp(argv[i], prefix, prefix_len) != 0) {
+            continue;
+        }
+        const int32_t minutes = atoi(argv[i] + prefix_len);
+        if (minutes > 0) {
+            test_time_out_minutes = static_cast<uint64_t>(minutes);
+        }
     }
-    const int32_t minutes = atoi(env);
-    free(env);
-#else
-    const char* env = getenv("BQ_TEST_TIMEOUT_MINUTES");
-    if (!env) {
-        return default_minutes;
-    }
-    const int32_t minutes = atoi(env);
-#endif
-    return minutes > 0 ? static_cast<uint64_t>(minutes) : default_minutes;
 }
 
 class time_out_monitor_thread : public bq::platform::thread {
 protected:
     void run() override
     {
-        const uint64_t time_out_minutes = test_time_out_minutes();
+        const uint64_t time_out_minutes = test_time_out_minutes;
         const auto start_epoch = bq::platform::high_performance_epoch_ms();
         while (!is_cancelled()) {
             if (start_epoch + time_out_minutes * 60 * 1000 < bq::platform::high_performance_epoch_ms()) {
@@ -184,6 +180,7 @@ static void prepare_test_meta_registry()
 
 int32_t main(int32_t argc, char** argv)
 {
+    parse_time_out_argument(argc, argv);
     prepare_test_meta_registry();
     if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {
         bq::test::test_fast_clock clock_test;

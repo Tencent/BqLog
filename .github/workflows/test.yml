@@ -1079,8 +1079,6 @@ jobs:
             exit 1
           run: |
             set -e -x
-            # the whole suite needs ~20 minutes here, so a hang must not run to the job limit
-            export BQ_TEST_TIMEOUT_MINUTES=45
             ulimit -c unlimited || true
             sysctl kern.coredump=1 || true
 
@@ -1089,7 +1087,7 @@ jobs:
             ls -l
             
             set +e
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}  
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=45  # a hang must not run to the job limit
             EXIT_CODE=$?
             set -e
 
