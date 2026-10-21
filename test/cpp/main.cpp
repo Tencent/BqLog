@@ -53,11 +53,21 @@ pthread_t main_thread_id = 0;
 static uint64_t test_time_out_minutes()
 {
     constexpr uint64_t default_minutes = 150;
+#ifdef BQ_MSVC
+    char* env = nullptr;
+    size_t env_size = 0;
+    if (_dupenv_s(&env, &env_size, "BQ_TEST_TIMEOUT_MINUTES") != 0 || !env) {
+        return default_minutes;
+    }
+    const int32_t minutes = atoi(env);
+    free(env);
+#else
     const char* env = getenv("BQ_TEST_TIMEOUT_MINUTES");
     if (!env) {
         return default_minutes;
     }
     const int32_t minutes = atoi(env);
+#endif
     return minutes > 0 ? static_cast<uint64_t>(minutes) : default_minutes;
 }
 
