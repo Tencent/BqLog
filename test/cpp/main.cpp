@@ -180,6 +180,8 @@ static void prepare_test_meta_registry()
 
 int32_t main(int32_t argc, char** argv)
 {
+    // a pipe (CI) would buffer the output in blocks, which hides the running case for minutes
+    setvbuf(stdout, nullptr, _IOLBF, 0);
     parse_time_out_argument(argc, argv);
     prepare_test_meta_registry();
     if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {
