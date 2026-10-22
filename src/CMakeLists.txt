@@ -113,18 +113,10 @@ COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
 COLLECT_SRC_FILES(INC_LIST "${PUB_INC_DIR}")
 COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
 
-# COLLECT_SRC_FILES only globs compiled and header extensions, so the non-compiled pieces of the
-# public include tree stay out of INC_LIST: bq_log/misc/bq_log_c_api.inc (included by
-# bq_log_c_api.h) and bq_log/bq.log.cppm (the C++20 module entry). The Apple framework derives
-# its Headers directory from INC_LIST alone, so a framework consumer got a header that could not
-# be compiled and no module to import. Add them to the same list, header-only, so the framework
-# packaging below carries them like every other public header.
 set(PUB_INC_FRAGMENTS "")
 foreach(pub_inc_dir ${PUB_INC_DIR})
-    foreach(pub_inc_ext "*.inc" "*.cppm")
-        file(GLOB_RECURSE pub_inc_frag "${pub_inc_dir}/${pub_inc_ext}")
-        list(APPEND PUB_INC_FRAGMENTS ${pub_inc_frag})
-    endforeach()
+    file(GLOB_RECURSE pub_inc_frag "${pub_inc_dir}/*.inc" "${pub_inc_dir}/*.cppm")
+    list(APPEND PUB_INC_FRAGMENTS ${pub_inc_frag})
 endforeach()
 if(PUB_INC_FRAGMENTS)
     set_source_files_properties(${PUB_INC_FRAGMENTS} PROPERTIES
