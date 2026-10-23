@@ -2,18 +2,20 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.7.1
+# BqLog (扁鹊日志) V 2.7.2
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.7.1-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.1-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.7.2-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.2-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
 
-[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS%20%7C%20OpenHarmony%20%7C%20Unix-lightgrey.svg?style=flat)]()
+[![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS%20%7C%20OpenHarmony%20%7C%20Unix%20%7C%20PS4%2F5%20%7C%20Switch-lightgrey.svg?style=flat)]()
+[![PlayStation 4/5](https://img.shields.io/badge/PlayStation_4%2F5-experimental-lightgrey?logo=playstation&style=flat)]()
+[![Nintendo Switch](https://img.shields.io/badge/Switch-experimental-lightgrey?logo=nintendoswitch&style=flat)]()
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
 [![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange?logo=homebrew&logoColor=white&style=flat)](https://formulae.brew.sh/formula/bqlog)
 [![NuGet](https://img.shields.io/nuget/v/BqLog?logo=nuget&label=nuget&style=flat)](https://www.nuget.org/packages/BqLog)
@@ -23,7 +25,7 @@
 [![npm](https://img.shields.io/npm/v/@pippocao/bqlog?logo=npm&label=npm&style=flat)](https://www.npmjs.com/package/@pippocao/bqlog)
 [![ohpm](https://img.shields.io/badge/ohpm-bqlog-blue?style=flat)](https://ohpm.openharmony.cn/#/cn/detail/bqlog)
 [![Go](https://img.shields.io/badge/Go-go%2Fv2-00ADD8?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)
-[![vcpkg](https://img.shields.io/badge/vcpkg-2.7.1-blue?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
+[![vcpkg](https://img.shields.io/badge/vcpkg-2.7.2-blue?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
 [![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
 [![Unreal](https://img.shields.io/badge/Unreal-Fab-0E1128?logo=unrealengine&style=flat)](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)
 
@@ -52,10 +54,11 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.1-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.2-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
 ## 📋 v2.7.x 更新亮点
 
+- **主机平台（实验性）**：支持 PlayStation 4、PlayStation 5 与 Nintendo Switch，以源码方式接入。详见[接入指南 — 主机平台](docs/INTEGRATION_GUIDE_CHS.md#主机平台)。
 - **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。
 - **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)`，性能与 `BQ_LOG_FAST_INFO` 相同，IDE 提示完整，任何日志对象都能用。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
 - **包管理器**：支持 Homebrew、vcpkg、NuGet，见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
@@ -94,6 +97,7 @@
 | 平台 | 语言 |
 |------|------|
 | Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 与 UE6 开发版） |
+| PlayStation 4、PlayStation 5、Nintendo Switch（实验性，源码接入） | C++（C++11+） |
 
 **硬件架构**：x86、x86_64、ARM32、ARM64
 **引入方式**：动态库、静态库、源代码

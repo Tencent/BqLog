@@ -2,6 +2,9 @@
 
 [English](CHANGELOG.md)
 
+## [v2.7.2] - 2026-10-23
+- **主机平台**：支持 PlayStation 4、PlayStation 5 与 Nintendo Switch（实验性）。
+
 ## [v2.7.1] - 2026-10-21
 - **问题修复**：（快速模式吞吐）性能对比2.6.0下降的问题
 - **代码规范性**: 一些include顺序修复

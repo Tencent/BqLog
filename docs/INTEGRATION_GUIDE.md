@@ -509,3 +509,34 @@ search, README and API documentation.
 - [Configuration](./CONFIGURATION.md) — Full configuration reference
 - [Advanced Usage](./ADVANCED_USAGE.md) — Category, encryption, custom types, and more
 - [Game Engine Integration](./ENGINE_INTEGRATION.md) — Unity, Tuanjie Engine, Unreal Engine
+
+## Console platforms
+
+PS4, PS5 and Switch builds are source integrations: add `src/` and `include/` to the
+platform toolchain's project and let the compiler identify the platform. There is no
+CMake target for PlayStation because the SDK is the build system there.
+
+```cpp
+bq::log::reset_base_dir(0, mount_path);   // after the game mounts its storage
+bq::log::reset_base_dir(1, mount_path);
+auto log = bq::log::create_log("game", R"({"log_config": {"recovery": true}})");
+```
+
+The directory must be set before the first log is created; a console has no writable
+working directory, so a path built from a guess terminates with a fatal message.
+
+| Capability | PS4 / PS5 | Switch | Effect when absent |
+|---|---|---|---|
+| `memory_map` | yes | no | no crash recovery, buffers stay on the heap |
+| `multi_process` | no | no | one instance per title; no multi-process isolation |
+| `cross_process_file_lock` | no | no | implied by the line above |
+| `crash_handler` | no | no | `enable_auto_crash_handle()` installs nothing |
+| `backtrace` | no | no | the stack field says it is unsupported |
+| `dirent` | yes | yes | `expire_time_*` and `capacity_limit` need it |
+| `thread_name` | no | no | threads report `thread_<id>` |
+| `default_base_dir` | no | no | `reset_base_dir` is mandatory |
+| `user_counter` | no | no | timestamps come from the system clock |
+
+`bq::log::get_platform_capabilities()` returns these as bits; the same values are printed
+once at startup, so a bug report carries the exact build. PlayStation and Switch builds are
+verified by compilation and unit tests, not on retail hardware.
