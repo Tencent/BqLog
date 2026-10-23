@@ -30,6 +30,7 @@ func main() {
 
 	// The recovery capability query must be reachable from this wrapper as well.
 	fmt.Println("Recovery capability:", bq.Get_recovery_capability())
+	fmt.Println("Platform capabilities:", bq.Get_platform_capabilities())
 
 	start_console_fetcher()
 

@@ -72,6 +72,13 @@ export class log {
     }
 
     /**
+     * What the linked library was built with, as platform_capability bits; attach it to a bug report.
+     */
+    public static get_platform_capabilities(): number {
+        return log_invoker.__api_get_platform_capabilities();
+    }
+
+    /**
      * If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
      * This will return the absolute paths corresponding to both scenarios.
      * @param base_dir_type

@@ -36,6 +36,12 @@ public class log_invoker {
 	 * @return One of the recovery_capability values.
 	 */
 	public static native int __api_get_recovery_capability();
+
+	/**
+	 * Capability bits the library was built with.
+	 * @return An OR of bq.def.platform_capability values.
+	 */
+	public static native int __api_get_platform_capabilities();
 	
 	/**
 	 * Creates a log and reads its config.

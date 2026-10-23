@@ -35,6 +35,9 @@ namespace bq.impl
         public static unsafe extern int __api_get_recovery_capability();
 
         [DllImport(LIB_NAME, CallingConvention = CallingConvention.Cdecl,CharSet = CharSet.Unicode)]
+        public static unsafe extern uint __api_get_platform_capabilities();
+
+        [DllImport(LIB_NAME, CallingConvention = CallingConvention.Cdecl,CharSet = CharSet.Unicode)]
         public static unsafe extern ulong __api_create_log(byte*  log_name_utf8, byte*  config_content_utf8, uint category_count, byte** category_names_array_utf8);
 
         [DllImport(LIB_NAME, CallingConvention = CallingConvention.Cdecl,CharSet = CharSet.Unicode)]

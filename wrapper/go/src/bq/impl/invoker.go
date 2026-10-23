@@ -92,6 +92,11 @@ func Get_recovery_capability() int32 {
 	return int32(C.__api_get_recovery_capability())
 }
 
+// Get_platform_capabilities returns the native capability bits.
+func Get_platform_capabilities() uint32 {
+	return uint32(C.__api_get_platform_capabilities())
+}
+
 // Create_log creates a log object and returns its id, or 0 when it failed.
 func Create_log(name, config string, category_names []string) uint64 {
 	c_name := C.CString(name)

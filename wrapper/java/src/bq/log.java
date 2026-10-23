@@ -253,6 +253,15 @@ public class log {
     }
 
     /**
+     * What the linked library was built with; attach it to a bug report.
+     * @return An OR of bq.def.platform_capability values.
+     */
+    public static int get_platform_capabilities()
+    {
+        return log_invoker.__api_get_platform_capabilities();
+    }
+
+    /**
      * If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
      * This will return the absolute paths corresponding to both scenarios.
      * @param base_dir_type The base directory type.

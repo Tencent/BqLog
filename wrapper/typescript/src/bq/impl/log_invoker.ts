@@ -44,6 +44,11 @@ export class log_invoker {
         return native_export("get_recovery_capability")();
     }
 
+    /** Returns the native capability bits. */
+    public static __api_get_platform_capabilities(): number {
+        return native_export("get_platform_capabilities")();
+    }
+
     /** Creates a log object and returns its id; 0 when it could not be created. */
     public static __api_create_log(log_name: string, config_content: string, category_count: number, category_names_array: string[] | null): bigint {
         const id = native_export("create_log")(log_name, config_content, category_count, category_names_array);
