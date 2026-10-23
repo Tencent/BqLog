@@ -25,13 +25,10 @@
 #include "bq_log/types/storage/instance_storage.h"
 
 #ifdef BQ_POSIX
-#ifdef BQ_PS
-// TODO
-#else
+#if BQ_HAS_CRASH_HANDLER
 #include <signal.h>
 #endif
 #include <unistd.h>
-#include <sys/syscall.h>
 #include <pthread.h>
 #endif
 
@@ -53,7 +50,22 @@ namespace bq {
             return log_utils::get_recovery_capability();
         }
 
-#if defined(BQ_POSIX)
+        BQ_API uint32_t __api_get_platform_capabilities()
+        {
+            uint32_t bits = 0;
+            bits |= BQ_HAS_MMAP ? platform_capability::memory_map : 0u;
+            bits |= BQ_HAS_MULTI_PROCESS ? platform_capability::multi_process : 0u;
+            bits |= BQ_HAS_CROSS_PROCESS_FILE_LOCK ? platform_capability::cross_process_file_lock : 0u;
+            bits |= BQ_HAS_CRASH_HANDLER ? platform_capability::crash_handler : 0u;
+            bits |= BQ_HAS_BACKTRACE ? platform_capability::backtrace : 0u;
+            bits |= BQ_HAS_DIRENT ? platform_capability::dirent : 0u;
+            bits |= BQ_HAS_THREAD_NAME ? platform_capability::thread_name : 0u;
+            bits |= BQ_HAS_DEFAULT_BASE_DIR ? platform_capability::default_base_dir : 0u;
+            bits |= BQ_HAS_USER_COUNTER ? platform_capability::user_counter : 0u;
+            return bits;
+        }
+
+#if defined(BQ_POSIX) && BQ_HAS_CRASH_HANDLER
 
         // compatible to siginfo_t or siginfo
         static struct sigaction tmp_action_static;
@@ -84,16 +96,12 @@ namespace bq {
         private:
             static void on_signal(int32_t sig, siginfo_ptr_type info, void* context)
             {
-#ifdef BQ_PS
-                // TODO
-#else
                 (void)tmp_action_static;
                 struct sigaction tmp;
                 sigaction(SIG, &original_sigaction, &tmp);
                 registered = false;
                 handler(sig, info, context);
                 pthread_kill(pthread_self(), sig);
-#endif
             }
 
 #ifdef BQ_IOS
@@ -108,9 +116,6 @@ namespace bq {
         public:
             static void set_handler(sigaction_func_type func)
             {
-#ifdef BQ_PS
-                // TODO
-#else
 #if BQ_SIGNAL_STACK_SUPPORT
                 stack_t ss;
                 ss.ss_sp = signal_stack_holder.signal_stack;
@@ -139,7 +144,6 @@ namespace bq {
                     registered = true;
                     handler = func;
                 }
-#endif
             }
         };
 
@@ -165,7 +169,7 @@ namespace bq {
 
         BQ_API void __api_enable_auto_crash_handler()
         {
-#if defined(BQ_POSIX)
+#if BQ_HAS_CRASH_HANDLER
             log_signal_handler<SIGSEGV>::set_handler(log_crash_handler);
             log_signal_handler<SIGABRT>::set_handler(log_crash_handler);
             log_signal_handler<SIGFPE>::set_handler(log_crash_handler);
@@ -173,7 +177,7 @@ namespace bq {
             log_signal_handler<SIGTRAP>::set_handler(log_crash_handler);
             log_signal_handler<SIGBUS>::set_handler(log_crash_handler);
 #else
-            bq::util::log_device_console(log_level::warning, "Crash Handler is only working on POSIX system now, such as Android, Linux, iOS and Mac");
+            bq::util::log_device_console(log_level::warning, "crash handler is unsupported on this platform, no signal handler was installed");
 #endif
         }
 
@@ -645,13 +649,11 @@ namespace bq {
 
         BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type)
         {
-            if (base_dir_type == 0) {
-                tls_base_dir_cache_0_.get() = bq::file_manager::get_base_dir(base_dir_type);
-                return tls_base_dir_cache_0_.get().c_str();
-            } else {
-                tls_base_dir_cache_1_.get() = bq::file_manager::get_base_dir(base_dir_type);
-                return tls_base_dir_cache_1_.get().c_str();
+            bq::string& cache = (base_dir_type == 0) ? tls_base_dir_cache_0_.get() : tls_base_dir_cache_1_.get();
+            if (!bq::platform::try_get_base_dir(base_dir_type, cache)) {
+                cache.clear();
             }
+            return cache.c_str();
         }
 
         BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle)

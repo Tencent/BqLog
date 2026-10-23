@@ -38,6 +38,7 @@ namespace bq {
             return ret;
         }
 
+#if BQ_HAS_DEFAULT_BASE_DIR
         base_dir_initializer::base_dir_initializer()
         {
             NSString *app_support_path = NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject;
@@ -45,6 +46,7 @@ namespace bq {
             set_base_dir_0([app_support_path UTF8String]);
             set_base_dir_1([documents_path UTF8String]);
         }
+#endif
     
         bq::string get_programe_home_path()
         {

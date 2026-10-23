@@ -18,6 +18,15 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 
+// The termination tests watch a child process die. Horizon has no fork.
+#if !defined(BQ_HAS_FORK)
+#if defined(BQ_WIN) || defined(BQ_SWITCH)
+#define BQ_HAS_FORK 0
+#else
+#define BQ_HAS_FORK 1
+#endif
+#endif
+
 namespace bq {
     namespace test {
         struct test_result {
@@ -106,6 +115,15 @@ namespace bq {
         bq::test::test_result result__##test_type_name = inst_##test_type_name.test(); \
         result__##test_type_name.output(#test_type_name);                              \
         __test_result_##group_name &= result__##test_type_name.is_all_pass();          \
+    }
+
+// Runs the group only where the platform provides what it exercises; the degraded CI
+// configuration reports why it was skipped instead of failing for an absent capability.
+#define TEST_GROUP_IF(cond, group_name, name_space, test_type_name)                                     \
+    if (cond) {                                                                                         \
+        TEST_GROUP(group_name, name_space, test_type_name);                                             \
+    } else {                                                                                            \
+        test_output_param(bq::log_level::info, "SKIP %s: capability not available\n", #test_type_name); \
     }
 
 #define TEST_GROUP_END(group_name)                                                                                                                                                                                                                              \

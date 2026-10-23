@@ -12,9 +12,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/log_types.h"
 
-#ifdef BQ_PS
-// TODO
-#else
+#if BQ_HAS_CRASH_HANDLER
 #include <signal.h>
 #endif
 namespace bq {

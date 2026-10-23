@@ -50,11 +50,13 @@ namespace bq {
                 result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/测试中文%##@aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/cc/bb/aa/dd/", base_dir_type)), "super long path and Chinese characters: create_directory_in_base_path cc/bb/aa/dd/*");
                 result.add_result(file_manager.is_dir(TO_ABSOLUTE_PATH("cc/bb/aa/dd", base_dir_type)), "check create_directory_in_base_path cc/bb/aa/dd");
                 result.add_result(file_manager.create_directory(TO_ABSOLUTE_PATH("cc/bb/aa/ee", base_dir_type)), "create_directory_in_base_path cc/bb/aa/ee");
+#if BQ_HAS_DIRENT
                 bq::array<bq::string> sub_dirs = file_manager.get_sub_dirs_and_files_name(TO_ABSOLUTE_PATH("cc/bb/aa/", base_dir_type));
                 result.add_result(sub_dirs.size() == 2, "get_sub_dirs_and_files_name test 0");
                 result.add_result((sub_dirs[0] == "dd" && sub_dirs[1] == "ee")
                         || (sub_dirs[1] == "dd" && sub_dirs[0] == "ee"),
                     "get_sub_dirs_and_files_name test 1");
+#endif
 
                 {
                     auto handle1 = file_manager.open_file(TO_ABSOLUTE_PATH("cc/bb/ff/real/v.txt", base_dir_type), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);

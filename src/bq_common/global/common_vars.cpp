@@ -167,7 +167,11 @@ namespace bq {
         GetSystemInfo(&sysInfo);
         page_size_ = static_cast<size_t>(sysInfo.dwPageSize);
 #elif defined(BQ_POSIX)
+#if BQ_HAS_GETPAGESIZE
         page_size_ = static_cast<size_t>(getpagesize());
+#else
+        page_size_ = static_cast<size_t>(4096);
+#endif
 #endif
 
 #if defined(BQ_X86)

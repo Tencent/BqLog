@@ -35,6 +35,7 @@ namespace bq {
             return epoch_milliseconds;
         }
 
+#if BQ_HAS_DEFAULT_BASE_DIR
         base_dir_initializer::base_dir_initializer()
         {
 #ifdef BQ_UNIT_TEST
@@ -50,6 +51,7 @@ namespace bq {
             set_base_dir_1("/data/storage/el2/base/cache");
 #endif
         }
+#endif
 
         static constexpr size_t max_stack_size_ = 128;
 

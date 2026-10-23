@@ -39,11 +39,11 @@
 #if defined(BQ_IOS)
 #include "bq_common/platform/ios_misc.h"
 #endif
-#if defined(BQ_PS)
-#include "bq_common/platform/ps_misc.h"
-#endif
 #if defined(BQ_OHOS)
 #include "bq_common/platform/ohos_misc.h"
+#endif
+#if defined(BQ_PS) || defined(BQ_SWITCH)
+#include "bq_common/platform/console_misc.h"
 #endif
 
 namespace bq {
@@ -73,13 +73,21 @@ namespace bq {
         private:
             bq::string base_dir_0_;
             bq::string base_dir_1_;
+            bool base_dir_0_set_ = false;
+            bool base_dir_1_set_ = false;
 
         public:
             const bq::string& get_base_dir_0() const { return base_dir_0_; }
             const bq::string& get_base_dir_1() const { return base_dir_1_; }
 
+            bool is_set(int32_t base_dir_type) const;
+
             void set_base_dir_0(const bq::string& dir);
             void set_base_dir_1(const bq::string& dir);
+
+#if defined(BQ_UNIT_TEST)
+            void test_clear_set_flag(int32_t base_dir_type);
+#endif
 
             base_dir_initializer();
         };
@@ -100,7 +108,10 @@ namespace bq {
             return system_epoch_ms();
         }
 
+        // Aborts when unset: a guessed path writes the log where nobody looks.
         bq::string get_base_dir(int32_t base_dir_type);
+
+        bool try_get_base_dir(int32_t base_dir_type, bq::string& out_dir);
 
         int32_t get_file_size(const char* file_path, size_t& size_ref);
 
@@ -191,6 +202,8 @@ namespace bq {
             // return null, simulating "mmap fails AND heap fails" on disk full + OOM.
             void set_normal_buffer_alloc_fail(bool fail);
             bool get_normal_buffer_alloc_fail();
+
+            void set_base_dir_unset(bool unset);
         }
 #endif
     }

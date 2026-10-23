@@ -149,19 +149,35 @@ function(BQ_DETECT_ARCH OUT_VAR)
 endfunction()
 
 # A function, not a macro: a macro's return would leave the caller as well.
+# Call it after project(): before that the toolchain file has not set CMAKE_SYSTEM_NAME.
 function(bq_default_target_platform)
     if(DEFINED TARGET_PLATFORM AND NOT "${TARGET_PLATFORM}" STREQUAL "")
         return()
     endif()
 
+    # Console toolchains are under NDA or set no CMAKE_SYSTEM_NAME, so ask the compiler.
+    include(CheckCXXSymbolExists)
+    check_cxx_symbol_exists(__PROSPERO__ "" BQ_COMPILER_IS_PS5)
+    check_cxx_symbol_exists(__ORBIS__ "" BQ_COMPILER_IS_PS4)
+    check_cxx_symbol_exists(__SWITCH__ "" BQ_COMPILER_IS_SWITCH)
+    check_cxx_symbol_exists(NN_NINTENDO_SDK "" BQ_COMPILER_IS_NINTENDO_SDK)
+    check_cxx_symbol_exists(NN_BUILD_TARGET_PLATFORM_NX "" BQ_COMPILER_IS_NX)
+
     if(ANDROID)
         set(_bq_detected_platform "android")
+    elseif(BQ_COMPILER_IS_PS5)
+        set(_bq_detected_platform "ps5")
+    elseif(BQ_COMPILER_IS_PS4)
+        set(_bq_detected_platform "ps4")
+    elseif(WIN32)
+        # Before the Nintendo SDK on purpose, matching macros.h: an SDK build on a PC is Windows.
+        set(_bq_detected_platform "win64")
+    elseif(BQ_COMPILER_IS_SWITCH OR BQ_COMPILER_IS_NINTENDO_SDK OR BQ_COMPILER_IS_NX OR CMAKE_SYSTEM_NAME STREQUAL "NintendoSwitch")
+        set(_bq_detected_platform "switch")
     elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(_bq_detected_platform "ios")
     elseif(CMAKE_SYSTEM_NAME STREQUAL "OHOS")
         set(_bq_detected_platform "ohos")
-    elseif(WIN32)
-        set(_bq_detected_platform "win64")
     elseif(APPLE)
         set(_bq_detected_platform "mac")
     elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
@@ -175,7 +191,7 @@ function(bq_default_target_platform)
 
     set(TARGET_PLATFORM "${_bq_detected_platform}" CACHE STRING "Choose the target platform")
     set_property(CACHE TARGET_PLATFORM PROPERTY STRINGS
-        "win64" "mac" "ios" "android" "linux" "unix" "ohos")
+        "win64" "mac" "ios" "android" "linux" "unix" "ohos" "switch" "ps4" "ps5")
     message(STATUS "TARGET_PLATFORM:${TARGET_PLATFORM} (from the CMake built-ins)")
 endfunction()
 

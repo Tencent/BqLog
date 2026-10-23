@@ -26,7 +26,7 @@
 #define BQ_FAST_CLOCK_RESYNC_INTERVAL_MS 1000
 #endif
 
-#if defined(BQ_ARM_64) || defined(BQ_X86_64)
+#if (defined(BQ_ARM_64) || defined(BQ_X86_64)) && BQ_HAS_USER_COUNTER
 #define BQ_FAST_CLOCK_SUPPORTED 1
 #endif
 
@@ -229,7 +229,7 @@ namespace bq {
             if (timespec_get(&ts, TIME_UTC) != TIME_UTC) {
                 return false;
             }
-#elif defined(BQ_POSIX) && !defined(BQ_PS)
+#elif defined(BQ_POSIX)
             struct timespec ts;
             if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
                 return false;
@@ -238,7 +238,7 @@ namespace bq {
             (void)out_epoch_ns;
             return false;
 #endif
-#if defined(BQ_WIN) || (defined(BQ_POSIX) && !defined(BQ_PS))
+#if defined(BQ_WIN) || defined(BQ_POSIX)
             out_epoch_ns = static_cast<uint64_t>(ts.tv_sec) * fast_clock_detail::ns_per_second() + static_cast<uint64_t>(ts.tv_nsec);
             return true;
 #endif

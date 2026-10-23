@@ -29,23 +29,55 @@ namespace bq {
             }
         }
 
+        static void terminate_for_unset_base_dir(int32_t base_dir_type)
+        {
+            bq::util::log_device_console(bq::log_level::fatal, "base dir %" PRId32 " is not set: mount the storage, then call bq::log::reset_base_dir() before creating any log", base_dir_type);
+            abort();
+        }
+
         bq::string get_base_dir(int32_t base_dir_type)
         {
             bq::platform::scoped_spin_lock lock(lock_);
-            if (base_dir_type == 0) {
-                return common_global_vars::get().base_dir_init_inst_.get_base_dir_0();
-            } else if (base_dir_type == 1) {
-                return common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
-            } else {
+            const auto& init_inst = common_global_vars::get().base_dir_init_inst_;
+            const int32_t type = (base_dir_type == 0) ? 0 : 1;
+            if (base_dir_type != 0 && base_dir_type != 1) {
                 bq::util::log_device_console(bq::log_level::warning, "[get_base_dir] unknown base dir type:%" PRId32, base_dir_type);
-                return common_global_vars::get().base_dir_init_inst_.get_base_dir_1();
             }
+            if (!init_inst.is_set(type)) {
+                terminate_for_unset_base_dir(type);
+            }
+            return (type == 0) ? init_inst.get_base_dir_0() : init_inst.get_base_dir_1();
         }
+
+        bool try_get_base_dir(int32_t base_dir_type, bq::string& out_dir)
+        {
+            bq::platform::scoped_spin_lock lock(lock_);
+            const auto& init_inst = common_global_vars::get().base_dir_init_inst_;
+            const int32_t type = (base_dir_type == 0) ? 0 : 1;
+            if (!init_inst.is_set(type)) {
+                out_dir.clear();
+                return false;
+            }
+            out_dir = (type == 0) ? init_inst.get_base_dir_0() : init_inst.get_base_dir_1();
+            return true;
+        }
+
+        bool base_dir_initializer::is_set(int32_t base_dir_type) const
+        {
+            return (base_dir_type == 0) ? base_dir_0_set_ : base_dir_1_set_;
+        }
+
+#if !BQ_HAS_DEFAULT_BASE_DIR
+        base_dir_initializer::base_dir_initializer()
+        {
+        }
+#endif
 
         void base_dir_initializer::set_base_dir_0(const bq::string& dir)
         {
             bq::platform::scoped_spin_lock lock(lock_);
             base_dir_0_ = dir;
+            base_dir_0_set_ = true;
 #if !defined(NDEBUG)
             bq::util::log_device_console(log_level::info, "set base dir type 0: %s", dir.c_str());
 #endif
@@ -54,12 +86,23 @@ namespace bq {
         {
             bq::platform::scoped_spin_lock lock(lock_);
             base_dir_1_ = dir;
+            base_dir_1_set_ = true;
 #if !defined(NDEBUG)
             bq::util::log_device_console(log_level::info, "set base dir type 1: %s", dir.c_str());
 #endif
         }
 
 #if defined(BQ_UNIT_TEST)
+        void base_dir_initializer::test_clear_set_flag(int32_t base_dir_type)
+        {
+            bq::platform::scoped_spin_lock lock(lock_);
+            if (base_dir_type == 0) {
+                base_dir_0_set_ = false;
+            } else {
+                base_dir_1_set_ = false;
+            }
+        }
+
         namespace test_inject {
             // All state is process-global. Tests are sequential; if a future test
             // wants to be parallel-safe across log objects, the path filter scopes
@@ -100,6 +143,15 @@ namespace bq {
             bool get_normal_buffer_alloc_fail()
             {
                 return s_normal_buffer_alloc_fail.load(bq::platform::memory_order::acquire) != 0;
+            }
+            void set_base_dir_unset(bool unset)
+            {
+                if (!unset) {
+                    return;
+                }
+                auto& init_inst = common_global_vars::get().base_dir_init_inst_;
+                init_inst.test_clear_set_flag(0);
+                init_inst.test_clear_set_flag(1);
             }
         }
 #endif

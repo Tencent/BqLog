@@ -47,6 +47,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/CMake_uti
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()
+bq_default_target_platform()
 
 #make __cplusplus correct in Visual Studio
 if (MSVC)
@@ -110,9 +111,14 @@ COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
 COLLECT_SRC_FILES(TEST_LIST "${TEST_DIR}")
 
 add_compile_definitions(BQ_UNIT_TEST)
-option(BQ_TEST_DISABLE_FILE_LOCK "Test a platform without a cross-process file lock" OFF)
+option(BQ_TEST_DISABLE_FILE_LOCK "Deprecated alias for BQ_HAS_CROSS_PROCESS_FILE_LOCK=0" OFF)
 if(BQ_TEST_DISABLE_FILE_LOCK)
-    add_compile_definitions(BQ_TEST_DISABLE_FILE_LOCK)
+    add_compile_definitions(BQ_HAS_CROSS_PROCESS_FILE_LOCK=0)
+endif()
+# Extra capability overrides for the degraded configurations, for example
+# -DBQ_CAPABILITY_OVERRIDES="BQ_HAS_MMAP=0;BQ_HAS_DIRENT=0" (quote it so CMake keeps the list).
+if(DEFINED BQ_CAPABILITY_OVERRIDES)
+    add_compile_definitions(${BQ_CAPABILITY_OVERRIDES})
 endif()
 if(DEFINED ENV{GITHUB_ACTIONS} AND "$ENV{GITHUB_ACTIONS}" STREQUAL "true")
     message(STATUS "Detected: running inside GitHub Actions")
@@ -194,7 +200,7 @@ elseif(TARGET_PLATFORM STREQUAL "ohos")
     )
 elseif(TARGET_PLATFORM STREQUAL "linux")
     target_link_libraries(bqlog_lib PRIVATE pthread dl)
-elseif(TARGET_PLATFORM STREQUAL "unix")
+elseif(TARGET_PLATFORM MATCHES "^(unix|ps4|ps5)$")
     target_link_libraries(bqlog_lib PRIVATE pthread)
     find_library(EXECINFO_LIBRARY execinfo)
     if(EXECINFO_LIBRARY)

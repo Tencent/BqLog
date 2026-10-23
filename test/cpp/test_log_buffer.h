@@ -277,6 +277,10 @@ namespace bq {
         private:
             void do_normal_buffer_test(test_result& result)
             {
+#if !BQ_HAS_MMAP
+                (void)result;
+                return;
+#endif
                 size_t prev_size = 0;
                 for (int32_t i = 0; i < 1024; ++i) {
                     std::random_device sd;

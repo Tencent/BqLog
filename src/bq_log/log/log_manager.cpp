@@ -25,6 +25,13 @@ namespace bq {
 #if !defined(NDEBUG)
         bq::util::log_device_console(log_level::info, "log_manager is constructed");
 #endif
+        {
+            bq::string base_dir;
+            const bool base_dir_ready = bq::platform::try_get_base_dir(0, base_dir);
+            bq::util::log_device_console(log_level::info,
+                "platform capabilities: mmap=%d multi_process=%d file_lock=%d crash_handler=%d backtrace=%d dirent=%d thread_name=%d default_base_dir=%d user_counter=%d base_dir=%s",
+                BQ_HAS_MMAP, BQ_HAS_MULTI_PROCESS, BQ_HAS_CROSS_PROCESS_FILE_LOCK, BQ_HAS_CRASH_HANDLER, BQ_HAS_BACKTRACE, BQ_HAS_DIRENT, BQ_HAS_THREAD_NAME, BQ_HAS_DEFAULT_BASE_DIR, BQ_HAS_USER_COUNTER, base_dir_ready ? base_dir.c_str() : "<unset>");
+        }
     }
 
     log_manager& log_manager::instance()

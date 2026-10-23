@@ -86,6 +86,7 @@ namespace bq {
             return ret;
         }
 
+#if BQ_HAS_DEFAULT_BASE_DIR
         base_dir_initializer::base_dir_initializer()
         {
             static_assert(sizeof(char16_t) == sizeof(WCHAR), "WCHAR must be 16bits on WIndows Platform!");
@@ -99,6 +100,7 @@ namespace bq {
             set_base_dir_0(base_dir);
             set_base_dir_1(base_dir);
         }
+#endif
 
         int32_t get_file_size(const char* file_path, size_t& size_ref)
         {

@@ -9,7 +9,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include "bq_common/platform/io/memory_map_posix.h"
-#if defined(BQ_POSIX)
+// The whole implementation, including <sys/mman.h>, disappears where the platform has no
+// file mapping: leaving the mmap/munmap/msync references behind would fail to link.
+#if defined(BQ_POSIX) && BQ_HAS_MMAP
 #include <unistd.h>
 #include <sys/mman.h>
 
@@ -22,11 +24,7 @@ namespace bq {
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(size_t) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");
-#if defined(BQ_ANDROID) || defined(BQ_APPLE) || defined(BQ_LINUX) || defined(BQ_UNIX)
         return true;
-#else
-        return false;
-#endif
     }
 
     size_t memory_map::get_memory_map_alignedment()
@@ -140,5 +138,42 @@ namespace bq {
         handle.error_code_ = 0;
     }
 }
+#elif defined(BQ_POSIX)
+#include <string.h>
+namespace bq {
+    bool memory_map::is_platform_support()
+    {
+        return false;
+    }
 
+    size_t memory_map::get_memory_map_alignedment()
+    {
+        return static_cast<size_t>(4096);
+    }
+
+    memory_map_handle memory_map::create_memory_map(const bq::file_handle& map_file, const size_t offset, const size_t size)
+    {
+        (void)map_file;
+        (void)offset;
+        (void)size;
+        memory_map_handle result;
+        result.error_code_ = ENOSYS;
+        return result;
+    }
+
+    void memory_map::flush_memory_map(const memory_map_handle& handle)
+    {
+        (void)handle;
+    }
+
+    void memory_map::release_memory_map(memory_map_handle& handle)
+    {
+        handle.file_.invalid();
+        memset(&handle.platform_data_, 0, sizeof(handle.platform_data_));
+        handle.mapped_data_ = nullptr;
+        handle.real_data_ = nullptr;
+        handle.size_ = 0;
+        handle.error_code_ = 0;
+    }
+}
 #endif

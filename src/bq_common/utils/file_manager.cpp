@@ -24,8 +24,11 @@ namespace bq {
         seq_generator = 0;
 #if !defined(NDEBUG)
         bq::util::log_device_console(log_level::info, "file_manager is constructed");
-        bq::util::log_device_console(log_level::info, "base dir type 0: %s", get_base_dir(0).c_str());
-        bq::util::log_device_console(log_level::info, "base dir type 1: %s", get_base_dir(1).c_str());
+        bq::string base_dir;
+        bq::util::log_device_console(log_level::info, "base dir type 0: %s",
+            bq::platform::try_get_base_dir(0, base_dir) ? base_dir.c_str() : "<unset>");
+        bq::util::log_device_console(log_level::info, "base dir type 1: %s",
+            bq::platform::try_get_base_dir(1, base_dir) ? base_dir.c_str() : "<unset>");
 #endif
     }
 

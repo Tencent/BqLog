@@ -8,20 +8,27 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-// Must come before every include: it controls whether <fcntl.h> exposes F_OFD_SETLK on Linux.
-#if defined(BQ_LINUX) && !defined(_GNU_SOURCE)
+// Feature macros must precede every system header, so macros.h (and BQ_LINUX) is not usable yet.
+// _GNU_SOURCE exposes F_OFD_SETLK on Linux; _DEFAULT_SOURCE exposes POSIX under strict -std on newlib.
+#if defined(__linux__) && !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
+#endif
+#if !defined(_DEFAULT_SOURCE)
+#define _DEFAULT_SOURCE
 #endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
 #include <pthread.h>
 #include <unistd.h>
 #include <fcntl.h>
+#include <time.h>
+#if BQ_HAS_CROSS_PROCESS_FILE_LOCK
 #include <sys/file.h>
-#ifndef BQ_PS
+#endif
+#if BQ_HAS_DIRENT
 #include <dirent.h>
 #endif
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+#if BQ_HAS_EXECINFO
 #include <cxxabi.h>
 #include <execinfo.h>
 namespace bq {
@@ -33,9 +40,7 @@ namespace bq {
 
 namespace bq {
     namespace platform {
-#ifdef BQ_PS
-        // TODO
-#else
+#if BQ_HAS_DIRENT
         class posix_dir_stack_holder {
         private:
             DIR* dp = nullptr;
@@ -170,10 +175,11 @@ namespace bq {
         {
             if (is_dir(path))
                 return 0;
-            char* path_cpy = strdup(path);
-            int32_t result = make_dir_recursive(path_cpy);
-            free(path_cpy);
-            return result;
+            bq::string path_cpy = path;
+            if (path_cpy.is_empty()) {
+                return 0;
+            }
+            return make_dir_recursive(const_cast<char*>(path_cpy.c_str()));
         }
 
         bool lock_file(const platform_file_handle& file_handle)
@@ -186,7 +192,7 @@ namespace bq {
             fl.l_whence = SEEK_SET;
             fl.l_start = 0;
             fl.l_len = 0;
-            fl.l_pid = getpid();
+            fl.l_pid = 0;
 
             if (fcntl(file_handle, F_SETLK, &fl) == -1) {
                 return false;
@@ -204,7 +210,7 @@ namespace bq {
             fl.l_whence = SEEK_SET;
             fl.l_start = 0;
             fl.l_len = 0;
-            fl.l_pid = getpid();
+            fl.l_pid = 0;
 
             if (fcntl(file_handle, F_SETLK, &fl) == -1) {
                 return false;
@@ -214,8 +220,7 @@ namespace bq {
 
         bool is_cross_process_file_lock_supported()
         {
-#if defined(BQ_PS) || defined(BQ_TEST_DISABLE_FILE_LOCK)
-            // PlayStation locks are not cross-process; test builds compile the lock out on purpose.
+#if !BQ_HAS_CROSS_PROCESS_FILE_LOCK || defined(BQ_TEST_DISABLE_FILE_LOCK)
             return false;
 #elif defined(F_OFD_SETLK) || (defined(LOCK_EX) && defined(LOCK_NB))
             return true;
@@ -227,11 +232,12 @@ namespace bq {
         instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
         {
             out_handle = invalid_platform_file_handle;
-#ifdef BQ_PS
-            // PlayStation has no inheritable file locks: report the instance as locked so callers
-            // do not fall into the retry loop. Multi-instance isolation is not supported there.
+#if !BQ_HAS_MULTI_PROCESS
             (void)abs_path;
             return instance_lock_result::locked;
+#elif !BQ_HAS_CROSS_PROCESS_FILE_LOCK
+            (void)abs_path;
+            return instance_lock_result::error;
 #else
             if (!is_cross_process_file_lock_supported()) {
                 bq::util::log_device_console(log_level::warning, "cross-process file lock unsupported on this platform: %s", abs_path);
@@ -372,7 +378,19 @@ namespace bq {
 
         bool is_absolute(const string& path)
         {
-            return path.size() > 0 && (path[0] == '/' || path[0] == '~');
+            if (path.size() > 0 && (path[0] == '/' || path[0] == '~')) {
+                return true;
+            }
+            // Console mount points: sdmc:/, save:/, cache:/.
+            for (size_t i = 0; i + 1 < path.size(); ++i) {
+                if (path[i] == '/') {
+                    break;
+                }
+                if (path[i] == ':' && path[i + 1] == '/') {
+                    return true;
+                }
+            }
+            return false;
         }
 
         int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
@@ -386,9 +404,17 @@ namespace bq {
 
         int32_t remove_dir_or_file_inner(bq::string& path)
         {
-#ifdef BQ_PS
-            // TODO
-            return 0;
+#if !BQ_HAS_DIRENT
+            if (!is_dir(path.c_str())) {
+                if (remove(path.c_str()) == 0) {
+                    return 0;
+                }
+                return errno;
+            }
+            if (rmdir(path.c_str()) == 0) {
+                return 0;
+            }
+            return ENOTSUP;
 #else
             if (!is_dir(path.c_str())) {
                 if (remove(path.c_str()) == 0) {
@@ -548,7 +574,7 @@ namespace bq {
         int32_t read_file(const platform_file_handle& file_handle, void* target_addr, size_t read_size, size_t& out_real_read_size)
         {
             out_real_read_size = 0;
-            size_t max_size_pertime = static_cast<size_t>(SSIZE_MAX);
+            size_t max_size_pertime = BQ_SSIZE_MAX;
             char* current_target = static_cast<char*>(target_addr);
             while (out_real_read_size < read_size) {
                 size_t need_read_size_this_time = bq::min_value(max_size_pertime, read_size - out_real_read_size);
@@ -579,7 +605,7 @@ namespace bq {
             size_t remaining = write_size;
 
             while (remaining > 0) {
-                size_t chunk_size = bq::min_value(remaining, static_cast<size_t>(SSIZE_MAX));
+                size_t chunk_size = bq::min_value(remaining, BQ_SSIZE_MAX);
                 ssize_t written = write(file_handle, current_src, chunk_size);
                 if (written < 0) {
                     if (errno == EINTR) {
@@ -624,7 +650,7 @@ namespace bq {
 
         int32_t flush_file(const platform_file_handle& file_handle)
         {
-#if defined(BQ_IOS) || defined(BQ_MAC)
+#if !BQ_HAS_FDATASYNC
             if (fsync(file_handle) == 0) {
 #else
             if (fdatasync(file_handle) == 0) {
@@ -647,9 +673,13 @@ namespace bq {
 
         bq::array<bq::string> get_all_sub_names(const char* path)
         {
-#ifdef BQ_PS
-            bq::array<bq::string> result;
-            return result;
+#if !BQ_HAS_DIRENT
+            static bq::platform::atomic<int32_t> warn_once = { 0 };
+            if (0 == warn_once.fetch_add_relaxed(1)) {
+                bq::util::log_device_console(log_level::warning, "directory enumeration is unsupported on this platform: expire_time and capacity_limit are ignored");
+            }
+            (void)path;
+            return bq::array<bq::string>();
 #else
             bq::array<bq::string> result;
             if (!path) {
@@ -671,7 +701,7 @@ namespace bq {
 #endif
         }
 
-#if !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+#if BQ_HAS_EXECINFO
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
         {
             if (!bq::stack_trace_current_str_) {
@@ -750,6 +780,22 @@ namespace bq {
             out_str_ptr = stack_trace_str_ref.begin();
             out_char_count = (uint32_t)stack_trace_str_ref.size();
         }
+#elif !BQ_HAS_BACKTRACE
+        void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count)
+        {
+            (void)skip_frame_count;
+            static const char unsupported[] = "<stack trace unsupported on this platform>";
+            out_str_ptr = unsupported;
+            out_char_count = (uint32_t)(sizeof(unsupported) / sizeof(char) - 1);
+        }
+
+        void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count)
+        {
+            (void)skip_frame_count;
+            static const char16_t unsupported[] = u"<stack trace unsupported on this platform>";
+            out_str_ptr = unsupported;
+            out_char_count = (uint32_t)(sizeof(unsupported) / sizeof(char16_t) - 1);
+        }
 #endif
 
         void* aligned_alloc(size_t alignment, size_t size)
@@ -758,9 +804,17 @@ namespace bq {
                 alignment = sizeof(void*);
             }
             void* p = nullptr;
+#if BQ_HAS_POSIX_MEMALIGN
             if (posix_memalign(&p, alignment, size) != 0) {
                 return nullptr;
             }
+#else
+            const size_t aligned_size = (size + alignment - 1) / alignment * alignment;
+            p = ::aligned_alloc(alignment, aligned_size);
+            if (!p) {
+                return nullptr;
+            }
+#endif
             return p;
         }
         void aligned_free(void* ptr)
@@ -769,4 +823,7 @@ namespace bq {
         }
     }
 }
+#else
+// Keep the translation unit non-empty where the platform has no POSIX layer at all.
+typedef int bq_posix_misc_empty_tu;
 #endif

@@ -291,8 +291,10 @@ namespace bq {
 
             virtual void run() override
             {
+#if BQ_HAS_THREAD_NAME
                 result_ptr_->add_result(get_thread_name() == set_name_, "thread name test 1");
                 result_ptr_->add_result(bq::platform::thread::get_current_thread_name() == set_name_, "thread name test 2");
+#endif
             }
         };
 
@@ -687,7 +689,9 @@ namespace bq {
                     t_restart.start();
                     t_restart.join();
                     result.add_result(t_restart.run_count_.load() == 1, "thread restart test 1");
+#if BQ_HAS_THREAD_NAME
                     result.add_result(t_restart.last_name_ == "Run1", "thread name test Run1");
+#endif
                     auto tid1 = t_restart.last_tid_;
                     result.add_result(tid1 == t_restart.last_obj_tid_, "thread id member check 1");
 
@@ -695,7 +699,9 @@ namespace bq {
                     t_restart.start(); // Restart!
                     t_restart.join();
                     result.add_result(t_restart.run_count_.load() == 2, "thread restart test 2");
+#if BQ_HAS_THREAD_NAME
                     result.add_result(t_restart.last_name_ == "Run2", "thread name test Run2");
+#endif
                     auto tid2 = t_restart.last_tid_;
                     result.add_result(tid2 == t_restart.last_obj_tid_, "thread id member check 2");
 
@@ -730,7 +736,7 @@ namespace bq {
 
                 test_output_dynamic(bq::log_level::info, "                                                                                                          \r");
 
-#ifndef BQ_WIN
+#if !defined(BQ_WIN) && BQ_HAS_THREAD_NAME
                 {
                     auto seg_start = bq::platform::high_performance_epoch_ms();
                     // thread name test

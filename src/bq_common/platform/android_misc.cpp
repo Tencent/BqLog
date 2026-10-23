@@ -181,6 +181,7 @@ namespace bq {
          * Try to analyze "Internal files dir" and "External files dir" without
          * reflect android java classes.
          */
+#if BQ_HAS_DEFAULT_BASE_DIR
         base_dir_initializer::base_dir_initializer()
         {
 #ifdef BQ_UNIT_TEST
@@ -285,6 +286,7 @@ namespace bq {
             }
 #endif
         }
+#endif
 
         bq::string get_files_dir()
         {

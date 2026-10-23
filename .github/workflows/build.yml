@@ -7675,3 +7675,38 @@ jobs:
         with:
           name: java_maven_fat_jar_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist/maven/java
+
+  # Nintendo Switch (devkitPro devkitA64 + libnx): a build check only. Consoles ship as source,
+  # like PlayStation, so nothing is uploaded.
+  build_switch_devkita64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: devkitpro/devkita64@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the static library
+        run: |
+          export PATH="/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH"
+          cmake -S src -B build_switch \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake \
+            -DCMAKE_BUILD_TYPE=Release
+          grep -q '^TARGET_PLATFORM:STRING=switch$' build_switch/CMakeCache.txt
+          cmake --build build_switch -j 4
+      - name: Check that the console symbols are absent
+        run: |
+          LIB=$(find artifacts/static_lib -name 'libBqLog.a' | head -n 1)
+          test -n "$LIB" || { echo "libBqLog.a not found" >&2; exit 1; }
+          echo "checking $LIB"
+          if aarch64-none-elf-nm -u "$LIB" | grep -wE 'mmap|munmap|msync|sigaction|backtrace|flock|pthread_setname_np'; then
+            echo "a console build must not reference these symbols" >&2
+            exit 1
+          fi
+      - name: Build the unit test ELF
+        run: |
+          export PATH="/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH"
+          cmake -S test/cpp -B build_switch_test \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake \
+            -DCMAKE_BUILD_TYPE=Release
+          grep -q '^TARGET_PLATFORM:STRING=switch$' build_switch_test/CMakeCache.txt
+          cmake --build build_switch_test -j 4
