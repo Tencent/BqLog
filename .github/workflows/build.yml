@@ -7054,6 +7054,14 @@ jobs:
               sed -i 's/"LinuxArm64"/"LinuxAArch64"/g' "$plugin_dir/BqLog.uplugin"
             fi
 
+            # Prebuilt has no console binaries: PS4/PS5 need the NDA SDKs, and CI's Switch build uses
+            # devkitA64 (newlib/libstdc++), which cannot link against Nintendo SDK targets.
+            sed -i 's/, "PS4", "PS5", "Switch"//' "$plugin_dir/BqLog.uplugin"
+            if grep -q '"PS4"\|"PS5"\|"Switch"' "$plugin_dir/BqLog.uplugin"; then
+              echo "ERROR: console platforms still listed in the prebuilt .uplugin" >&2
+              exit 1
+            fi
+
             rm -rf "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxAArch64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS"
             mkdir -p "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxAArch64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS" "$plugin_dir/Binaries/Android"
 

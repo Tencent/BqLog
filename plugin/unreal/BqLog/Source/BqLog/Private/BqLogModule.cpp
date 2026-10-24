@@ -12,6 +12,7 @@
 #include "Logging/LogMacros.h"
 #include "Containers/Map.h"
 #include "HAL/CriticalSection.h"
+#include "Misc/Paths.h"
 #include "bq_log/bq_log.h"
 
 // UE4 does not have UE_LOG_SOURCE_FILE
@@ -140,6 +141,12 @@ public:
         bq::log::console(bq::log_level::info, bq::string("BqLog Version:") + bq::log::get_version());
 
         FString dir = FPaths::ProjectDir();
+        FString full = FPaths::ConvertRelativePathToFull(dir);
+        bq::log::reset_base_dir(0, bq::string(TCHAR_TO_UTF8(*full)));
+        bq::log::reset_base_dir(1, bq::string(TCHAR_TO_UTF8(*full)));
+#elif !BQ_HAS_DEFAULT_BASE_DIR
+        // Consoles have no writable working directory, so use the engine's saved data.
+        FString dir = FPaths::ProjectSavedDir();
         FString full = FPaths::ConvertRelativePathToFull(dir);
         bq::log::reset_base_dir(0, bq::string(TCHAR_TO_UTF8(*full)));
         bq::log::reset_base_dir(1, bq::string(TCHAR_TO_UTF8(*full)));

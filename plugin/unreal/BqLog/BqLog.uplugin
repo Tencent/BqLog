@@ -4,7 +4,7 @@
 	"Version": 1,
 	"VersionName": "1.0",
 	"FriendlyName": "BqLog",
-	"Description": "BqLog is a super high-performance logging system for games and real-time applications. It supports Windows, Linux (x86_64 and arm64), macOS, iOS, Android, PlayStation 4, PlayStation 5 and Nintendo Switch.",
+	"Description": "BqLog is a super high-performance logging system for games and real-time applications. It supports Windows, Linux (x86_64 and arm64), macOS, iOS, Android, PlayStation 4, PlayStation 5 and Nintendo Switch (consoles as source integrations).",
 	"Category": "Logging",
 	"CreatedBy": "Tencent",
 	"CreatedByURL": "https://github.com/Tencent/BqLog",
