@@ -13,6 +13,7 @@
 //  Created by Yu Cao on 2025/4/11.
 //
 
+#include <stdio.h>
 #include "bq_common/global/common_vars.h"
 #ifdef BQ_WIN
 #include "bq_common/platform/win64_includes_begin.h"
@@ -68,7 +69,10 @@ namespace bq {
         bq::util::set_log_device_console_min_level(bq::log_level::info);
 #endif
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-        bq::util::log_device_console(bq::log_level::info, "Hardware AVX2 support:%s", result ? "true" : "false");
+        // common_global_vars is still being constructed here, so log_device_console would re-enter it.
+        char text[64];
+        snprintf(text, sizeof(text), "Hardware AVX2 support:%s", result ? "true" : "false");
+        bq::util::_default_console_output(bq::log_level::info, text);
 #endif
 #ifdef BQ_UNIT_TEST
         bq::util::set_log_device_console_min_level(bq::log_level::warning);
@@ -123,7 +127,10 @@ namespace bq {
         bq::util::set_log_device_console_min_level(bq::log_level::info);
 #endif
 #if !defined(NDEBUG) || defined(BQ_UNIT_TEST)
-        bq::util::log_device_console(bq::log_level::info, "Hardware CRC32 support:%s", result ? "true" : "false");
+        // common_global_vars is still being constructed here, so log_device_console would re-enter it.
+        char text[64];
+        snprintf(text, sizeof(text), "Hardware CRC32 support:%s", result ? "true" : "false");
+        bq::util::_default_console_output(bq::log_level::info, text);
 #endif
 #ifdef BQ_UNIT_TEST
         bq::util::set_log_device_console_min_level(bq::log_level::warning);
