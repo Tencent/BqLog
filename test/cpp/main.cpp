@@ -47,6 +47,9 @@
 #include <signal.h>
 #include <unistd.h>
 #endif
+#if defined(BQ_MSVC)
+#include <crtdbg.h>
+#endif
 
 #if BQ_HAS_CRASH_HANDLER
 pthread_t main_thread_id = 0;
@@ -187,6 +190,11 @@ static void prepare_test_meta_registry()
 
 int32_t main(int32_t argc, char** argv)
 {
+#if defined(BQ_MSVC)
+    // A debug-CRT assertion otherwise opens a modal dialog and parks the whole job.
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+#endif
 #if !defined(BQ_WIN)
     // UCRT rejects a zero size and reads _IOLBF as full buffering, so Windows has nothing to
     // gain here; its output already flushes after every case (test_base.h).
