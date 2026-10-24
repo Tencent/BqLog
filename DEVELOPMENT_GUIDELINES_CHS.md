@@ -14,6 +14,8 @@
 
 清晰、优雅、模块化优先：代码被读的次数远多于被写的次数。一个文件、一个类只负责一个主题，接口要窄且把状态留在内部，分层方向单向（`bq_common` → `bq_log` → wrapper / plugin / tools）。
 
+- 每个 `.cpp` 第一个包含的必须是与本文件同名的头文件，之后才能包含其它内容。UE 插件通过 Unreal Build Tool 编译本库时会检查这个顺序，系统头放在最前面会导致 UE 构建失败。
+
 ## 2. 命名
 
 - 文件名、类型、函数、变量、枚举值和成员一律 `snake_case`：`meta_registry`、`enable_meta_records`、`run_version()`、`log_level::info`。

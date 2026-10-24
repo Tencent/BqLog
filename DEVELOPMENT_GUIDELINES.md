@@ -14,6 +14,8 @@ These rules keep BqLog consistent across platforms, compilers and languages. The
 
 Clarity, elegance and modularity come first: code is read far more often than it is written. One subject per file and per class, a narrow interface that keeps its state to itself, and a one-way layer direction (`bq_common` → `bq_log` → wrapper / plugin / tools).
 
+- A `.cpp` includes the header that carries its own name first, before any other include. The Unreal Build Tool validates that order when the plugin compiles the library, so a system header placed first fails the Unreal build.
+
 ## 2. Naming
 
 - `snake_case` for files, types, functions, variables, enum values and members: `meta_registry`, `enable_meta_records`, `run_version()`, `log_level::info`.

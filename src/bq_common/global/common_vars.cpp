@@ -13,8 +13,8 @@
 //  Created by Yu Cao on 2025/4/11.
 //
 
-#include <stdio.h>
 #include "bq_common/global/common_vars.h"
+#include <stdio.h>
 #ifdef BQ_WIN
 #include "bq_common/platform/win64_includes_begin.h"
 #endif
