@@ -21,7 +21,7 @@
 #include "bq_common/bq_common_public_include.h"
 #include "bq_log/adapters/adapters.h"
 #include "bq_log/misc/bq_log_def.h"
-#include "bq_log/misc/bq_log_api.h"
+#include "bq_log/api/bq_log_api.h"
 #include "bq_log/misc/bq_log_wrapper_tools.h"
 #if defined(BQ_CPP_20)
 #include "bq_log/misc/bq_log_fixed_format.h"

@@ -24,7 +24,7 @@
 #endif
 #include "bq_common/bq_common.h"
 #include "bq_common/platform/io/memory_map.h"
-#include "bq_log/misc/bq_log_api.h"
+#include "bq_log/api/bq_log_api.h"
 #include "bq_log/types/buffer/log_buffer_defs.h"
 #include "bq_log/types/buffer/block_list.h"
 #include "bq_log/types/buffer/memory_pool.h"
