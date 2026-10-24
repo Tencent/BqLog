@@ -187,8 +187,11 @@ static void prepare_test_meta_registry()
 
 int32_t main(int32_t argc, char** argv)
 {
-    // a pipe (CI) would buffer the output in blocks, which hides the running case for minutes
+#if !defined(BQ_WIN)
+    // UCRT rejects a zero size and reads _IOLBF as full buffering, so Windows has nothing to
+    // gain here; its output already flushes after every case (test_base.h).
     setvbuf(stdout, nullptr, _IOLBF, 0);
+#endif
 #if !BQ_HAS_DEFAULT_BASE_DIR
     {
         char cwd_buf[4096];
