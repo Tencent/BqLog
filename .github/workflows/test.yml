@@ -575,6 +575,7 @@ jobs:
   #Linux-ubuntu
   ubuntu:
     name: ubuntu (${{ matrix.runner.label }} ${{ matrix.cc }} ${{ matrix.cpp_ver }} ${{ matrix.asan.label }})
+    if: ${{ matrix.asan.label != 'asan' || (matrix.runner.label == 'x86_64' && matrix.cc == 'clang' && matrix.cpp_ver == 17) || github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
     runs-on: ${{ matrix.runner.runs_on }}
     strategy:
       fail-fast: false
