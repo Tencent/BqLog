@@ -453,6 +453,88 @@ capability := bq.Get_recovery_capability()
 
 返回 `ready` 表示支持，其它值说明缺少什么。
 
+### 平台能力查询
+
+链接进来的库实际编译了哪些能力，以位返回；启动时也会打印同样的值，反馈问题时带上它，描述的就是二进制本身，而不是调用方的头文件。
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+uint32_t capabilities = bq::log::get_platform_capabilities();
+if ((capabilities & bq::platform_capability::memory_map) == 0) {
+    // 当前构建没有崩溃恢复能力
+}
+```
+</details>
+
+<details>
+<summary><b>原生 C ABI</b></summary>
+
+```c
+uint32_t __api_get_platform_capabilities(void);
+```
+</details>
+
+<details>
+<summary><b>Java / Kotlin</b></summary>
+
+```java
+int capabilities = bq.log.get_platform_capabilities();
+boolean memory_map = (capabilities & bq.def.platform_capability.memory_map) != 0;
+```
+</details>
+
+<details>
+<summary><b>C#</b></summary>
+
+```csharp
+bq.def.platform_capability capabilities = bq.log.get_platform_capabilities();
+bool memory_map = capabilities.HasFlag(bq.def.platform_capability.memory_map);
+```
+</details>
+
+<details>
+<summary><b>TypeScript</b></summary>
+
+```typescript
+const capabilities = bq.log.get_platform_capabilities();
+const memory_map = (capabilities & bq.platform_capability.memory_map) !== 0;
+```
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+capabilities = log.get_platform_capabilities()
+memory_map = bool(capabilities & bq.defs.platform_capability.memory_map)
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+capabilities := bq.Get_platform_capabilities()
+memory_map := capabilities&def.Platform_capability_memory_map != 0   // def 即 bq/def 包
+```
+</details>
+
+| 能力位 | 具备时的含义 |
+|---|---|
+| `memory_map` | 缓冲区由映射文件支撑，崩溃恢复依赖它 |
+| `multi_process` | 多个进程可共用一个日志目录 |
+| `cross_process_file_lock` | 能把第二个进程挡在实例槽位外 |
+| `crash_handler` | `enable_auto_crash_handle()` 会安装处理器 |
+| `backtrace` | 日志条目里的栈字段带堆栈 |
+| `dirent` | `expire_time_*` 与 `capacity_limit` 可用 |
+| `thread_name` | 线程名是真实名字，而不是 `thread_<id>` |
+| `default_base_dir` | 存在可写的默认目录；没有时必须调用 `reset_base_dir` |
+| `user_counter` | 时间戳取自平台计数器，而不是系统时钟 |
+
+主机平台会按设计清掉其中大部分，见[接入指南 — 主机平台](./INTEGRATION_GUIDE_CHS.md#主机平台)。
+
 ---
 
 ## 6. 拦截 / 获取 Console 输出

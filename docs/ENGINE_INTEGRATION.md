@@ -52,6 +52,8 @@ Pick any one of the following ways to integrate.
 > **Mac / iOS on UE 4.22 and 4.23:** Due to Fab build-machine limitations, the Fab zips for UE 4.22 and 4.23 do **not** include Mac or iOS binaries. If you need Mac or iOS support on these two engine versions, please download the **Source** or **Prebuilt** package from the [GitHub Releases page](https://github.com/Tencent/BqLog/releases) and integrate it manually.
 >
 > **Using UE6?** Download the `ue6` Source or Prebuilt plugin manually from the [GitHub Releases page](https://github.com/Tencent/BqLog/releases). These packages currently use the same plugin implementation as UE5 and have been verified with current UE6 development builds. UE6 is still under development, so compatibility may be adjusted as the engine changes. Fab cannot distribute the UE6 package yet because Epic's official Fab engine support currently ends at UE 5.8.
+>
+> **On PS4 / PS5 / Switch?** Use the **Source** package: the prebuilt one ships no console binaries. The plugin injects the console platform macros and sets both base dirs itself. Platform setup is in [Integration Guide — console platforms](./INTEGRATION_GUIDE.md#console-platforms).
 
 ### Integration
 

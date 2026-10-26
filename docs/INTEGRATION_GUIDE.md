@@ -512,18 +512,27 @@ search, README and API documentation.
 
 ## Console platforms
 
-PS4, PS5 and Switch builds are source integrations: add `src/` and `include/` to the
-platform toolchain's project and let the compiler identify the platform. There is no
-CMake target for PlayStation because the SDK is the build system there.
+Because of licensing, PS4, PS5 and Switch are source integrations only: add `src/` and `include/`
+to the platform toolchain's project and build them there.
+
+The platform is recognized from macros the toolchain passes: `__ORBIS__` (PS4), `__PROSPERO__`
+(PS5), `__SWITCH__` or `NN_NINTENDO_SDK` (Switch). A normal console build environment already
+defines them, so they usually need no manual work.
+
+Both base dirs (type 0 and type 1) must be set before the first log is created, once the storage is
+mounted; a console has no writable working directory, so otherwise the process stops with a fatal
+message.
 
 ```cpp
+// Mount the console's storage first and take mount_path from it
 bq::log::reset_base_dir(0, mount_path);   // after the game mounts its storage
 bq::log::reset_base_dir(1, mount_path);
 auto log = bq::log::create_log("game", R"({"log_config": {"recovery": true}})");
 ```
 
-The directory must be set before the first log is created; a console has no writable
-working directory, so a path built from a guess terminates with a fatal message.
+Note: integrating through Unreal Engine lets you skip this step, because the plugin already points
+both base dirs at the project's saved directory; see
+[Game Engine Integration — Unreal Engine](./ENGINE_INTEGRATION.md#unreal-engine).
 
 | Capability | PS4 / PS5 | Switch | Effect when absent |
 |---|---|---|---|
@@ -537,6 +546,6 @@ working directory, so a path built from a guess terminates with a fatal message.
 | `default_base_dir` | no | no | `reset_base_dir` is mandatory |
 | `user_counter` | no | no | timestamps come from the system clock |
 
-`bq::log::get_platform_capabilities()` returns these as bits; the same values are printed
-once at startup, so a bug report carries the exact build. PlayStation and Switch builds are
-verified by compilation and unit tests, not on retail hardware.
+`bq::log::get_platform_capabilities()` returns these as bits, and the same values are printed once
+at startup, so a bug report can carry them. PlayStation and Switch are experimental for now: if you
+hit a problem, please file an issue with the `get_platform_capabilities()` output mentioned above.

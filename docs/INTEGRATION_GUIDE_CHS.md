@@ -509,15 +509,20 @@ README 和 API 文档展示。
 
 ## 主机平台
 
-PS4、PS5 与 Switch 都是源码接入：把 `src/` 与 `include/` 加进平台工具链的工程，平台由编译器识别。PlayStation 不提供 CMake target，那里构建系统就是 SDK 本身。
+由于许可的原因，PS4、PS5 与 Switch 只提供源码接入：把 `src/` 与 `include/` 加进平台工具链的工程里一起编译。
+
+平台由工具链传入的宏识别：`__ORBIS__`（PS4）、`__PROSPERO__`（PS5）、`__SWITCH__` 或 `NN_NINTENDO_SDK`（Switch）。正常的主机构建环境已经预设值了这些宏，一般不需要手动添加。
+
+类型 0 与类型 1 的 base dir 都必须在创建第一个日志之前挂载存储并设置，否则主机没有可写的工作目录，会直接以 fatal 信息终止。
 
 ```cpp
+// 先调用主机的存储挂载API，并获取挂载目录mount_path
 bq::log::reset_base_dir(0, mount_path);   // 游戏挂载存储之后
 bq::log::reset_base_dir(1, mount_path);
 auto log = bq::log::create_log("game", R"({"log_config": {"recovery": true}})");
 ```
 
-目录必须在创建第一个日志之前设置。主机没有可写的工作目录，用猜测的路径会直接以 fatal 信息终止。
+注意：通过 UE 接入的话这一步可以跳过，因为插件已经把两个 base dir 都指到工程的 Saved 目录，详见[游戏引擎集成 — Unreal Engine](./ENGINE_INTEGRATION_CHS.md#unreal-engine)。
 
 | 能力 | PS4 / PS5 | Switch | 缺失时的表现 |
 |---|---|---|---|
@@ -531,5 +536,5 @@ auto log = bq::log::create_log("game", R"({"log_config": {"recovery": true}})");
 | `default_base_dir` | 无 | 无 | 必须调用 `reset_base_dir` |
 | `user_counter` | 无 | 无 | 时间戳取自系统时钟 |
 
-`bq::log::get_platform_capabilities()` 以位掩码返回上述能力，启动时也会打印一次，反馈问题时可直接带上。PlayStation 与 Switch 的验证方式是编译与单元测试，不是零售机。
+`bq::log::get_platform_capabilities()` 以位掩码返回上述能力，启动时也会打印一次，反馈问题时可直接带上。PlayStation 与 Switch 目前为实验版本，如果遇到问题请反馈Issue并带上上述`get_platform_capabilities()`输出的信息。
 

@@ -52,6 +52,8 @@ log.info("Hello from Unity! value:{}", 42);
 > **UE 4.22 与 4.23 的 Mac / iOS 支持：** 由于 Fab 构建机的限制，Fab 上针对 UE 4.22 与 4.23 的 zip **未包含** Mac 与 iOS 版本。如果在这两个引擎版本下需要 Mac 或 iOS 支持，请前往 [GitHub Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 **源码版** 或 **预编译版** 手动引入。
 >
 > **使用 UE6？** 请从 [GitHub Releases 页面](https://github.com/Tencent/BqLog/releases)手动下载 `ue6` 源码版或预编译版插件。这些包目前与 UE5 使用相同的插件实现，并已在当前 UE6 开发版中验证可用。UE6 仍在开发，后续可能需要随引擎变化调整兼容性。由于 Epic 官方的 Fab 引擎支持目前只到 UE 5.8，Fab 暂时无法分发 UE6 插件。
+>
+> **PS4 / PS5 / Switch？** 请使用**源码版**：预编译版不含主机平台的库。主机平台宏由插件传入，两个 base dir 也由插件设置。平台相关准备见[接入指南 — 主机平台](./INTEGRATION_GUIDE_CHS.md#主机平台)。
 
 ### 集成方式
 

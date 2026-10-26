@@ -300,10 +300,10 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 
 ## 🔄 Changes from 1.x to 2.x
 
-1. Added HarmonyOS support, including ArkTS and C++.
-2. Added Node.js support (CJS and ESM).
+1. Added HarmonyOS support, plus PS4 / PS5 / Switch (experimental, source integration).
+2. Added TypeScript (Node.js, ArkTS), Python and Go support.
 3. Improved cross-platform compatibility, stability and generality; supports more Unix systems.
-4. Average performance improved by ~80% for UTF-8, and by >500% for UTF-16 environments (C#, Unreal, Unity).
+4. Significant performance improvements, most visible in UTF-16 environments (C#, Unreal, Unity). See [benchmark](docs/BENCHMARK.md).
 5. Android no longer must be used together with Java.
 6. Removed the `is_in_sandbox` config and replaced it with `base_dir_type`; added filters for snapshots and support for opening a new log file on each startup. See [Configuration](docs/CONFIGURATION.md).
 7. Added high-performance hybrid asymmetric encryption, ***almost zero overhead***; see [Advanced Usage — Encryption](docs/ADVANCED_USAGE.md#6-log-encryption-and-decryption).

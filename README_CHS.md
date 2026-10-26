@@ -299,10 +299,10 @@ bq.log.force_flush_all_logs();
 
 ## 🔄 从 1.x 版本升级到 2.x 版本的变化
 
-1. 增加对鸿蒙系统的支持，包括 ArkTS 和 C++ 两种语言。
-2. 增加对 Node.js 的支持（CJS 和 ESM）。
+1. 增加对鸿蒙系统以及 PS4、PS5、Switch 的支持（主机平台为实验性，源码接入）。
+2. 增加对 TypeScript（Node.js、ArkTS）、Python、Go 等语言的支持。
 3. 增强跨平台兼容性、稳定性与通用性，支持更多 Unix 系统。
-4. utf8编码下性能平均提升约 80%，utf16编码环境（C#，Unreal，Unity）提升超过500%。
+4. 性能大幅提升，UTF-16 环境（C#、Unreal、Unity）尤为明显，详见[性能基准](docs/BENCHMARK_CHS.md)。
 5. Android 不再强制要求与 Java 一起使用。
 6. 移除 `is_in_sandbox` 配置，改用 `base_dir_type`；对 snapshot 增加过滤配置，支持每次启动新开日志文件。详见 [配置说明](docs/CONFIGURATION_CHS.md)。
 7. 支持高性能非对称混合加密，几乎无额外性能损耗，详见 [高级用法 — 加密](docs/ADVANCED_USAGE_CHS.md#6-日志加密和解密)。

@@ -453,6 +453,89 @@ capability := bq.Get_recovery_capability()
 
 `ready` means recovery is available; any other value names what is missing.
 
+### Platform capabilities
+
+What the linked library was actually built with, as bits — the same values it prints once at startup,
+so a bug report describes the binary instead of the caller's headers.
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+uint32_t capabilities = bq::log::get_platform_capabilities();
+if ((capabilities & bq::platform_capability::memory_map) == 0) {
+    // crash recovery is unavailable on this build
+}
+```
+</details>
+
+<details>
+<summary><b>Native C ABI</b></summary>
+
+```c
+uint32_t __api_get_platform_capabilities(void);
+```
+</details>
+
+<details>
+<summary><b>Java / Kotlin</b></summary>
+
+```java
+int capabilities = bq.log.get_platform_capabilities();
+boolean memory_map = (capabilities & bq.def.platform_capability.memory_map) != 0;
+```
+</details>
+
+<details>
+<summary><b>C#</b></summary>
+
+```csharp
+bq.def.platform_capability capabilities = bq.log.get_platform_capabilities();
+bool memory_map = capabilities.HasFlag(bq.def.platform_capability.memory_map);
+```
+</details>
+
+<details>
+<summary><b>TypeScript</b></summary>
+
+```typescript
+const capabilities = bq.log.get_platform_capabilities();
+const memory_map = (capabilities & bq.platform_capability.memory_map) !== 0;
+```
+</details>
+
+<details>
+<summary><b>Python</b></summary>
+
+```python
+capabilities = log.get_platform_capabilities()
+memory_map = bool(capabilities & bq.defs.platform_capability.memory_map)
+```
+</details>
+
+<details>
+<summary><b>Go</b></summary>
+
+```go
+capabilities := bq.Get_platform_capabilities()
+memory_map := capabilities&def.Platform_capability_memory_map != 0   // def = the bq/def package
+```
+</details>
+
+| Bit | Present means |
+|---|---|
+| `memory_map` | buffers are file-backed; crash recovery needs it |
+| `multi_process` | several processes may share one log directory |
+| `cross_process_file_lock` | a second process can be kept out of an instance |
+| `crash_handler` | `enable_auto_crash_handle()` installs a handler |
+| `backtrace` | the stack field of an entry carries a backtrace |
+| `dirent` | `expire_time_*` and `capacity_limit` work |
+| `thread_name` | threads report a name instead of `thread_<id>` |
+| `default_base_dir` | a writable working directory was found; without it `reset_base_dir` is mandatory |
+| `user_counter` | timestamps come from a platform counter instead of the system clock |
+
+A console clears most of these on purpose; see [Integration Guide — console platforms](./INTEGRATION_GUIDE.md#console-platforms).
+
 ---
 
 ## 6. Intercept / fetch Console Output
