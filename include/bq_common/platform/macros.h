@@ -448,6 +448,14 @@
 #endif
 #endif
 
+#if !defined(BQ_HAS_FORK)
+#if defined(BQ_WIN) || defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_FORK 0
+#else
+#define BQ_HAS_FORK 1
+#endif
+#endif
+
 #if !defined(BQ_HAS_CRASH_HANDLER)
 #if defined(BQ_POSIX) && !defined(BQ_PS) && !defined(BQ_SWITCH)
 #define BQ_HAS_CRASH_HANDLER 1

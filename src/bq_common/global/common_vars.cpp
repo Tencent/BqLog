@@ -167,6 +167,29 @@ namespace bq {
         destructible_vars_ = nullptr;
     }
 
+    void common_global_vars::reinit_after_fork()
+    {
+        auto& vars = get();
+        bq::string base_dir_0;
+        bq::string base_dir_1;
+        const bool base_dir_0_set = vars.base_dir_init_inst_.is_set(0);
+        const bool base_dir_1_set = vars.base_dir_init_inst_.is_set(1);
+        if (base_dir_0_set) {
+            base_dir_0 = vars.base_dir_init_inst_.get_base_dir_0();
+        }
+        if (base_dir_1_set) {
+            base_dir_1 = vars.base_dir_init_inst_.get_base_dir_1();
+        }
+        global_vars_base::reinit_after_fork();
+        auto& fresh = get();
+        if (base_dir_0_set) {
+            fresh.base_dir_init_inst_.set_base_dir_0(base_dir_0);
+        }
+        if (base_dir_1_set) {
+            fresh.base_dir_init_inst_.set_base_dir_1(base_dir_1);
+        }
+    }
+
     common_global_vars::common_global_vars()
     {
 #if defined(BQ_WIN)

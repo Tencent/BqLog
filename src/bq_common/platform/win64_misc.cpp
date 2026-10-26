@@ -250,10 +250,14 @@ namespace bq {
         void unlock_instance_file(platform_file_handle& handle)
         {
             // closing the handle releases the LockFileEx lock
-            if (is_platform_handle_valid(handle)) {
-                CloseHandle(handle);
-            }
-            handle = invalid_platform_file_handle;
+            close_descriptor(handle);
+        }
+
+        bool register_after_fork_child_handler(void (*handler)())
+        {
+            // CreateProcess starts a new image with no inherited state; there is nothing to drop.
+            (void)handler;
+            return false;
         }
 
         bq::string get_lexically_path(const bq::string& original_path)
@@ -450,6 +454,14 @@ namespace bq {
                 return 0;
             }
             return static_cast<int32_t>(GetLastError());
+        }
+
+        void close_descriptor(platform_file_handle& in_out_file_handle)
+        {
+            if (is_platform_handle_valid(in_out_file_handle)) {
+                CloseHandle(in_out_file_handle);
+            }
+            in_out_file_handle = invalid_platform_file_handle;
         }
 
         int32_t read_file(const platform_file_handle& file_handle, void* target_addr, size_t read_size, size_t& out_real_read_size)

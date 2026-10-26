@@ -281,6 +281,7 @@ namespace bq {
         bq::util::log_device_console(log_level::info, "BqLog is uninited!");
     }
 
+
     bq::layout& log_manager::get_public_layout()
     {
         return public_layout_;

@@ -29,6 +29,60 @@ namespace bq {
             return child > 0 && waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0;
         }
 
+        // A forked child drops every descriptor it inherited, so the parent keeps its lock and the
+        // child's own file handling starts from a clean table.
+        inline void test_fork_drops_inherited_handles(test_result& result, bq::file_manager& parent_file_manager)
+        {
+            if (!bq::platform::is_cross_process_file_lock_supported()) {
+                result.add_result(true, "fork handles: needs a cross-process file lock");
+                return;
+            }
+            const bq::string path = TO_ABSOLUTE_PATH("cc/fork_handles.txt", base_dir_type);
+            const bq::string child_path = TO_ABSOLUTE_PATH("cc/fork_child_map.mmp", base_dir_type);
+            auto holder = parent_file_manager.open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+            result.add_result(holder.is_valid(), "fork handles: holder opened");
+
+            const pid_t child = fork();
+            if (child == 0) {
+                // Everything below runs after the fork handler has rebuilt the runtime, so the console
+                // is usable again; the tables reachable through the parent's references are not.
+                bq::util::set_log_device_console_min_level(bq::log_level::log_level_max);
+                int32_t stage = 0;
+                if (bq::platform::is_platform_handle_valid(holder.platform_handle())) {
+                    stage = 1; // the inherited descriptor should be gone
+                }
+                bq::platform::platform_file_handle probe = bq::platform::invalid_platform_file_handle;
+                const auto probe_result = bq::platform::try_lock_instance_file(path.c_str(), probe);
+                bq::platform::unlock_instance_file(probe);
+                if (probe_result != bq::platform::file_lock_result::held_by_other) {
+                    stage = 2; // the parent's lock must survive the child closing its copy
+                }
+                bq::file_manager& child_file_manager = bq::file_manager::instance();
+                auto child_file = child_file_manager.open_file(child_path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                if (!child_file.is_valid()) {
+                    stage = 3;
+                } else if (bq::memory_map::is_platform_support()) {
+                    child_file_manager.truncate_file(child_file, bq::memory_map::get_min_size_of_memory_map_file(0, 4096));
+                    auto child_map = bq::memory_map::create_memory_map(child_file, 0, 4096);
+                    if (!child_map.has_been_mapped()) {
+                        stage = 4;
+                    }
+                    bq::memory_map::release_memory_map(child_map);
+                }
+                if (child_file.is_valid()) {
+                    child_file_manager.close_file(child_file);
+                }
+                _exit(stage);
+            }
+            int32_t status = 0;
+            const bool child_ok = child > 0 && waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+            result.add_result(child_ok,
+                "fork handles: the child drops the descriptor, maps a file of its own, and leaves the lock to the parent (status:%" PRId32 ")", status);
+            parent_file_manager.close_file(holder);
+            parent_file_manager.remove_file_or_dir(path);
+            parent_file_manager.remove_file_or_dir(child_path);
+        }
+
         // An exclusive open keeps other processes out until that handle closes, whatever this
         // process does with other handles of the same file.
         inline void test_exclusive_lock_scope(test_result& result, bq::file_manager& file_manager)
@@ -255,6 +309,7 @@ namespace bq {
                 }
 #if BQ_HAS_FORK
                 test_exclusive_lock_scope(result, file_manager);
+                test_fork_drops_inherited_handles(result, file_manager);
 #endif
 
                 if (bq::memory_map::is_platform_support()) {

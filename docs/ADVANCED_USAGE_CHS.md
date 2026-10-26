@@ -496,3 +496,7 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 - `要解码的文件`：压缩加密日志文件路径；
 - `-o 输出文件`：可选，指定解码后的文本保存路径，不填则输出到标准输出；
 - `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
+
+## 7. 多进程与 fork
+
+多个进程可以写同一个目录：每个进程认领自己的实例。`fork()` 之后，子进程必须先 `create_log` 一次才能继续打日志；从父进程继承的日志对象不可用。

@@ -230,7 +230,7 @@ namespace bq {
             bq::util::log_device_console(log_level::warning, "file lock flock failed, fd:%" PRId32 ", errno:%d", file_handle, err);
             return file_lock_result::error;
 #else
-            bq::util::log_device_console(log_level::warning, "no cross-process file lock on this kernel: OFD locks or native flock required");
+            bq::util::log_device_console(log_level::warning, "no cross-process file lock on this kernel: OFD locks or native flock required, fd:%" PRId32, file_handle);
             return file_lock_result::error;
 #endif
 #endif
@@ -268,10 +268,25 @@ namespace bq {
         void unlock_instance_file(platform_file_handle& handle)
         {
             // closing the fd releases both OFD and flock locks
-            if (is_platform_handle_valid(handle)) {
-                ::close(handle);
+            close_descriptor(handle);
+        }
+
+        void close_descriptor(platform_file_handle& in_out_file_handle)
+        {
+            if (is_platform_handle_valid(in_out_file_handle)) {
+                ::close(in_out_file_handle);
             }
-            handle = invalid_platform_file_handle;
+            in_out_file_handle = invalid_platform_file_handle;
+        }
+
+        bool register_after_fork_child_handler(void (*handler)())
+        {
+#if BQ_HAS_FORK
+            return ::pthread_atfork(nullptr, nullptr, handler) == 0;
+#else
+            (void)handler;
+            return false;
+#endif
         }
 
         bq::string get_lexically_path(const bq::string& original_path)

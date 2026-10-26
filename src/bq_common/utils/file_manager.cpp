@@ -531,6 +531,21 @@ namespace bq {
         return true;
     }
 
+    void file_manager::discard_all_after_fork()
+    {
+        // No lock and no allocation: a mutex or an allocator the parent held at fork time would never
+        // be released. handle_ptr stays, so an inherited handle is safe to read and finds no slot.
+        for (decltype(file_descriptors)::size_type i = 0; i < file_descriptors.size(); ++i) {
+            auto& descriptor = file_descriptors[i];
+            if (!descriptor.handle_ptr) {
+                continue;
+            }
+            bq::platform::close_descriptor(*(descriptor.handle_ptr));
+            descriptor.ref_cout = 0;
+            descriptor.seq = 0;
+        }
+    }
+
     size_t file_manager::get_file_size(const file_handle& handle) const
     {
         bq::platform::flush_file(handle.platform_handle());

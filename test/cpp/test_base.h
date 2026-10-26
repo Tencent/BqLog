@@ -18,15 +18,6 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 
-// The termination tests watch a child process die. Horizon has no fork.
-#if !defined(BQ_HAS_FORK)
-#if defined(BQ_WIN) || defined(BQ_SWITCH)
-#define BQ_HAS_FORK 0
-#else
-#define BQ_HAS_FORK 1
-#endif
-#endif
-
 namespace bq {
     namespace test {
         struct test_result {
