@@ -8,13 +8,9 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-// Feature macros must precede every system header, so macros.h (and BQ_LINUX) is not usable yet.
-// _GNU_SOURCE exposes F_OFD_SETLK on Linux; _DEFAULT_SOURCE exposes POSIX under strict -std on newlib.
-#if defined(__linux__) && !defined(_GNU_SOURCE)
+// Defined before any include: glibc and musl expose F_OFD_SETLK only with it, newlib exposes POSIX with it under a strict -std.
+#if !defined(_GNU_SOURCE)
 #define _GNU_SOURCE
-#endif
-#if !defined(_DEFAULT_SOURCE)
-#define _DEFAULT_SOURCE
 #endif
 #include "bq_common/platform/posix_misc.h"
 #if defined(BQ_POSIX)
@@ -182,42 +178,6 @@ namespace bq {
             return make_dir_recursive(const_cast<char*>(path_cpy.c_str()));
         }
 
-        bool lock_file(const platform_file_handle& file_handle)
-        {
-            if (!is_platform_handle_valid(file_handle)) {
-                return false;
-            }
-            struct flock fl;
-            fl.l_type = F_WRLCK;
-            fl.l_whence = SEEK_SET;
-            fl.l_start = 0;
-            fl.l_len = 0;
-            fl.l_pid = 0;
-
-            if (fcntl(file_handle, F_SETLK, &fl) == -1) {
-                return false;
-            }
-            return true;
-        }
-
-        bool unlock_file(const platform_file_handle& file_handle)
-        {
-            if (!is_platform_handle_valid(file_handle)) {
-                return false;
-            }
-            struct flock fl;
-            fl.l_type = F_UNLCK;
-            fl.l_whence = SEEK_SET;
-            fl.l_start = 0;
-            fl.l_len = 0;
-            fl.l_pid = 0;
-
-            if (fcntl(file_handle, F_SETLK, &fl) == -1) {
-                return false;
-            }
-            return true;
-        }
-
         bool is_cross_process_file_lock_supported()
         {
 #if !BQ_HAS_CROSS_PROCESS_FILE_LOCK || defined(BQ_TEST_DISABLE_FILE_LOCK)
@@ -229,68 +189,79 @@ namespace bq {
 #endif
         }
 
-        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
+        // Non-blocking lock owned by this open description: it conflicts with every other open of the
+        // file, in this process or another, and only closing this description releases it.
+        static file_lock_result try_lock_file(const platform_file_handle& file_handle)
         {
-            out_handle = invalid_platform_file_handle;
-#if !BQ_HAS_MULTI_PROCESS
-            (void)abs_path;
-            return instance_lock_result::locked;
-#elif !BQ_HAS_CROSS_PROCESS_FILE_LOCK
-            (void)abs_path;
-            return instance_lock_result::error;
+#if !BQ_HAS_CROSS_PROCESS_FILE_LOCK
+            (void)file_handle;
+            return file_lock_result::error;
 #else
             if (!is_cross_process_file_lock_supported()) {
-                bq::util::log_device_console(log_level::warning, "cross-process file lock unsupported on this platform: %s", abs_path);
-                return instance_lock_result::error;
+                return file_lock_result::error;
             }
-            int32_t fd = ::open(abs_path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
-            if (fd < 0) {
-                bq::util::log_device_console(log_level::warning, "file lock open failed: %s, errno:%d", abs_path, errno);
-                return instance_lock_result::error;
-            }
-            bool locked = false;
 #if defined(F_OFD_SETLK)
             struct flock fl;
             memset(&fl, 0, sizeof(fl));
             fl.l_type = F_WRLCK;
             fl.l_whence = SEEK_SET;
-            if (::fcntl(fd, F_OFD_SETLK, &fl) == 0) {
-                locked = true;
-            } else if (errno != EINVAL) {
-                // EINVAL means this kernel cannot do OFD locks; fall through to flock. Anything
-                // else has an errno that says whether another description holds the lock.
+            if (::fcntl(file_handle, F_OFD_SETLK, &fl) == 0) {
+                return file_lock_result::locked;
+            }
+            // EINVAL means this kernel cannot do OFD locks; fall through to flock
+            if (errno != EINVAL) {
                 const int err = errno;
-                if (err != EAGAIN && err != EACCES && err != EWOULDBLOCK) {
-                    bq::util::log_device_console(log_level::warning, "file lock fcntl failed: %s, errno:%d", abs_path, err);
-                    ::close(fd);
-                    return instance_lock_result::error;
+                if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
+                    return file_lock_result::held_by_other;
                 }
-                ::close(fd);
-                return instance_lock_result::held_by_other;
+                bq::util::log_device_console(log_level::warning, "file lock fcntl failed, fd:%" PRId32 ", errno:%d", file_handle, err);
+                return file_lock_result::error;
             }
 #endif
 #if defined(LOCK_EX) && defined(LOCK_NB)
-            if (!locked && ::flock(fd, LOCK_EX | LOCK_NB) != 0) {
-                // only a genuine "someone else holds it" is retryable; a filesystem that does not
-                // support locks at all (NFS returns ENOLCK, some FUSE returns EOPNOTSUPP) must be
-                // reported as an error, otherwise the caller retries forever
-                const int err = errno;
-                ::close(fd);
-                if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
-                    return instance_lock_result::held_by_other;
-                }
-                bq::util::log_device_console(log_level::warning, "file lock flock failed: %s, errno:%d", abs_path, err);
-                return instance_lock_result::error;
+            if (::flock(file_handle, LOCK_EX | LOCK_NB) == 0) {
+                return file_lock_result::locked;
             }
+            // a filesystem without locks (NFS returns ENOLCK, some FUSE EOPNOTSUPP) is an error, not contention
+            const int err = errno;
+            if (err == EAGAIN || err == EACCES || err == EWOULDBLOCK) {
+                return file_lock_result::held_by_other;
+            }
+            bq::util::log_device_console(log_level::warning, "file lock flock failed, fd:%" PRId32 ", errno:%d", file_handle, err);
+            return file_lock_result::error;
 #else
-            if (!locked) {
-                bq::util::log_device_console(log_level::warning, "no cross-process file lock on this kernel: OFD locks or native flock required (%s)", abs_path);
-                ::close(fd);
-                return instance_lock_result::error;
-            }
+            bq::util::log_device_console(log_level::warning, "no cross-process file lock on this kernel: OFD locks or native flock required");
+            return file_lock_result::error;
 #endif
+#endif
+        }
+
+        file_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
+        {
+            out_handle = invalid_platform_file_handle;
+#if !BQ_HAS_MULTI_PROCESS
+            (void)abs_path;
+            return file_lock_result::locked;
+#elif !BQ_HAS_CROSS_PROCESS_FILE_LOCK
+            (void)abs_path;
+            return file_lock_result::error;
+#else
+            if (!is_cross_process_file_lock_supported()) {
+                bq::util::log_device_console(log_level::warning, "cross-process file lock unsupported on this platform: %s", abs_path);
+                return file_lock_result::error;
+            }
+            int32_t fd = ::open(abs_path, O_RDWR | O_CREAT | O_CLOEXEC, 0644);
+            if (fd < 0) {
+                bq::util::log_device_console(log_level::warning, "file lock open failed: %s, errno:%d", abs_path, errno);
+                return file_lock_result::error;
+            }
+            const file_lock_result result = try_lock_file(fd);
+            if (result != file_lock_result::locked) {
+                ::close(fd);
+                return result;
+            }
             out_handle = fd;
-            return instance_lock_result::locked;
+            return result;
 #endif
         }
 
@@ -471,45 +442,42 @@ namespace bq {
             if (!(int32_t)(mode & (file_open_mode_enum::write | file_open_mode_enum::exclusive))) {
                 return true;
             }
-            if ((int32_t)(mode & file_open_mode_enum::exclusive)) {
-                struct flock lock;
-                memset(&lock, 0, sizeof(lock));
-                lock.l_type = F_WRLCK;
-                lock.l_whence = SEEK_SET;
-                lock.l_start = 0;
-                lock.l_len = 0;
-                constexpr int32_t max_retry = 5;
-                int32_t retry = 0;
-                while (fcntl(file_handle, F_SETLK, &lock) == -1) {
-                    int32_t err = errno;
-                    if ((err == EAGAIN || err == EACCES || err == EINTR) && ++retry < max_retry) {
-                        bq::platform::thread::sleep(3);
-                        continue;
-                    }
-                    bq::util::log_device_console(log_level::error, "add_file_execlusive_check fcntl(F_SETLK) failed, fd:%" PRId32 ", errno:%" PRId32, file_handle, err);
-                    return false;
-                }
-            }
             struct stat file_info;
             if (fstat(file_handle, &file_info) < 0) {
                 bq::util::log_device_console(log_level::error, "add_file_execlusive_check fstat failed, fd:%" PRId32 ", error code:%" PRId32, file_handle, errno);
                 return false;
             }
             auto& file_exclusive_cache = common_global_vars::get().file_exclusive_cache_;
-            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
             file_node_info node_info;
             node_info.dev = file_info.st_dev;
             node_info.ino = file_info.st_ino;
-            auto iter = file_exclusive_cache.find(node_info);
-            if (iter == file_exclusive_cache.end()) {
-                file_exclusive_cache.add(node_info, mode);
-                return true;
-            } else {
-                if ((int32_t)((iter->value() | mode) & file_open_mode_enum::exclusive)) {
-                    return false;
+            {
+                bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
+                auto iter = file_exclusive_cache.find(node_info);
+                if (iter != file_exclusive_cache.end()) {
+                    return !(int32_t)((iter->value().mode_ | mode) & file_open_mode_enum::exclusive);
                 }
+                file_exclusive_cache.add(node_info, file_exclusive_entry { mode, file_handle });
             }
-            return true;
+            // Only an exclusive open has to keep the other processes out, and the cache above already
+            // covers this one; a kernel that cannot lock is left with just the cache.
+            if (!(int32_t)(mode & file_open_mode_enum::exclusive) || !is_cross_process_file_lock_supported()) {
+                return true;
+            }
+            // retried because overlayfs (GitHub runners) reports a transient conflict now and then
+            constexpr int32_t max_retry = 5;
+            int32_t retry = 0;
+            file_lock_result lock_result;
+            while ((lock_result = try_lock_file(file_handle)) == file_lock_result::held_by_other && ++retry < max_retry) {
+                bq::platform::thread::sleep(3);
+            }
+            if (lock_result == file_lock_result::locked) {
+                return true;
+            }
+            bq::util::log_device_console(log_level::error, "add_file_execlusive_check lock failed, fd:%" PRId32, file_handle);
+            bq::platform::scoped_mutex lock(common_global_vars::get().file_exclusive_mutex_);
+            file_exclusive_cache.erase(node_info);
+            return false;
         }
         static void remove_file_execlusive_check(const platform_file_handle& file_handle)
         {
@@ -523,7 +491,10 @@ namespace bq {
             file_node_info node_info;
             node_info.dev = file_info.st_dev;
             node_info.ino = file_info.st_ino;
-            file_exclusive_cache.erase(node_info);
+            auto iter = file_exclusive_cache.find(node_info);
+            if (iter != file_exclusive_cache.end() && iter->value().owner_ == file_handle) {
+                file_exclusive_cache.erase(iter);
+            }
         }
 
         int32_t open_file(const char* path, file_open_mode_enum mode, platform_file_handle& out_file_handle)
@@ -546,6 +517,9 @@ namespace bq {
             if ((int32_t)(mode & file_open_mode_enum::auto_create)) {
                 flags |= O_CREAT;
             }
+            // The exclusive lock lives on this open description, so a child that inherits the fd and
+            // then execs would hold the file locked after this process is gone.
+            flags |= O_CLOEXEC;
 
             out_file_handle = open(path, flags, S_IRUSR | S_IWUSR | S_IRGRP);
 

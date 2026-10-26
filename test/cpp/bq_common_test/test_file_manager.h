@@ -2,10 +2,66 @@
 #include <string.h>
 #include "test_base.h"
 #include "bq_common/bq_common.h"
+#if BQ_HAS_FORK
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 namespace bq {
     namespace test {
         const int32_t base_dir_type = 1;
+
+#if BQ_HAS_FORK
+        // Whether another process still sees the file locked.
+        inline bool is_locked_for_other_process(const bq::string& path)
+        {
+            const pid_t child = fork();
+            if (child == 0) {
+                // Another parent thread may have held the console mutex at fork time.
+                bq::util::set_log_device_console_min_level(bq::log_level::log_level_max);
+                bq::platform::platform_file_handle handle = bq::platform::invalid_platform_file_handle;
+                const auto lock_result = bq::platform::try_lock_instance_file(path.c_str(), handle);
+                bq::platform::unlock_instance_file(handle);
+                _exit(lock_result == bq::platform::file_lock_result::held_by_other ? 0 : 1);
+            }
+            int32_t status = 0;
+            return child > 0 && waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0;
+        }
+
+        // An exclusive open keeps other processes out until that handle closes, whatever this
+        // process does with other handles of the same file.
+        inline void test_exclusive_lock_scope(test_result& result, bq::file_manager& file_manager)
+        {
+            if (!bq::platform::is_cross_process_file_lock_supported()) {
+                result.add_result(true, "exclusive lock scope needs a cross-process file lock");
+                return;
+            }
+            const bq::string path = TO_ABSOLUTE_PATH("cc/exclusive_scope.txt", base_dir_type);
+            auto holder = file_manager.open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+            result.add_result(holder.is_valid(), "exclusive lock scope: holder opened");
+            result.add_result(is_locked_for_other_process(path), "exclusive lock scope: locked for another process");
+
+            bq::util::set_log_device_console_min_level(bq::log_level::fatal);
+            auto refused = file_manager.open_file(path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+            bq::util::set_log_device_console_min_level(bq::log_level::warning);
+            result.add_result(!refused.is_valid(), "exclusive lock scope: second exclusive open refused");
+            result.add_result(is_locked_for_other_process(path), "exclusive lock scope: still locked after a refused exclusive open");
+
+            auto reader = file_manager.open_file(path, file_open_mode_enum::read);
+            result.add_result(reader.is_valid(), "exclusive lock scope: reader opened");
+            file_manager.close_file(reader);
+            result.add_result(is_locked_for_other_process(path), "exclusive lock scope: still locked after closing a reader");
+            bq::util::set_log_device_console_min_level(bq::log_level::fatal);
+            refused = file_manager.open_file(path, file_open_mode_enum::read_write | file_open_mode_enum::exclusive);
+            bq::util::set_log_device_console_min_level(bq::log_level::warning);
+            result.add_result(!refused.is_valid(), "exclusive lock scope: exclusive open still refused after closing a reader");
+
+            file_manager.close_file(holder);
+            result.add_result(!is_locked_for_other_process(path), "exclusive lock scope: released when the holder closes");
+            file_manager.remove_file_or_dir(path);
+        }
+#endif
 
         template <bool>
         struct test_file_manager_large_file_truncate {
@@ -197,6 +253,9 @@ namespace bq {
                     bq::util::set_log_device_console_min_level(bq::log_level::warning);
                     result.add_result(group_handle_A_3 && !group_handle_A_4, "exclusive test 3");
                 }
+#if BQ_HAS_FORK
+                test_exclusive_lock_scope(result, file_manager);
+#endif
 
                 if (bq::memory_map::is_platform_support()) {
                     // memory map test

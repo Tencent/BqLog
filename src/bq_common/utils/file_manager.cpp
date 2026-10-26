@@ -463,11 +463,6 @@ namespace bq {
         return true;
     }
 
-    bool file_manager::lock_file(const file_handle& handle)
-    {
-        return bq::platform::lock_file(handle.platform_handle());
-    }
-
     bq::string file_manager::read_text(const file_handle& handle)
     {
         size_t size = get_file_size(handle);

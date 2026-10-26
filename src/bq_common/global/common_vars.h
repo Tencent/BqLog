@@ -152,7 +152,7 @@ namespace bq {
 #endif
         bool crc32_supported_;
         bq::platform::base_dir_initializer base_dir_init_inst_;
-        bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
+        bq::hash_map<bq::platform::file_node_info, bq::platform::file_exclusive_entry> file_exclusive_cache_;
         bq::platform::mutex file_exclusive_mutex_;
         bq::platform::mutex stack_trace_mutex_;
 

@@ -76,14 +76,14 @@ namespace bq {
                 const bq::string lock_path = lock_dir + "/t.lock";
                 platform::platform_file_handle h1 = platform::invalid_platform_file_handle;
                 auto first = platform::try_lock_instance_file(lock_path.c_str(), h1);
-                result.add_result(first == platform::instance_lock_result::locked, "lock primitive: first lock succeeds");
+                result.add_result(first == platform::file_lock_result::locked, "lock primitive: first lock succeeds");
                 platform::platform_file_handle h2 = platform::invalid_platform_file_handle;
                 auto second = platform::try_lock_instance_file(lock_path.c_str(), h2);
-                result.add_result(second == platform::instance_lock_result::held_by_other, "lock primitive: second handle in same process is held_by_other");
+                result.add_result(second == platform::file_lock_result::held_by_other, "lock primitive: second handle in same process is held_by_other");
                 platform::unlock_instance_file(h1);
                 platform::platform_file_handle h3 = platform::invalid_platform_file_handle;
                 auto third = platform::try_lock_instance_file(lock_path.c_str(), h3);
-                result.add_result(third == platform::instance_lock_result::locked, "lock primitive: lock succeeds again after unlock");
+                result.add_result(third == platform::file_lock_result::locked, "lock primitive: lock succeeds again after unlock");
                 platform::unlock_instance_file(h3);
                 result.add_result(bq::file_manager::is_file(lock_path), "lock primitive: lock file still exists after unlock");
             }

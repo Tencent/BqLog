@@ -243,13 +243,6 @@ namespace bq {
         bool seek(const file_handle& handle, seek_option opt, int64_t offset);
 
         /// <summary>
-        /// set file write exclusive
-        /// </summary>
-        /// <param name="handle"></param>
-        /// <returns>true if set success, false if file does not exist or has already be locked by another process</returns>
-        bool lock_file(const file_handle& handle);
-
-        /// <summary>
         /// read text data from file.
         /// </summary>
         /// <param name="handle">file handle</param>

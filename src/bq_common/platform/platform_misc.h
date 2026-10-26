@@ -69,6 +69,12 @@ namespace bq {
             return static_cast<file_open_mode_enum>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
         }
 
+        // Only the handle that registered a file in the exclusive cache removes it on close.
+        struct file_exclusive_entry {
+            file_open_mode_enum mode_;
+            platform_file_handle owner_;
+        };
+
         struct base_dir_initializer {
         private:
             bq::string base_dir_0_;
@@ -141,11 +147,7 @@ namespace bq {
 
         bq::array<bq::string> get_all_sub_names(const char* path);
 
-        bool lock_file(const platform_file_handle& file_handle); // make file write exclusive
-
-        bool unlock_file(const platform_file_handle& file_handle); // undo file write exclusive
-
-        enum class instance_lock_result {
+        enum class file_lock_result {
             locked,
             held_by_other,
             error,
@@ -154,9 +156,9 @@ namespace bq {
         // Whether a file can be locked until its open description closes, which keeps a second process out.
         bool is_cross_process_file_lock_supported();
 
-        // Non-blocking lock, exclusive between runtimes in one process; released with the description.
-        // The lock file is never deleted.
-        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle);
+        // Opens the file and locks it, then keeps the lock until the handle closes. The lock file is
+        // never deleted: the lock lives in the kernel, so a stale file on disk locks nothing.
+        file_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle);
         void unlock_instance_file(platform_file_handle& handle);
 
         bq::string get_lexically_path(const bq::string& original_path);
