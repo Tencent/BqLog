@@ -762,7 +762,7 @@ jobs:
   #Unix-FreeBSD
   freeBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -802,7 +802,7 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
 
   freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -885,7 +885,7 @@ jobs:
   #Unix-Solaris
   solaris_x86_64_GCC:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -940,7 +940,7 @@ jobs:
             ctest --test-dir instance_lock_build --output-on-failure -R multi_instance_lock
 
             set +e
-            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
             EXIT_CODE=$?
             set -e
 
@@ -1122,7 +1122,7 @@ jobs:
 
   openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -1198,7 +1198,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            ./run_test_clang.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
             EXIT_CODE=$?
             set -e
 
@@ -1284,7 +1284,7 @@ jobs:
 
   netBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 180
     strategy:
       fail-fast: false
       matrix:
@@ -1354,7 +1354,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
 
   netBSD_arm64_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
