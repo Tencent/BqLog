@@ -52,16 +52,14 @@ namespace bq {
 
         BQ_API uint32_t __api_get_platform_capabilities()
         {
+            uint32_t count = 0;
+            const platform_capability_row* rows = platform_capability_rows(count);
             uint32_t bits = 0;
-            bits |= BQ_HAS_MMAP ? platform_capability::memory_map : 0u;
-            bits |= BQ_HAS_MULTI_PROCESS ? platform_capability::multi_process : 0u;
-            bits |= BQ_HAS_CROSS_PROCESS_FILE_LOCK ? platform_capability::cross_process_file_lock : 0u;
-            bits |= BQ_HAS_CRASH_HANDLER ? platform_capability::crash_handler : 0u;
-            bits |= BQ_HAS_BACKTRACE ? platform_capability::backtrace : 0u;
-            bits |= BQ_HAS_DIRENT ? platform_capability::dirent : 0u;
-            bits |= BQ_HAS_THREAD_NAME ? platform_capability::thread_name : 0u;
-            bits |= BQ_HAS_DEFAULT_BASE_DIR ? platform_capability::default_base_dir : 0u;
-            bits |= BQ_HAS_USER_COUNTER ? platform_capability::user_counter : 0u;
+            for (uint32_t i = 0; i < count; ++i) {
+                if (rows[i].supported_) {
+                    bits |= rows[i].bit_;
+                }
+            }
             return bits;
         }
 

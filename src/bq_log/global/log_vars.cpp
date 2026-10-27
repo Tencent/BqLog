@@ -39,12 +39,6 @@ namespace bq {
 
     void log_global_vars::partial_destruct()
     {
-        /*delete log_manager_inst_;
-        log_manager_inst_ = nullptr;
-        delete appender_decoder_manager_inst_;
-        appender_decoder_manager_inst_ = nullptr;
-        delete console_static_misc_;
-        console_static_misc_ = nullptr;*/
         bool force_flush_success = false;
         for (uint32_t i = 0; i < 128; ++i) {
             if (log_manager_inst_.try_flush_all()) {

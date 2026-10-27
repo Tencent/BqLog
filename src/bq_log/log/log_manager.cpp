@@ -14,6 +14,23 @@
 #include "bq_log/log/log_worker.h"
 
 namespace bq {
+    const platform_capability_row* platform_capability_rows(uint32_t& out_count)
+    {
+        static const platform_capability_row rows[] = {
+            { "mmap", platform_capability::memory_map, BQ_HAS_MMAP },
+            { "multi_process", platform_capability::multi_process, BQ_HAS_MULTI_PROCESS },
+            { "file_lock", platform_capability::cross_process_file_lock, BQ_HAS_CROSS_PROCESS_FILE_LOCK },
+            { "crash_handler", platform_capability::crash_handler, BQ_HAS_CRASH_HANDLER },
+            { "backtrace", platform_capability::backtrace, BQ_HAS_BACKTRACE },
+            { "dirent", platform_capability::dirent, BQ_HAS_DIRENT },
+            { "thread_name", platform_capability::thread_name, BQ_HAS_THREAD_NAME },
+            { "default_base_dir", platform_capability::default_base_dir, BQ_HAS_DEFAULT_BASE_DIR },
+            { "user_counter", platform_capability::user_counter, BQ_HAS_USER_COUNTER },
+        };
+        out_count = static_cast<uint32_t>(sizeof(rows) / sizeof(rows[0]));
+        return rows;
+    }
+
     log_manager::log_manager()
     {
         phase_ = phase::invalid;
@@ -28,9 +45,15 @@ namespace bq {
         {
             bq::string base_dir;
             const bool base_dir_ready = bq::platform::try_get_base_dir(0, base_dir);
-            bq::util::log_device_console(log_level::info,
-                "platform capabilities: mmap=%d multi_process=%d file_lock=%d crash_handler=%d backtrace=%d dirent=%d thread_name=%d default_base_dir=%d user_counter=%d base_dir=%s",
-                BQ_HAS_MMAP, BQ_HAS_MULTI_PROCESS, BQ_HAS_CROSS_PROCESS_FILE_LOCK, BQ_HAS_CRASH_HANDLER, BQ_HAS_BACKTRACE, BQ_HAS_DIRENT, BQ_HAS_THREAD_NAME, BQ_HAS_DEFAULT_BASE_DIR, BQ_HAS_USER_COUNTER, base_dir_ready ? base_dir.c_str() : "<unset>");
+            uint32_t capability_count = 0;
+            const platform_capability_row* rows = platform_capability_rows(capability_count);
+            bq::string report;
+            for (uint32_t i = 0; i < capability_count; ++i) {
+                char item[64];
+                snprintf(item, sizeof(item), "%s=%" PRId32 "%s", rows[i].name_, rows[i].supported_, (i + 1 < capability_count) ? " " : "");
+                report += item;
+            }
+            bq::util::log_device_console(log_level::info, "platform capabilities: %s base_dir=%s", report.c_str(), base_dir_ready ? base_dir.c_str() : "<unset>");
         }
     }
 

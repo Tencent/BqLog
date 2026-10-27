@@ -178,6 +178,7 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
     static_assert(sizeof(enum_buffer_result_code) == sizeof(int32_t), "32-bit buffer result ABI");
     static_assert(sizeof(appender_decode_result) == sizeof(int32_t), "32-bit decoder result ABI");
     static_assert(sizeof(recovery_capability) == sizeof(int32_t), "32-bit recovery capability ABI");
+    static_assert(sizeof(platform_capability::memory_map) == sizeof(uint32_t), "32-bit platform capability ABI");
     BQ_MODULE_EXPORT_END
 }
 #else
