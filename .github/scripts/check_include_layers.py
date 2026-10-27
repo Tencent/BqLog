@@ -32,6 +32,9 @@ MACRO_ONLY = {
     'bq_common/platform/macros.h',
     'bq_common/platform/build_type.h',
     'bq_common/misc/assert.h',
+    # A list of system headers plus the switch that tells the library headers they are already
+    # included. It declares nothing, so it cannot collide with the module either.
+    'bq_common/module_system_headers.h',
 }
 
 # The C compatible header is compiled as C and cannot include the C++ entry.
