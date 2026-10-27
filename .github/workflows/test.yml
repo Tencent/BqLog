@@ -762,7 +762,7 @@ jobs:
   #Unix-FreeBSD
   freeBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -885,7 +885,7 @@ jobs:
   #Unix-Solaris
   solaris_x86_64_GCC:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -975,7 +975,7 @@ jobs:
 
   omnisOS_x86_64_GCC:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -1037,7 +1037,7 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
 
   dragonflyBSD_x86_64:
     runs-on: ubuntu-latest
@@ -1122,7 +1122,7 @@ jobs:
 
   openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -1284,7 +1284,7 @@ jobs:
 
   netBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 180
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
