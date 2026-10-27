@@ -47,6 +47,7 @@
 - 平台判断只能依赖编译器和工具链已经提供的东西，加上这个头文件自己能做的探测（`__has_include`、架构）；绝不能依赖外部构建传入的 `BQ_*` 平台宏。库是以源码形式交付、直接放进任意工程的，那些工程并不知道我们的开关。
 - 外部 `-D` 是给构建和测试用的：选择工具链、给构建脚本指定目标平台、或打开一个退化的测试配置。代码究竟编在哪个平台，由编译器和 `macros.h` 里的探测决定，不由接入方需要记住的宏决定。
 - 尽量判断"能力"而不是"平台"。可能缺失的头文件探测一次后推导成 `BQ_HAS_*`，参考 `macros.h` 里的 `BQ_HAS_DIRENT`、`BQ_HAS_EXECINFO`；只有在链接期才会暴露的符号，就在调用处探测：先 `#if defined(F_OFD_SETLK)`，再 `#if defined(LOCK_EX) && defined(LOCK_NB)`，参考 `try_lock_instance_file`。
+- 系统头只能从两处进入：普通头文件里，包在 `#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)` 内；模块入口（`*.cppm` 与生成器模板）里，只 include 该库根目录的 `module_system_headers.h`，不得复制其列表。增删系统头只改那一份，并确认每个模块入口都能编过。`macros.h` 是唯一例外：它提供平台探测所需的系统头，排在 fragment 最前。
 - 语言能表达的地方，用内联函数和模板，不要用函数式宏。
 
 ## 6. 库内禁用 C++ 标准库

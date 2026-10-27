@@ -20,7 +20,9 @@
  *  both arm and Intel architecture is supported for all memory order semantic.
  */
 #ifdef BQ_MSVC
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <intrin.h>
+#endif
 namespace bq {
     namespace platform {
         bq_forceinline void atomic_thread_fence_acquire() noexcept

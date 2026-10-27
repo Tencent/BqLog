@@ -10,9 +10,11 @@
  */
 #pragma once
 // Small integer intrinsics, included by bq_common_public_include.h. Each falls back to its _portable version.
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 #include "bq_common/platform/macros.h"
-#if defined(BQ_MSVC)
+#if defined(BQ_MSVC) && !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <intrin.h>
 #endif
 

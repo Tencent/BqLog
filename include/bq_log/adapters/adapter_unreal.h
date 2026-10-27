@@ -17,7 +17,9 @@
  * \author pippocao
  * \date 2024.07.29
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 #include "bq_common/bq_common_public_include.h"
 
 #if defined(BQ_LOG_UE_PLUGIN)

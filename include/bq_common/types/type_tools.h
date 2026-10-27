@@ -16,8 +16,10 @@
  * \author pippocao
  * \date 2022.08.03
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
 #include <stdint.h>
+#endif
 #include "bq_common/types/type_traits.h"
 
 // we must supply a custom placement new, because we can compile without libc++.

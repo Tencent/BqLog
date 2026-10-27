@@ -1,6 +1,8 @@
 /* Copyright (C) 2026 Tencent. Licensed under the Apache License, Version 2.0. */
 #pragma once
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 // The two exceptions to "bq_log only includes the bq_common entry": this header is
 // also compiled as C, and these are the only two bq_common headers that are.
 #include "bq_common/platform/macros.h"
@@ -51,7 +53,9 @@ namespace bq {
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t
 #else
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdbool.h>
+#endif
 typedef int32_t bq_buffer_result_code;
 enum bq_buffer_result_code_value {
     bq_buffer_result_code_success = 0,
