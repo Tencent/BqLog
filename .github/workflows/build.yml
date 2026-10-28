@@ -7067,7 +7067,9 @@ jobs:
 
             # Prebuilt has no console binaries: PS4/PS5 need the NDA SDKs, and CI's Switch build uses
             # devkitA64 (newlib/libstdc++), which cannot link against Nintendo SDK targets.
-            sed -i 's/, "PS4", "PS5", "Switch"//' "$plugin_dir/BqLog.uplugin"
+            # The UE4 package already arrives without PS5 (the packaging scripts remove it), so the
+            # three names are stripped one at a time rather than as one fixed run of text.
+            sed -i -E 's/,[[:space:]]*"(PS4|PS5|Switch)"//g' "$plugin_dir/BqLog.uplugin"
             if grep -q '"PS4"\|"PS5"\|"Switch"' "$plugin_dir/BqLog.uplugin"; then
               echo "ERROR: console platforms still listed in the prebuilt .uplugin" >&2
               exit 1
