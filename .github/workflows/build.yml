@@ -6615,6 +6615,17 @@ jobs:
                   -e 's/"LinuxAArch64"//g' \
                   "$uplugin"
               fi
+
+              # 4.27 is the only UE4 version where PS5 is a valid UnrealTargetPlatform. The packaging
+              # scripts strip PS5 from the whole UE4 channel because one prebuilt package has to load
+              # in 4.22~4.27; put it back for this one package, which is built per engine version.
+              if (( ue_minor == 27 )); then
+                sed -i 's/"PS4", "Switch"/"PS4", "PS5", "Switch"/' "$uplugin"
+                if ! grep -q '"PS5"' "$uplugin"; then
+                  echo "::error::PS5 was not restored in the UE 4.27 .uplugin" >&2
+                  exit 1
+                fi
+              fi
             fi
           }
 
