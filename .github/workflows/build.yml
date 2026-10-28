@@ -6615,17 +6615,6 @@ jobs:
                   -e 's/"LinuxAArch64"//g' \
                   "$uplugin"
               fi
-
-              # PS5 was added to UnrealTargetPlatform in 4.27. Fab validates the older UE4 packages
-              # against the pre-PS5 name list and rejects "PS5" with "The platform name PS5 is not a
-              # valid platform name", which blocked the 2.7.2 update for 4.24~4.26. 4.27 keeps it.
-              if (( ue_minor < 27 )); then
-                sed -i -E \
-                  -e 's/,[[:space:]]*"PS5"//g' \
-                  -e 's/"PS5"[[:space:]]*,[[:space:]]*//g' \
-                  -e 's/"PS5"//g' \
-                  "$uplugin"
-              fi
             fi
           }
 
