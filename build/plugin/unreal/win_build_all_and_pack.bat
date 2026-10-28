@@ -77,7 +77,7 @@ for %%T in (ue4 ue5) do (
 
     REM Replace version in .uplugin
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$v='%VERSION%'; $ue='%%T'; $parts=$v.Split('.'); $vint=[int]$parts[0]*10000+[int]$parts[1]*100+[int]$parts[2]; $f='%TARGET_DIR%\BqLog.uplugin'; $c=Get-Content $f -Raw; $c=$c -replace '\"Version\": 1', ('\"Version\": '+$vint); $c=$c -replace '\"VersionName\": \"1.0\"', ('\"VersionName\": \"'+$v+'\"'); if($ue -eq 'ue4'){ $c=$c -replace '\"EngineVersion\": \"5.8\"', '\"EngineVersion\": \"4.27\"'; $c=$c -replace '\"PlatformAllowList\"', '\"WhitelistPlatforms\"'; $c=$c -replace '\"PlatformDenyList\"', '\"BlacklistPlatforms\"'; $c=$c -replace '\"LinuxArm64\"', '\"LinuxAArch64\"'; $c=$c -replace ', \"PS5\"', '' }; Set-Content $f $c -NoNewline"
+      "$v='%VERSION%'; $ue='%%T'; $parts=$v.Split('.'); $vint=[int]$parts[0]*10000+[int]$parts[1]*100+[int]$parts[2]; $f='%TARGET_DIR%\BqLog.uplugin'; $c=Get-Content $f -Raw; $c=$c -replace '\"Version\": 1', ('\"Version\": '+$vint); $c=$c -replace '\"VersionName\": \"1.0\"', ('\"VersionName\": \"'+$v+'\"'); if($ue -eq 'ue4'){ $c=$c -replace '\"EngineVersion\": \"5.8\"', '\"EngineVersion\": \"4.27\"'; $c=$c -replace '\"PlatformAllowList\"', '\"WhitelistPlatforms\"'; $c=$c -replace '\"PlatformDenyList\"', '\"BlacklistPlatforms\"'; $c=$c -replace '\"LinuxArm64\"', '\"LinuxAArch64\"' }; Set-Content $f $c -NoNewline"
 
     REM Remove .gitkeep files before zipping
     powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path '%TARGET_DIR%' -Recurse -Filter '.gitkeep' | Remove-Item -Force"

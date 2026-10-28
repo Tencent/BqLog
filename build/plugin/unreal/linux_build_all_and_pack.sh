@@ -78,9 +78,6 @@ for ue_version in "${UE_VERSIONS[@]}"; do
     sed -i 's/"PlatformAllowList"/"WhitelistPlatforms"/g' "$TARGET_DIR/BqLog.uplugin"
     sed -i 's/"PlatformDenyList"/"BlacklistPlatforms"/g' "$TARGET_DIR/BqLog.uplugin"
     sed -i 's/"LinuxArm64"/"LinuxAArch64"/g' "$TARGET_DIR/BqLog.uplugin"
-    # PS5 only exists in UnrealTargetPlatform from 4.27 on; Fab rejects the older UE4 packages that
-    # list it, so the UE4 build drops it from the platform list.
-    sed -i 's/, "PS5"//g' "$TARGET_DIR/BqLog.uplugin"
   fi
 
   # Remove .gitkeep files before zipping
