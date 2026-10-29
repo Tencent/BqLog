@@ -11,6 +11,8 @@ vcpkg install "bqlog[tools]"   # 同时安装命令行工具
 
 静态库还是动态库由 triplet 决定。会安装头文件（含 C++20 模块 `bq_log/bq.log.cppm`）、库以及 `find_package` / pkg-config 文件；`tools` feature 会把 `BqLog_CategoryLogGenerator` 和 `BqLog_LogDecoder` 装到 `tools/bqlog/`。
 
+本 port 只安装 C/C++ 核心：C 与 C++ 接口以及命令行工具。Java、C#、Node.js、Python 的 wrapper 不在其中 —— 它们各自需要一份带对应语言选项编译的核心库，因此走各自的包管理器发行。各语言的获取渠道见[集成指南](../../docs/INTEGRATION_GUIDE_CHS.md)。
+
 ```cmake
 find_package(BqLog CONFIG REQUIRED)
 target_link_libraries(main PRIVATE bqlog::BqLog)

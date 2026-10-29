@@ -10,6 +10,8 @@ brew install bqlog
 
 Installs the static and shared libraries, the headers (including the C++20 module `bq_log/bq.log.cppm`), `find_package` / pkg-config files, and the `BqLog_CategoryLogGenerator` and `BqLog_LogDecoder` tools.
 
+The formula installs the C/C++ core only: the C and C++ APIs plus the tools. The Java, C#, Node.js and Python wrappers are not included — each one needs a core built with its own language option, so they are published through their own package managers instead. See the [Integration Guide](../../docs/INTEGRATION_GUIDE.md) for the channel of each language.
+
 ```cmake
 find_package(BqLog REQUIRED)
 target_link_libraries(app PRIVATE bqlog::BqLogShared)   # or bqlog::BqLogStatic

@@ -11,6 +11,8 @@ vcpkg install "bqlog[tools]"   # with the command line tools
 
 The triplet decides static or shared. Installs the headers (including the C++20 module `bq_log/bq.log.cppm`), the library and `find_package` / pkg-config files; the `tools` feature adds `BqLog_CategoryLogGenerator` and `BqLog_LogDecoder` under `tools/bqlog/`.
 
+This port installs the C/C++ core only: the C and C++ APIs plus the tools. The Java, C#, Node.js and Python wrappers are not included — each one needs a core built with its own language option, so they are published through their own package managers instead. See the [Integration Guide](../../docs/INTEGRATION_GUIDE.md) for the channel of each language.
+
 ```cmake
 find_package(BqLog CONFIG REQUIRED)
 target_link_libraries(main PRIVATE bqlog::BqLog)

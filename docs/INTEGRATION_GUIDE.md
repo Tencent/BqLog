@@ -6,6 +6,12 @@
 
 ---
 
+## Distribution channels
+
+The C/C++ packages published by vcpkg and Homebrew contain the C and C++ APIs and the command line tools only. The Java, C#, Node.js and Python wrappers are not part of them: a wrapper is built together with a core library compiled for that language, so each wrapper ships with its own package (see the per-language sections below). Use vcpkg / Homebrew for C/C++ projects, or to build a wrapper from the source tree.
+
+---
+
 ## C++ (dynamic / static / source)
 
 - **Homebrew (macOS / Linux)**

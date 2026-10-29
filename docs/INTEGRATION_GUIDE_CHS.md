@@ -6,6 +6,12 @@
 
 ---
 
+## 发行渠道
+
+vcpkg 与 Homebrew 发布的是 C/C++ 包：只包含 C 与 C++ 接口以及命令行工具。Java、C#、Node.js、Python 的 wrapper 不在其中 —— wrapper 需要与一份针对该语言编译的核心库一起构建，所以每种 wrapper 都随自己的包发布（见下面各语言章节）。vcpkg / Homebrew 请用于 C/C++ 工程，或用于从源码树构建 wrapper。
+
+---
+
 ## C++（动态库 / 静态库 / 源码）
 
 - **Homebrew（macOS / Linux）**
