@@ -53,6 +53,16 @@ JNIEXPORT jint JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1recovery_1capabil
 
 /*
  * Class:     bq_impl_log_invoker
+ * Method:    __api_get_platform_capabilities
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1platform_1capabilities(JNIEnv*, jclass)
+{
+    return (jint)bq::api::__api_get_platform_capabilities();
+}
+
+/*
+ * Class:     bq_impl_log_invoker
  * Method:    __api_create_log
  * Signature: (Ljava/lang/String;Ljava/lang/String;J[Ljava/lang/String;)J
  */

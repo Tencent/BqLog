@@ -17,6 +17,9 @@
 #include <sys/select.h>
 #include <sys/time.h>
 
+// Naming probes are skipped entirely where the platform has no pthread naming API, so the
+// overloads below never form a reference to a symbol that does not exist.
+#if BQ_HAS_THREAD_NAME
 #if defined(__has_include)
 #if __has_include(<sys/prctl.h>)
 #include <sys/prctl.h>
@@ -31,6 +34,7 @@
 #endif
 #endif
 
+#endif
 #endif
 
 #if defined(BQ_JAVA)
@@ -182,12 +186,23 @@ namespace bq {
             return bq::string(thread_name_buf);
         }
 #endif
+        // pthread_t is an integer on Linux and a pointer on FreeBSD and the consoles.
+        template <typename U, bq::enable_if_t<bq::is_pointer<U>::value, bool> = true>
+        uint64_t thread_handle_to_u64(U thread_handle)
+        {
+            return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(thread_handle));
+        }
+        template <typename U, bq::enable_if_t<!bq::is_pointer<U>::value, bool> = true>
+        uint64_t thread_handle_to_u64(U thread_handle)
+        {
+            return static_cast<uint64_t>(thread_handle);
+        }
+
         template <typename U, bq::enable_if_t<!get_thread_name_func_sfinae1<U>::value && !get_thread_name_func_sfinae2<U>::value && !get_thread_name_func_sfinae3<U>::value, bool> = true>
         bq::string get_thread_name_impl(U thread_handle)
         {
             char thread_name_buf[64] = { 0 };
-            uint64_t tid = static_cast<uint64_t>(thread_handle);
-            snprintf(thread_name_buf, sizeof(thread_name_buf), "pthread_%" PRIu64, tid);
+            snprintf(thread_name_buf, sizeof(thread_name_buf), "pthread_%" PRIu64, thread_handle_to_u64(thread_handle));
             return thread_name_buf;
         }
 

@@ -124,6 +124,11 @@ namespace bq {
         handle.size_ = 0;
         handle.error_code_ = 0;
     }
+
+    void memory_map::protect_all_after_fork()
+    {
+        // Windows has no fork: a child process starts from CreateProcess with no inherited view.
+    }
 }
 
 #include "native_src_bq_common_platform_win64_includes_end.h"

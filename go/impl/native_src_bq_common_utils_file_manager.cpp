@@ -24,8 +24,11 @@ namespace bq {
         seq_generator = 0;
 #if !defined(NDEBUG)
         bq::util::log_device_console(log_level::info, "file_manager is constructed");
-        bq::util::log_device_console(log_level::info, "base dir type 0: %s", get_base_dir(0).c_str());
-        bq::util::log_device_console(log_level::info, "base dir type 1: %s", get_base_dir(1).c_str());
+        bq::string base_dir;
+        bq::util::log_device_console(log_level::info, "base dir type 0: %s",
+            bq::platform::try_get_base_dir(0, base_dir) ? base_dir.c_str() : "<unset>");
+        bq::util::log_device_console(log_level::info, "base dir type 1: %s",
+            bq::platform::try_get_base_dir(1, base_dir) ? base_dir.c_str() : "<unset>");
 #endif
     }
 
@@ -460,11 +463,6 @@ namespace bq {
         return true;
     }
 
-    bool file_manager::lock_file(const file_handle& handle)
-    {
-        return bq::platform::lock_file(handle.platform_handle());
-    }
-
     bq::string file_manager::read_text(const file_handle& handle)
     {
         size_t size = get_file_size(handle);
@@ -531,6 +529,21 @@ namespace bq {
         desc.dec_ref();
         handle.clear();
         return true;
+    }
+
+    void file_manager::discard_all_after_fork()
+    {
+        // No lock and no allocation: a mutex or an allocator the parent held at fork time would never
+        // be released. handle_ptr stays, so an inherited handle is safe to read and finds no slot.
+        for (decltype(file_descriptors)::size_type i = 0; i < file_descriptors.size(); ++i) {
+            auto& descriptor = file_descriptors[i];
+            if (!descriptor.handle_ptr) {
+                continue;
+            }
+            bq::platform::close_descriptor(*(descriptor.handle_ptr));
+            descriptor.ref_cout = 0;
+            descriptor.seq = 0;
+        }
     }
 
     size_t file_manager::get_file_size(const file_handle& handle) const

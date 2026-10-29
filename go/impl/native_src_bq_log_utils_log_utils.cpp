@@ -18,9 +18,12 @@ namespace bq {
         if (!bq::memory_map::is_platform_support()) {
             return recovery_capability::no_memory_map;
         }
+#if BQ_HAS_MULTI_PROCESS
+        // Recovery files live in a shared directory, so a second process must be locked out.
         if (!bq::platform::is_cross_process_file_lock_supported()) {
             return recovery_capability::no_instance_lock;
         }
+#endif
         return recovery_capability::ready;
     }
 

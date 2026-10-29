@@ -1041,31 +1041,8 @@ namespace bq {
         }
 
         if (enum_buffer_result_code::success != over_size_handle.result) {
-            // Both "find existing" and "alloc new" failed. Most likely cause:
-            // need_recovery=true and the recovery mmap file could not be created
-            // because the disk is full (or some other unrecoverable IO error).
-            //
-            // The lp_buffer parent slot is already populated with a real
-            // version/seq/tls_info pointing at this tls_buffer. We must commit
-            // it (otherwise the lp_buffer cursor is stuck), but the reader must
-            // NOT later try to read an oversize payload that doesn't exist.
-            // Two surgical adjustments make this clean:
-            //   1. Bump version_ on the parent so verify_context() classifies it
-            //      as version_invalid - the reader returns the chunk and skips
-            //      it without ever calling deregister_seq() or
-            //      rt_read_oversize_chunk().
-            //   2. Roll back the write_seq we already incremented; the next alloc
-            //      from this tls thread reuses the same seq value. The reader's
-            //      current_read_seq_ is NEVER advanced for this entry (because it
-            //      was version_invalid), so write/read seqs stay aligned.
-            // is_external_ref_ no longer matters - the version_invalid branch in
-            // rt_read_from_lp_buffer (case version_invalid) goes straight to
-            // return_read_chunk without inspecting it.
-            //
-            // Return err_io_failure_drop (NOT err_not_enough_space) so the upper
-            // layer (__api_log_write_begin) drops this entry immediately and
-            // never enters the wait_and_retry spin loop. Disk-full is not a
-            // back-pressure scenario - waiting is futile.
+            // Both "find existing" and "alloc new" failed, typically a full disk: commit the parent as
+            // version_invalid with the seq rolled back so the reader skips it, and drop instead of retry.
             --tls_buffer.wt_data_.current_write_seq_;
             parent_context->version_ = invalid_recovery_version();
             lp_buffer_.commit_write_chunk(parent_result);

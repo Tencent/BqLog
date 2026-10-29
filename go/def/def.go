@@ -30,3 +30,18 @@ const (
 	Recovery_no_memory_map
 	Recovery_no_instance_lock
 )
+
+// Platform_capability is a bit of Get_platform_capabilities: what the linked library was built with.
+type Platform_capability uint32
+
+const (
+	Platform_capability_memory_map Platform_capability = 1 << iota
+	Platform_capability_multi_process
+	Platform_capability_cross_process_file_lock
+	Platform_capability_crash_handler
+	Platform_capability_backtrace
+	Platform_capability_dirent
+	Platform_capability_thread_name
+	Platform_capability_default_base_dir
+	Platform_capability_user_counter
+)

@@ -126,6 +126,18 @@ namespace bq {
             }
             return *T::global_vars_ptr_;
         }
+
+        // A forked child constructs the collection again over the same buffer, so every lock and
+        // member starts clean. Nothing is destructed: that would flush what the child does not own.
+        static void reinit_after_fork()
+        {
+            if (!T::global_vars_buffer_ || T::global_vars_init_flag_.load_acquire() != 2) {
+                return;
+            }
+            initializer_mark_.store_release(&T::global_vars_ptr_);
+            new (T::global_vars_buffer_, bq::enum_new_dummy::dummy) T();
+            T::global_vars_ptr_ = T::global_vars_buffer_;
+        }
     };
 
     template <typename T, typename Priority_Global_Var_Type>
@@ -152,9 +164,13 @@ namespace bq {
 #endif
         bool crc32_supported_;
         bq::platform::base_dir_initializer base_dir_init_inst_;
-        bq::hash_map<bq::platform::file_node_info, bq::platform::file_open_mode_enum> file_exclusive_cache_;
+        bq::hash_map<bq::platform::file_node_info, bq::platform::file_exclusive_entry> file_exclusive_cache_;
         bq::platform::mutex file_exclusive_mutex_;
         bq::platform::mutex stack_trace_mutex_;
+
+        // Reconstructed in place after a fork. The base directories are the only configuration the
+        // child cannot derive again, so they are carried over; everything else starts clean.
+        static void reinit_after_fork();
 
 #if defined(BQ_JAVA)
         bq::array<void (*)()> jni_onload_callbacks_inst_;

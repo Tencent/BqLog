@@ -30,7 +30,7 @@ namespace bq {
             tls_str.fill_uninitialized(10);
         }
         size_t len8 = u8string_bytes;
-        if (u8string_bytes == SIZE_MAX) {
+        if (u8string_bytes == BQ_SIZE_MAX) {
             napi_get_value_string_utf16(env, v, nullptr, 0, &len8);
         }
         tls_str.clear();

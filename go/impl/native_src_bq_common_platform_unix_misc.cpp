@@ -39,6 +39,7 @@ namespace bq {
             return epoch_milliseconds;
         }
 
+#if BQ_HAS_DEFAULT_BASE_DIR
         base_dir_initializer::base_dir_initializer()
         {
             bq::array<char> tmp;
@@ -49,6 +50,7 @@ namespace bq {
             set_base_dir_0(&tmp[0]);
             set_base_dir_1(&tmp[0]);
         }
+#endif
     }
 }
 #endif

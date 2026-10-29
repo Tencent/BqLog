@@ -18,7 +18,7 @@
  */
 #include <stddef.h>
 #include "native_src_bq_common_bq_common.h"
-#include "native_include_bq_log_misc_bq_log_api.h"
+#include "native_include_bq_log_api_bq_log_api.h"
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif

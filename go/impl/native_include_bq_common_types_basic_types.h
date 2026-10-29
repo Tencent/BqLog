@@ -16,7 +16,9 @@
  * \date 2022/07/14
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 
 #if defined(__cplusplus)
 namespace bq {

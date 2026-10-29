@@ -24,7 +24,7 @@
 #endif
 #include "native_src_bq_common_bq_common.h"
 #include "native_src_bq_common_platform_io_memory_map.h"
-#include "native_include_bq_log_misc_bq_log_api.h"
+#include "native_include_bq_log_api_bq_log_api.h"
 #include "native_src_bq_log_types_buffer_log_buffer_defs.h"
 #include "native_src_bq_log_types_buffer_block_list.h"
 #include "native_src_bq_log_types_buffer_memory_pool.h"

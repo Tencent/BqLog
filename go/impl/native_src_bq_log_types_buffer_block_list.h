@@ -18,7 +18,7 @@
  * \date 2024/12/06
  */
 #include "native_src_bq_common_bq_common.h"
-#include "native_include_bq_log_misc_bq_log_api.h"
+#include "native_include_bq_log_api_bq_log_api.h"
 #include "native_src_bq_log_types_buffer_log_buffer_defs.h"
 #include "native_src_bq_log_types_buffer_siso_ring_buffer.h"
 

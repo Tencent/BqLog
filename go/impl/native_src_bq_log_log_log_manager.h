@@ -15,6 +15,16 @@
 #include "native_src_bq_log_log_log_worker.h"
 
 namespace bq {
+    // One row per platform capability: the single place where the list and its BQ_HAS_* source live.
+    struct platform_capability_row {
+        const char* name_;
+        uint32_t bit_;
+        int32_t supported_;
+    };
+
+    // rows of what this build has, in report order; out_count receives the row count
+    const platform_capability_row* platform_capability_rows(uint32_t& out_count);
+
     class log_manager {
     private:
         enum class phase {

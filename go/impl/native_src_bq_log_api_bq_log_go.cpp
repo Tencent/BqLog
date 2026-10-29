@@ -8,7 +8,8 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
-#include "native_include_bq_log_misc_bq_log_api.h"
+#include "native_src_bq_log_api_bq_log_go.h"
+#include "native_include_bq_log_api_bq_log_api.h"
 
 #if defined(BQ_GO)
 #include "native_src_bq_common_bq_common.h"

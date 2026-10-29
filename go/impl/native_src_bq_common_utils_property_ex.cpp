@@ -157,8 +157,7 @@ namespace bq {
             }
         } break;
         default:
-            // retain the following content for new key
-            // old key=a.b.c -> new key = b.c
+            // keep what follows the first segment: a.b.c -> b.c
             string new_key = key.substr(keys[0].size() + 1, key.size() - keys[0].size() - 1);
             trans_parson_to_property_value(root[keys[0]], new_key, value);
             break;

@@ -39,11 +39,11 @@
 #if defined(BQ_IOS)
 #include "native_src_bq_common_platform_ios_misc.h"
 #endif
-#if defined(BQ_PS)
-#include "native_src_bq_common_platform_ps_misc.h"
-#endif
 #if defined(BQ_OHOS)
 #include "native_src_bq_common_platform_ohos_misc.h"
+#endif
+#if defined(BQ_PS) || defined(BQ_SWITCH)
+#include "native_src_bq_common_platform_console_misc.h"
 #endif
 
 namespace bq {
@@ -69,17 +69,31 @@ namespace bq {
             return static_cast<file_open_mode_enum>(static_cast<int32_t>(lhs) & static_cast<int32_t>(rhs));
         }
 
+        // Only the handle that registered a file in the exclusive cache removes it on close.
+        struct file_exclusive_entry {
+            file_open_mode_enum mode_;
+            platform_file_handle owner_;
+        };
+
         struct base_dir_initializer {
         private:
             bq::string base_dir_0_;
             bq::string base_dir_1_;
+            bool base_dir_0_set_ = false;
+            bool base_dir_1_set_ = false;
 
         public:
             const bq::string& get_base_dir_0() const { return base_dir_0_; }
             const bq::string& get_base_dir_1() const { return base_dir_1_; }
 
+            bool is_set(int32_t base_dir_type) const;
+
             void set_base_dir_0(const bq::string& dir);
             void set_base_dir_1(const bq::string& dir);
+
+#if defined(BQ_UNIT_TEST)
+            void test_clear_set_flag(int32_t base_dir_type);
+#endif
 
             base_dir_initializer();
         };
@@ -100,7 +114,10 @@ namespace bq {
             return system_epoch_ms();
         }
 
+        // Aborts when unset: a guessed path writes the log where nobody looks.
         bq::string get_base_dir(int32_t base_dir_type);
+
+        bool try_get_base_dir(int32_t base_dir_type, bq::string& out_dir);
 
         int32_t get_file_size(const char* file_path, size_t& size_ref);
 
@@ -118,6 +135,10 @@ namespace bq {
 
         int32_t close_file(platform_file_handle& in_out_file_handle);
 
+        // Drops one reference to the open description and nothing else: no flush, no bookkeeping.
+        // A forked child uses it, because closing that copy releases no lock the parent holds.
+        void close_descriptor(platform_file_handle& in_out_file_handle);
+
         int32_t read_file(const platform_file_handle& file_handle, void* target_addr, size_t read_size, size_t& out_real_read_size);
 
         int32_t write_file(const platform_file_handle& file_handle, const void* src_addr, size_t write_size, size_t& out_real_write_size);
@@ -130,11 +151,7 @@ namespace bq {
 
         bq::array<bq::string> get_all_sub_names(const char* path);
 
-        bool lock_file(const platform_file_handle& file_handle); // make file write exclusive
-
-        bool unlock_file(const platform_file_handle& file_handle); // undo file write exclusive
-
-        enum class instance_lock_result {
+        enum class file_lock_result {
             locked,
             held_by_other,
             error,
@@ -143,10 +160,14 @@ namespace bq {
         // Whether a file can be locked until its open description closes, which keeps a second process out.
         bool is_cross_process_file_lock_supported();
 
-        // Non-blocking lock, exclusive between runtimes in one process; released with the description.
-        // The lock file is never deleted.
-        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle);
+        // Opens the file and locks it, then keeps the lock until the handle closes. The lock file is
+        // never deleted: the lock lives in the kernel, so a stale file on disk locks nothing.
+        file_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle);
         void unlock_instance_file(platform_file_handle& handle);
+
+        // Runs handler in a forked child, before the fork call returns there; false where fork does
+        // not exist. That child has one thread, so a handler must not wait for a lock.
+        bool register_after_fork_child_handler(void (*handler)());
 
         bq::string get_lexically_path(const bq::string& original_path);
 
@@ -191,6 +212,8 @@ namespace bq {
             // return null, simulating "mmap fails AND heap fails" on disk full + OOM.
             void set_normal_buffer_alloc_fail(bool fail);
             bool get_normal_buffer_alloc_fail();
+
+            void set_base_dir_unset(bool unset);
         }
 #endif
     }
