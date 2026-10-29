@@ -1,6 +1,8 @@
 /* Copyright (C) 2026 Tencent. Licensed under the Apache License, Version 2.0. */
 #pragma once
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 // The two exceptions to "bq_log only includes the bq_common entry": this header is
 // also compiled as C, and these are the only two bq_common headers that are.
 #include "bq_common/platform/macros.h"
@@ -35,10 +37,25 @@ namespace bq {
         no_memory_map, // nothing survives a crash without a memory map
         no_instance_lock // no cross-process file lock to keep a second process out
     };
+
+    // Bits of log::get_platform_capabilities(): what the linked library was built with.
+    namespace platform_capability {
+        constexpr uint32_t memory_map = 1u << 0;
+        constexpr uint32_t multi_process = 1u << 1;
+        constexpr uint32_t cross_process_file_lock = 1u << 2;
+        constexpr uint32_t crash_handler = 1u << 3;
+        constexpr uint32_t backtrace = 1u << 4;
+        constexpr uint32_t dirent = 1u << 5;
+        constexpr uint32_t thread_name = 1u << 6;
+        constexpr uint32_t default_base_dir = 1u << 7;
+        constexpr uint32_t user_counter = 1u << 8;
+    }
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t
 #else
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdbool.h>
+#endif
 typedef int32_t bq_buffer_result_code;
 enum bq_buffer_result_code_value {
     bq_buffer_result_code_success = 0,
@@ -65,6 +82,17 @@ enum bq_recovery_capability_value {
     bq_recovery_capability_ready = 0,
     bq_recovery_capability_no_memory_map,
     bq_recovery_capability_no_instance_lock
+};
+enum bq_platform_capability_value {
+    bq_platform_capability_memory_map = 1 << 0,
+    bq_platform_capability_multi_process = 1 << 1,
+    bq_platform_capability_cross_process_file_lock = 1 << 2,
+    bq_platform_capability_crash_handler = 1 << 3,
+    bq_platform_capability_backtrace = 1 << 4,
+    bq_platform_capability_dirent = 1 << 5,
+    bq_platform_capability_thread_name = 1 << 6,
+    bq_platform_capability_default_base_dir = 1 << 7,
+    bq_platform_capability_user_counter = 1 << 8
 };
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) c_type
 #define BQ_LOG_ABI_CHAR16 uint16_t
@@ -154,6 +182,7 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
     static_assert(sizeof(enum_buffer_result_code) == sizeof(int32_t), "32-bit buffer result ABI");
     static_assert(sizeof(appender_decode_result) == sizeof(int32_t), "32-bit decoder result ABI");
     static_assert(sizeof(recovery_capability) == sizeof(int32_t), "32-bit recovery capability ABI");
+    static_assert(sizeof(platform_capability::memory_map) == sizeof(uint32_t), "32-bit platform capability ABI");
     BQ_MODULE_EXPORT_END
 }
 #else

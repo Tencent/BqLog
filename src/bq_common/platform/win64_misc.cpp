@@ -86,6 +86,7 @@ namespace bq {
             return ret;
         }
 
+#if BQ_HAS_DEFAULT_BASE_DIR
         base_dir_initializer::base_dir_initializer()
         {
             static_assert(sizeof(char16_t) == sizeof(WCHAR), "WCHAR must be 16bits on WIndows Platform!");
@@ -99,6 +100,7 @@ namespace bq {
             set_base_dir_0(base_dir);
             set_base_dir_1(base_dir);
         }
+#endif
 
         int32_t get_file_size(const char* file_path, size_t& size_ref)
         {
@@ -193,22 +195,6 @@ namespace bq {
             return result;
         }
 
-        bool lock_file(const platform_file_handle& file_handle)
-        {
-            if (!is_platform_handle_valid(file_handle)) {
-                return false;
-            }
-            return LockFile(file_handle, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF);
-        }
-
-        bool unlock_file(const platform_file_handle& file_handle)
-        {
-            if (!is_platform_handle_valid(file_handle)) {
-                return false;
-            }
-            return UnlockFile(file_handle, 0, 0, 0xFFFFFFFF, 0xFFFFFFFF);
-        }
-
         bool is_cross_process_file_lock_supported()
         {
 #if defined(BQ_TEST_DISABLE_FILE_LOCK)
@@ -218,11 +204,26 @@ namespace bq {
 #endif
         }
 
-        instance_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
+        // A byte-range lock is owned by the handle: it conflicts with every other open of the file,
+        // in this process or another, and only closing this handle releases it.
+        static file_lock_result try_lock_file(const platform_file_handle& file_handle)
+        {
+            if (!is_cross_process_file_lock_supported()) {
+                return file_lock_result::error;
+            }
+            OVERLAPPED ov = {};
+            if (LockFileEx(file_handle, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ov)) {
+                return file_lock_result::locked;
+            }
+            // only a real contention is retryable; a volume without locking support must not be retried forever
+            return GetLastError() == ERROR_LOCK_VIOLATION ? file_lock_result::held_by_other : file_lock_result::error;
+        }
+
+        file_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle)
         {
             out_handle = invalid_platform_file_handle;
             if (!is_cross_process_file_lock_supported()) {
-                return instance_lock_result::error;
+                return file_lock_result::error;
             }
             bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(abs_path)));
             SECURITY_ATTRIBUTES sa = { sizeof(sa), nullptr, FALSE }; // not inherited by child processes
@@ -235,30 +236,28 @@ namespace bq {
                 FILE_ATTRIBUTE_NORMAL,
                 nullptr);
             if (h == INVALID_HANDLE_VALUE) {
-                return instance_lock_result::error;
+                return file_lock_result::error;
             }
-            OVERLAPPED ov = {};
-            if (!LockFileEx(h, LOCKFILE_EXCLUSIVE_LOCK | LOCKFILE_FAIL_IMMEDIATELY, 0, 1, 0, &ov)) {
-                const DWORD err = GetLastError();
+            const file_lock_result result = try_lock_file(h);
+            if (result != file_lock_result::locked) {
                 CloseHandle(h);
-                // only a real contention is retryable; other failures (e.g. a volume without
-                // locking support) must not be retried forever
-                if (err == ERROR_LOCK_VIOLATION) {
-                    return instance_lock_result::held_by_other;
-                }
-                return instance_lock_result::error;
+                return result;
             }
             out_handle = h;
-            return instance_lock_result::locked;
+            return result;
         }
 
         void unlock_instance_file(platform_file_handle& handle)
         {
             // closing the handle releases the LockFileEx lock
-            if (is_platform_handle_valid(handle)) {
-                CloseHandle(handle);
-            }
-            handle = invalid_platform_file_handle;
+            close_descriptor(handle);
+        }
+
+        bool register_after_fork_child_handler(void (*handler)())
+        {
+            // CreateProcess starts a new image with no inherited state; there is nothing to drop.
+            (void)handler;
+            return false;
         }
 
         bq::string get_lexically_path(const bq::string& original_path)
@@ -396,10 +395,10 @@ namespace bq {
             node_info.idx_low = static_cast<uint32_t>(file_info.nFileIndexLow);
             auto iter = file_exclusive_cache.find(node_info);
             if (iter == file_exclusive_cache.end()) {
-                file_exclusive_cache.add(node_info, mode);
+                file_exclusive_cache.add(node_info, file_exclusive_entry { mode, file_handle });
                 return true;
             } else {
-                if ((int32_t)((iter->value() | mode) & file_open_mode_enum::exclusive)) {
+                if ((int32_t)((iter->value().mode_ | mode) & file_open_mode_enum::exclusive)) {
                     return false;
                 }
             }
@@ -418,7 +417,10 @@ namespace bq {
             node_info.volumn = static_cast<uint32_t>(file_info.dwVolumeSerialNumber);
             node_info.idx_high = static_cast<uint32_t>(file_info.nFileIndexHigh);
             node_info.idx_low = static_cast<uint32_t>(file_info.nFileIndexLow);
-            file_exclusive_cache.erase(node_info);
+            auto iter = file_exclusive_cache.find(node_info);
+            if (iter != file_exclusive_cache.end() && iter->value().owner_ == file_handle) {
+                file_exclusive_cache.erase(iter);
+            }
         }
 
         int32_t open_file(const char* path, file_open_mode_enum mode, platform_file_handle& out_file_handle)
@@ -452,6 +454,14 @@ namespace bq {
                 return 0;
             }
             return static_cast<int32_t>(GetLastError());
+        }
+
+        void close_descriptor(platform_file_handle& in_out_file_handle)
+        {
+            if (is_platform_handle_valid(in_out_file_handle)) {
+                CloseHandle(in_out_file_handle);
+            }
+            in_out_file_handle = invalid_platform_file_handle;
         }
 
         int32_t read_file(const platform_file_handle& file_handle, void* target_addr, size_t read_size, size_t& out_real_read_size)

@@ -24,6 +24,7 @@ public class test_main {
             }
             // The recovery capability query must be reachable from this wrapper as well.
             System.out.println("Recovery capability: " + log.get_recovery_capability());
+            System.out.println("Platform capabilities: " + log.get_platform_capabilities());
             
             test_manager.add_test(new test_log_1("Test Log Basic"));
             test_manager.add_test(new test_log_2("Test Log MultiThread"));

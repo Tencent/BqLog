@@ -2,6 +2,10 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.7.2] - 2026-10-23
+- **Console platforms**: PlayStation 4, PlayStation 5 and Nintendo Switch support (experimental).
+- **Unreal Engine**: the plugin compiles on the console platforms from the source package, and the prebuilt package no longer lists platforms it has no binaries for.
+
 ## [v2.7.1] - 2026-10-21
 - **Bug fix**: (fast mode throughput) the throughput regression against 2.6.0.
 - **Code conventions**: a few include-order fixes.

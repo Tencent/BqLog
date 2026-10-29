@@ -14,6 +14,8 @@
 
 清晰、优雅、模块化优先：代码被读的次数远多于被写的次数。一个文件、一个类只负责一个主题，接口要窄且把状态留在内部，分层方向单向（`bq_common` → `bq_log` → wrapper / plugin / tools）。
 
+- 每个 `.cpp` 第一个包含的必须是与本文件同名的头文件，之后才能包含其它内容。UE 插件通过 Unreal Build Tool 编译本库时会检查这个顺序，系统头放在最前面会导致 UE 构建失败。
+
 ## 2. 命名
 
 - 文件名、类型、函数、变量、枚举值和成员一律 `snake_case`：`meta_registry`、`enable_meta_records`、`run_version()`、`log_level::info`。
@@ -42,7 +44,10 @@
 - 宏定义放在 `include/bq_common/platform/macros.h`，以 `BQ_` 开头。只用于配置某个组件的宏可以放在该组件自己的头文件里（如 `BQ_LOG_META_SEGMENT_SIZE`），同样以 `BQ_` 开头。
 - 平台、编译器、架构判断只能使用 `macros.h` 里定义的宏：`BQ_WIN`/`BQ_WIN64`、`BQ_APPLE`/`BQ_MAC`/`BQ_IOS`、`BQ_LINUX`、`BQ_UNIX`、`BQ_POSIX`、`BQ_ANDROID`、`BQ_OHOS`、`BQ_PS`、`BQ_MSVC`/`BQ_GCC`/`BQ_CLANG`、`BQ_ARM*`/`BQ_X86*`。不要直接判断裸平台宏（`_WIN32`、`__APPLE__`、`__sun`、`_MSC_VER` 之类），也不要自己定义平台宏。
 - 唯一例外是必须在第一个系统头文件之前定义的特性宏（如 `src/bq_common/platform/posix_misc.cpp` 顶部的 `_GNU_SOURCE`），这类情况要集中在一处。
-- 尽量判断"能力"而不是"平台"：`try_lock_instance_file` 里先 `#if defined(F_OFD_SETLK)`，再 `#if defined(LOCK_EX) && defined(LOCK_NB)`。
+- 平台判断只能依赖编译器和工具链已经提供的东西，加上这个头文件自己能做的探测（`__has_include`、架构）；绝不能依赖外部构建传入的 `BQ_*` 平台宏。库是以源码形式交付、直接放进任意工程的，那些工程并不知道我们的开关。
+- 外部 `-D` 是给构建和测试用的：选择工具链、给构建脚本指定目标平台、或打开一个退化的测试配置。代码究竟编在哪个平台，由编译器和 `macros.h` 里的探测决定，不由接入方需要记住的宏决定。
+- 尽量判断"能力"而不是"平台"。可能缺失的头文件探测一次后推导成 `BQ_HAS_*`，参考 `macros.h` 里的 `BQ_HAS_DIRENT`、`BQ_HAS_EXECINFO`；只有在链接期才会暴露的符号，就在调用处探测：先 `#if defined(F_OFD_SETLK)`，再 `#if defined(LOCK_EX) && defined(LOCK_NB)`，参考 `try_lock_instance_file`。
+- 系统头只能从两处进入：普通头文件里，包在 `#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)` 内；模块入口（`*.cppm` 与生成器模板）里，只 include 该库根目录的 `module_system_headers.h`，不得复制其列表。增删系统头只改那一份，并确认每个模块入口都能编过。`macros.h` 是唯一例外：它提供平台探测所需的系统头，排在 fragment 最前。
 - 语言能表达的地方，用内联函数和模板，不要用函数式宏。
 
 ## 6. 库内禁用 C++ 标准库

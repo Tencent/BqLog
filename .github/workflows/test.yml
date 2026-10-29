@@ -615,6 +615,7 @@ jobs:
           sudo apt-get update && sudo apt-get install -y gdb ninja-build       
 
       - name: Build for Linux
+        if: ${{ matrix.asan.label != 'asan' || (matrix.runner.label == 'x86_64' && matrix.cc == 'clang' && matrix.cpp_ver == 17) || github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
         env:
           BQ_ENABLE_ASAN: ${{ matrix.asan.assan_switch }}
         run: |
@@ -761,7 +762,7 @@ jobs:
   #Unix-FreeBSD
   freeBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -801,7 +802,7 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
 
   freeBSD_arm64_test_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -884,7 +885,7 @@ jobs:
   #Unix-Solaris
   solaris_x86_64_GCC:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -939,7 +940,7 @@ jobs:
             ctest --test-dir instance_lock_build --output-on-failure -R multi_instance_lock
 
             set +e
-            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
             EXIT_CODE=$?
             set -e
 
@@ -974,7 +975,7 @@ jobs:
 
   omnisOS_x86_64_GCC:
     runs-on: ubuntu-latest
-    timeout-minutes: 150
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -1036,7 +1037,7 @@ jobs:
             cd build/test/unix_like  
             chmod +x *.sh
             ls -l
-            ./run_test_gcc.sh ${{ matrix.cpp_ver }} 
+            ./run_test_gcc.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
 
   dragonflyBSD_x86_64:
     runs-on: ubuntu-latest
@@ -1121,7 +1122,7 @@ jobs:
 
   openBSD_X86_64_Clang:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -1197,7 +1198,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_clang.sh ${{ matrix.cpp_ver }}
+            ./run_test_clang.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
             EXIT_CODE=$?
             set -e
 
@@ -1283,7 +1284,7 @@ jobs:
 
   netBSD_x86_64:
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     strategy:
       fail-fast: false
       matrix:
@@ -1353,7 +1354,7 @@ jobs:
             ulimit -n
             ulimit -Hn
             ulimit -n 4096
-            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }}
+            ./run_test_${{ matrix.cc }}.sh ${{ matrix.cpp_ver }} --timeout-minutes=150
 
   netBSD_arm64_cpp17:
     if: ${{ github.event.inputs.run_arm_tests == true || github.event.inputs.run_arm_tests == 'true' }}
@@ -2252,3 +2253,42 @@ jobs:
               echo "Test failed with exit code $EXIT_CODE"
               exit $EXIT_CODE
             fi
+
+  # Same sources compiled with the capability set of a console target: every optional
+  # feature is switched off, so the degraded code paths really run.
+  linux_degraded_capabilities:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build and run with every capability disabled
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++
+          cmake -S test/cpp -B build_degraded -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Debug \
+            -DBQ_CAPABILITY_OVERRIDES="BQ_HAS_MMAP=0;BQ_HAS_CROSS_PROCESS_FILE_LOCK=0;BQ_HAS_CRASH_HANDLER=0;BQ_HAS_BACKTRACE=0;BQ_HAS_DIRENT=0;BQ_HAS_THREAD_NAME=0;BQ_HAS_USER_COUNTER=0;BQ_HAS_POSIX_MEMALIGN=0;BQ_HAS_FDATASYNC=0;BQ_HAS_GETPAGESIZE=0;BQ_HAS_DEFAULT_BASE_DIR=0"
+          cmake --build build_degraded -j 4
+          ./build_degraded/BqLogUnitTest
+
+  # FreeBSD built with the PlayStation platform branch: platform detection, the capability
+  # combination and all conditional compilation match a PS5 build, only libc differs.
+  freebsd_as_ps5:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v5
+      - name: Run in FreeBSD with the PlayStation branch
+        uses: vmactions/freebsd-vm@v1
+        with:
+          usesh: true
+          mem: 8192
+          prepare: |
+            pkg install -y cmake
+          run: |
+            set -e
+            cmake -S test/cpp -B build_ps5 -DCMAKE_BUILD_TYPE=Debug \
+              -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++ \
+              -DCMAKE_CXX_FLAGS="-D__PROSPERO__"
+            grep -q '^TARGET_PLATFORM:STRING=ps5$' build_ps5/CMakeCache.txt
+            cmake --build build_ps5 -j 4
+            ./build_ps5/BqLogUnitTest

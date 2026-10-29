@@ -353,3 +353,8 @@ BQ_API_DEF(uint32_t, __api_go_log_write_4, (uint64_t log_id, uint8_t level, uint
 // buffers are backed by memory maps (hp is false before the first hp block exists)
 BQ_API_DEF(bool, __api_test_get_storage_report, (uint64_t log_id, uint32_t* out_instance, bool* out_lp_mapped, bool* out_hp_mapped), (log_id, out_instance, out_lp_mapped, out_hp_mapped));
 #endif
+
+/// <summary>
+/// What the linked library was built with, so a bug report describes the binary and not the caller's headers.
+/// </summary>
+BQ_API_DEF(uint32_t, __api_get_platform_capabilities, (void), ());

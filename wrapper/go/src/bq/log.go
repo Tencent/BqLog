@@ -65,6 +65,11 @@ func Get_recovery_capability() def.Recovery_capability {
 	return def.Recovery_capability(impl.Get_recovery_capability())
 }
 
+// Get_platform_capabilities reports what the linked library was built with; attach it to a bug report.
+func Get_platform_capabilities() def.Platform_capability {
+	return def.Platform_capability(impl.Get_platform_capabilities())
+}
+
 // Get_file_base_dir returns the absolute base dir for relative-path logs.
 func Get_file_base_dir(base_dir_type int32) string {
 	return impl.Get_file_base_dir(base_dir_type)

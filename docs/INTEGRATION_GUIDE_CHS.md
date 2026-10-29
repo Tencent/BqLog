@@ -506,3 +506,30 @@ README 和 API 文档展示。
 - [配置说明](./CONFIGURATION_CHS.md) — 完整配置参考
 - [高级用法](./ADVANCED_USAGE_CHS.md) — Category、加密、自定义类型等
 - [游戏引擎集成](./ENGINE_INTEGRATION_CHS.md) — Unity、团结引擎、Unreal Engine
+
+## 主机平台
+
+PS4、PS5 与 Switch 都是源码接入：把 `src/` 与 `include/` 加进平台工具链的工程，平台由编译器识别。PlayStation 不提供 CMake target，那里构建系统就是 SDK 本身。
+
+```cpp
+bq::log::reset_base_dir(0, mount_path);   // 游戏挂载存储之后
+bq::log::reset_base_dir(1, mount_path);
+auto log = bq::log::create_log("game", R"({"log_config": {"recovery": true}})");
+```
+
+目录必须在创建第一个日志之前设置。主机没有可写的工作目录，用猜测的路径会直接以 fatal 信息终止。
+
+| 能力 | PS4 / PS5 | Switch | 缺失时的表现 |
+|---|---|---|---|
+| `memory_map` | 有 | 无 | 无崩溃恢复，缓冲区留在堆上 |
+| `multi_process` | 无 | 无 | 每个 title 单实例，无多进程隔离 |
+| `cross_process_file_lock` | 无 | 无 | 由上一条决定 |
+| `crash_handler` | 无 | 无 | `enable_auto_crash_handle()` 不安装任何处理器 |
+| `backtrace` | 无 | 无 | 栈字段写明不支持 |
+| `dirent` | 有 | 有 | `expire_time_*` 与 `capacity_limit` 依赖它 |
+| `thread_name` | 无 | 无 | 线程名返回 `thread_<id>` |
+| `default_base_dir` | 无 | 无 | 必须调用 `reset_base_dir` |
+| `user_counter` | 无 | 无 | 时间戳取自系统时钟 |
+
+`bq::log::get_platform_capabilities()` 以位掩码返回上述能力，启动时也会打印一次，反馈问题时可直接带上。PlayStation 与 Switch 的验证方式是编译与单元测试，不是零售机。
+

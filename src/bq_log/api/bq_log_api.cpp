@@ -9,7 +9,7 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 
-#include "bq_log/misc/bq_log_api.h"
+#include "bq_log/api/bq_log_api.h"
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_types.h"
@@ -25,13 +25,10 @@
 #include "bq_log/types/storage/instance_storage.h"
 
 #ifdef BQ_POSIX
-#ifdef BQ_PS
-// TODO
-#else
+#if BQ_HAS_CRASH_HANDLER
 #include <signal.h>
 #endif
 #include <unistd.h>
-#include <sys/syscall.h>
 #include <pthread.h>
 #endif
 
@@ -53,7 +50,20 @@ namespace bq {
             return log_utils::get_recovery_capability();
         }
 
-#if defined(BQ_POSIX)
+        BQ_API uint32_t __api_get_platform_capabilities()
+        {
+            uint32_t count = 0;
+            const platform_capability_row* rows = platform_capability_rows(count);
+            uint32_t bits = 0;
+            for (uint32_t i = 0; i < count; ++i) {
+                if (rows[i].supported_) {
+                    bits |= rows[i].bit_;
+                }
+            }
+            return bits;
+        }
+
+#if defined(BQ_POSIX) && BQ_HAS_CRASH_HANDLER
 
         // compatible to siginfo_t or siginfo
         static struct sigaction tmp_action_static;
@@ -84,16 +94,12 @@ namespace bq {
         private:
             static void on_signal(int32_t sig, siginfo_ptr_type info, void* context)
             {
-#ifdef BQ_PS
-                // TODO
-#else
                 (void)tmp_action_static;
                 struct sigaction tmp;
                 sigaction(SIG, &original_sigaction, &tmp);
                 registered = false;
                 handler(sig, info, context);
                 pthread_kill(pthread_self(), sig);
-#endif
             }
 
 #ifdef BQ_IOS
@@ -108,9 +114,6 @@ namespace bq {
         public:
             static void set_handler(sigaction_func_type func)
             {
-#ifdef BQ_PS
-                // TODO
-#else
 #if BQ_SIGNAL_STACK_SUPPORT
                 stack_t ss;
                 ss.ss_sp = signal_stack_holder.signal_stack;
@@ -139,7 +142,6 @@ namespace bq {
                     registered = true;
                     handler = func;
                 }
-#endif
             }
         };
 
@@ -165,7 +167,7 @@ namespace bq {
 
         BQ_API void __api_enable_auto_crash_handler()
         {
-#if defined(BQ_POSIX)
+#if BQ_HAS_CRASH_HANDLER
             log_signal_handler<SIGSEGV>::set_handler(log_crash_handler);
             log_signal_handler<SIGABRT>::set_handler(log_crash_handler);
             log_signal_handler<SIGFPE>::set_handler(log_crash_handler);
@@ -173,7 +175,7 @@ namespace bq {
             log_signal_handler<SIGTRAP>::set_handler(log_crash_handler);
             log_signal_handler<SIGBUS>::set_handler(log_crash_handler);
 #else
-            bq::util::log_device_console(log_level::warning, "Crash Handler is only working on POSIX system now, such as Android, Linux, iOS and Mac");
+            bq::util::log_device_console(log_level::warning, "crash handler is unsupported on this platform, no signal handler was installed");
 #endif
         }
 
@@ -645,13 +647,11 @@ namespace bq {
 
         BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type)
         {
-            if (base_dir_type == 0) {
-                tls_base_dir_cache_0_.get() = bq::file_manager::get_base_dir(base_dir_type);
-                return tls_base_dir_cache_0_.get().c_str();
-            } else {
-                tls_base_dir_cache_1_.get() = bq::file_manager::get_base_dir(base_dir_type);
-                return tls_base_dir_cache_1_.get().c_str();
+            bq::string& cache = (base_dir_type == 0) ? tls_base_dir_cache_0_.get() : tls_base_dir_cache_1_.get();
+            if (!bq::platform::try_get_base_dir(base_dir_type, cache)) {
+                cache.clear();
             }
+            return cache.c_str();
         }
 
         BQ_API bq::appender_decode_result __api_log_decoder_create(const char* log_file_path, const char* priv_key, uint32_t* out_handle)

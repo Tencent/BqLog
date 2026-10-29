@@ -17,11 +17,13 @@
  * \author pippocao
  * \date 2022.08.03
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 #include "bq_common/bq_common_public_include.h"
 #include "bq_log/adapters/adapters.h"
 #include "bq_log/misc/bq_log_def.h"
-#include "bq_log/misc/bq_log_api.h"
+#include "bq_log/api/bq_log_api.h"
 #include "bq_log/misc/bq_log_wrapper_tools.h"
 #if defined(BQ_CPP_20)
 #include "bq_log/misc/bq_log_fixed_format.h"
@@ -97,6 +99,12 @@ namespace bq {
         /// </summary>
         /// <returns></returns>
         static recovery_capability get_recovery_capability();
+
+        /// <summary>
+        /// What the linked library was built with, as bq::platform_capability bits; attach it to a bug report.
+        /// </summary>
+        /// <returns></returns>
+        static uint32_t get_platform_capabilities();
 
         /// <summary>
         /// If bqLog is asynchronous, a crash in the program may cause the logs in the buffer not to be persisted to disk.

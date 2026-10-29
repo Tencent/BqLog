@@ -26,14 +26,14 @@ class instance_lock_racer : public bq::platform::thread {
         for (uint32_t i = 0; i < 500; ++i) {
             platform_file_handle handle = invalid_platform_file_handle;
             const auto result = try_lock_instance_file(path_, handle);
-            if (result == instance_lock_result::locked) {
+            if (result == file_lock_result::locked) {
                 if (active_.fetch_add(1, memory_order::acq_rel) != 0) {
                     valid_.store_release(false);
                 }
                 thread::yield();
                 active_.fetch_sub(1, memory_order::acq_rel);
                 unlock_instance_file(handle);
-            } else if (result != instance_lock_result::held_by_other) {
+            } else if (result != file_lock_result::held_by_other) {
                 valid_.store_release(false);
             }
         }
@@ -60,12 +60,12 @@ int main()
     platform_file_handle second = invalid_platform_file_handle;
     const auto first_result = try_lock_instance_file(path, first);
     const auto second_result = try_lock_instance_file(path, second);
-    const bool held = first_result == instance_lock_result::locked
-        && second_result == instance_lock_result::held_by_other
+    const bool held = first_result == file_lock_result::locked
+        && second_result == file_lock_result::held_by_other
         && !is_platform_handle_valid(second);
     unlock_instance_file(second);
     const auto third_result = try_lock_instance_file(path, second);
-    const bool still_held = third_result == instance_lock_result::held_by_other;
+    const bool still_held = third_result == file_lock_result::held_by_other;
     unlock_instance_file(second);
     bool child_blocked = true;
 #if defined(BQ_POSIX)
@@ -74,7 +74,7 @@ int main()
         unlock_instance_file(first);
         const auto child_result = try_lock_instance_file(path, second);
         unlock_instance_file(second);
-        _exit(child_result == instance_lock_result::held_by_other ? 0 : 1);
+        _exit(child_result == file_lock_result::held_by_other ? 0 : 1);
     }
     int status = 0;
     child_blocked = child > 0 && waitpid(child, &status, 0) == child
@@ -82,19 +82,19 @@ int main()
 #endif
     unlock_instance_file(first);
     const auto final_result = try_lock_instance_file(path, first);
-    const bool released = final_result == instance_lock_result::locked;
+    const bool released = final_result == file_lock_result::locked;
     unlock_instance_file(first);
     bool crash_released = true;
 #if defined(BQ_POSIX)
     const auto crash_child = fork();
     if (crash_child == 0) {
         const auto crash_result = try_lock_instance_file(path, first);
-        _exit(crash_result == instance_lock_result::locked ? 0 : 1);
+        _exit(crash_result == file_lock_result::locked ? 0 : 1);
     }
     int crash_status = 0;
     crash_released = crash_child > 0 && waitpid(crash_child, &crash_status, 0) == crash_child
         && WIFEXITED(crash_status) && WEXITSTATUS(crash_status) == 0;
-    crash_released = crash_released && try_lock_instance_file(path, first) == instance_lock_result::locked;
+    crash_released = crash_released && try_lock_instance_file(path, first) == file_lock_result::locked;
     unlock_instance_file(first);
 #endif
     bq::platform::atomic<int32_t> active(0);

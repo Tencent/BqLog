@@ -19,6 +19,9 @@
 #include "test_string_serialize.h"
 #include "bq_common_test/test_string.h"
 #include "bq_common_test/test_file_manager.h"
+#include "bq_common_test/test_base_dir_strict.h"
+#include "bq_common_test/test_mutex_recursive.h"
+#include "bq_common_test/test_platform_capability.h"
 #include "bq_common_test/test_property.h"
 #include "bq_common_test/test_thread_atomic.h"
 #include "bq_common_test/test_encryption.h"
@@ -42,9 +45,13 @@
 #include <windows.h>
 #elif defined(BQ_POSIX)
 #include <signal.h>
+#include <unistd.h>
+#endif
+#if defined(BQ_MSVC)
+#include <crtdbg.h>
 #endif
 
-#ifdef BQ_POSIX
+#if BQ_HAS_CRASH_HANDLER
 pthread_t main_thread_id = 0;
 #endif
 
@@ -79,7 +86,7 @@ protected:
                 printf("test time out after %u minutes in %s\n",
                     static_cast<uint32_t>(time_out_minutes), bq::test::current_test_case());
                 fflush(stdout);
-#ifdef BQ_POSIX
+#if BQ_HAS_CRASH_HANDLER
                 pthread_kill(main_thread_id, SIGUSR2); // the handler prints the stack trace of the running thread
 #endif
                 bq::platform::thread::sleep(1000);
@@ -91,7 +98,7 @@ protected:
     }
 };
 
-#ifdef BQ_POSIX
+#if BQ_HAS_CRASH_HANDLER
 void sig_handler(int)
 {
     bq::_api_string_def stack_trace_str;
@@ -104,7 +111,7 @@ void sig_handler(int)
 
 int32_t main_logic()
 {
-#ifdef BQ_POSIX
+#if BQ_HAS_CRASH_HANDLER
     struct sigaction sa = {};
     sa.sa_handler = sig_handler;
     sigemptyset(&sa.sa_mask);
@@ -129,30 +136,33 @@ int32_t main_logic()
     TEST_GROUP(Bq_Common_Test, bq::test, test_string);
     TEST_GROUP(Bq_Common_Test, bq::test, test_hash_map);
     TEST_GROUP(Bq_Common_Test, bq::test, test_utils);
-    TEST_GROUP(Bq_Common_Test, bq::test, test_file_manager);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Common_Test, bq::test, test_file_manager);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_base_dir_strict);
     TEST_GROUP(Bq_Common_Test, bq::test, test_thread_atomic);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_mutex_recursive);
+    TEST_GROUP(Bq_Common_Test, bq::test, test_platform_capability);
     TEST_GROUP(Bq_Common_Test, bq::test, test_encryption);
     TEST_GROUP(Bq_Common_Test, bq::test, test_fast_clock);
     TEST_GROUP_END(Bq_Common_Test);
 
     TEST_GROUP_BEGIN(Bq_Log_Test);
     TEST_GROUP(Bq_Log_Test, bq::test, test_bounded_hash_cache);
-    TEST_GROUP(Bq_Log_Test, bq::test, test_compressed_cache);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_compressed_cache);
     TEST_GROUP(Bq_Log_Test, bq::test, test_string_serialize);
     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("bqlog_mmap", 0));
-    TEST_GROUP(Bq_Log_Test, bq::test, test_instance_storage);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_instance_storage);
     TEST_GROUP(Bq_Log_Test, bq::test, test_meta_registry);
-    TEST_GROUP(Bq_Log_Test, bq::test, test_log_buffer);
-    TEST_GROUP(Bq_Log_Test, bq::test, test_fast_log);
+    TEST_GROUP_IF(BQ_HAS_MMAP, Bq_Log_Test, bq::test, test_log_buffer);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_fast_log);
 #if defined(BQ_CPP_20)
     TEST_GROUP(Bq_Log_Test, bq::test, test_fast_info);
 #endif
-    TEST_GROUP(Bq_Log_Test, bq::test, test_log_appender);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_log_appender);
     TEST_GROUP(Bq_Log_Test, bq::test, test_siso_ring_buffer);
     TEST_GROUP(Bq_Log_Test, bq::test, test_miso_ring_buffer);
-    TEST_GROUP(Bq_Log_Test, bq::test, test_log);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_log);
     TEST_GROUP(Bq_Log_Test, bq::test, test_layout);
-    TEST_GROUP(Bq_Log_Test, bq::test, test_disk_full);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_disk_full);
     TEST_GROUP_END(Bq_Log_Test);
 
     bool test_result = TEST_GROUP_RESULT(Bq_Common_Test) && TEST_GROUP_RESULT(Bq_Log_Test);
@@ -180,8 +190,25 @@ static void prepare_test_meta_registry()
 
 int32_t main(int32_t argc, char** argv)
 {
-    // a pipe (CI) would buffer the output in blocks, which hides the running case for minutes
+#if defined(BQ_MSVC)
+    // A debug-CRT assertion otherwise opens a modal dialog and parks the whole job.
+    _CrtSetReportMode(_CRT_ASSERT, _CRTDBG_MODE_FILE);
+    _CrtSetReportFile(_CRT_ASSERT, _CRTDBG_FILE_STDERR);
+#endif
+#if !defined(BQ_WIN)
+    // UCRT rejects a zero size and reads _IOLBF as full buffering, so Windows has nothing to
+    // gain here; its output already flushes after every case (test_base.h).
     setvbuf(stdout, nullptr, _IOLBF, 0);
+#endif
+#if !BQ_HAS_DEFAULT_BASE_DIR
+    {
+        char cwd_buf[4096];
+        if (getcwd(cwd_buf, sizeof(cwd_buf)) != nullptr) {
+            bq::log::reset_base_dir(0, cwd_buf);
+            bq::log::reset_base_dir(1, cwd_buf);
+        }
+    }
+#endif
     parse_time_out_argument(argc, argv);
     prepare_test_meta_registry();
     if (argc > 1 && strcmp(argv[1], "--fast-clock-only") == 0) {

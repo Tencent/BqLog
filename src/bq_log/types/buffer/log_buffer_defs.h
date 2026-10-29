@@ -18,7 +18,7 @@
  */
 #include <stddef.h>
 #include "bq_common/bq_common.h"
-#include "bq_log/misc/bq_log_api.h"
+#include "bq_log/api/bq_log_api.h"
 #if defined(BQ_JAVA)
 #include <jni.h>
 #endif

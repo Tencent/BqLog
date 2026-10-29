@@ -17,7 +17,7 @@
 #include "test_base.h"
 #if defined(BQ_WIN)
 #include <windows.h>
-#elif defined(BQ_POSIX)
+#elif defined(BQ_POSIX) && BQ_HAS_MMAP
 #include <sys/mman.h>
 #include <unistd.h>
 #endif
@@ -149,7 +149,7 @@ namespace bq {
                 result.add_result(all_pass, "u32string size and copy");
             }
 
-#if defined(BQ_WIN) || defined(BQ_POSIX)
+#if defined(BQ_WIN) || (defined(BQ_POSIX) && BQ_HAS_MMAP)
             struct guarded_page {
                 uint8_t* base = nullptr;
                 size_t size = 0;
@@ -245,7 +245,7 @@ namespace bq {
                 test_heap<char32_t>(result, "utf32");
                 test_heap<wchar_t>(result, "wchar_t");
                 test_heap_u32_view(result);
-#if defined(BQ_WIN) || defined(BQ_POSIX)
+#if defined(BQ_WIN) || (defined(BQ_POSIX) && BQ_HAS_MMAP)
                 test_page_end<char>(result, "utf8");
                 test_page_end<char16_t>(result, "utf16");
                 test_page_end<char32_t>(result, "utf32");

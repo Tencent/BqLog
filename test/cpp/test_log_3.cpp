@@ -649,6 +649,7 @@ namespace bq {
             }
         };
 
+#if BQ_HAS_DIRENT
         static const bq::string& decode_compressed_item()
         {
             static decoder_test decoder(".logcompr");
@@ -669,6 +670,7 @@ namespace bq {
             return decoded_item.begin_with("/************************************* BQLOG RECOVER START")
                 && decoded_item.end_with(console_output);
         }
+#endif
 
         template <typename First>
         void parameter_expand_tools(First first)
@@ -1042,12 +1044,14 @@ namespace bq {
             log_param_test<MAX_PARAM>();
             bq::log::force_flush_all_logs();
 
+#if BQ_HAS_DIRENT
             // decode test
             bool is_encrypted = !get_encript_config().is_empty();
             for (size_t i = 0; i < test_log_3_all_console_outputs.size(); ++i) {
                 const bq::string& compressed_item = decode_compressed_item();
                 result_ptr->add_result(decoded_item_matches_console_output(compressed_item, test_log_3_all_console_outputs[i]), "%s test idx:%" PRIu64 ", compressed test, \ndecoded: %s, \nconsole: %s", (is_encrypted ? "encrypt" : ""), static_cast<uint64_t>(i), compressed_item.c_str(), test_log_3_all_console_outputs[i].c_str());
             }
+#endif
         }
 
         void test_log::test_3(test_result& result, const test_category_log& log_inst)

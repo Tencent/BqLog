@@ -6615,6 +6615,17 @@ jobs:
                   -e 's/"LinuxAArch64"//g' \
                   "$uplugin"
               fi
+
+              # 4.27 is the only UE4 version where PS5 is a valid UnrealTargetPlatform. The packaging
+              # scripts strip PS5 from the whole UE4 channel because one prebuilt package has to load
+              # in 4.22~4.27; put it back for this one package, which is built per engine version.
+              if (( ue_minor == 27 )); then
+                sed -i 's/"PS4", "Switch"/"PS4", "PS5", "Switch"/' "$uplugin"
+                if ! grep -q '"PS5"' "$uplugin"; then
+                  echo "::error::PS5 was not restored in the UE 4.27 .uplugin" >&2
+                  exit 1
+                fi
+              fi
             fi
           }
 
@@ -7052,6 +7063,16 @@ jobs:
               sed -i 's/"PlatformAllowList"/"WhitelistPlatforms"/g' "$plugin_dir/BqLog.uplugin"
               sed -i 's/"PlatformDenyList"/"BlacklistPlatforms"/g' "$plugin_dir/BqLog.uplugin"
               sed -i 's/"LinuxArm64"/"LinuxAArch64"/g' "$plugin_dir/BqLog.uplugin"
+            fi
+
+            # Prebuilt has no console binaries: PS4/PS5 need the NDA SDKs, and CI's Switch build uses
+            # devkitA64 (newlib/libstdc++), which cannot link against Nintendo SDK targets.
+            # The UE4 package already arrives without PS5 (the packaging scripts remove it), so the
+            # three names are stripped one at a time rather than as one fixed run of text.
+            sed -i -E 's/,[[:space:]]*"(PS4|PS5|Switch)"//g' "$plugin_dir/BqLog.uplugin"
+            if grep -q '"PS4"\|"PS5"\|"Switch"' "$plugin_dir/BqLog.uplugin"; then
+              echo "ERROR: console platforms still listed in the prebuilt .uplugin" >&2
+              exit 1
             fi
 
             rm -rf "$plugin_dir/Binaries/Win64" "$plugin_dir/Binaries/Win64Arm64" "$plugin_dir/Binaries/Linux" "$plugin_dir/Binaries/LinuxAArch64" "$plugin_dir/Binaries/Mac" "$plugin_dir/Binaries/IOS"
@@ -7675,3 +7696,38 @@ jobs:
         with:
           name: java_maven_fat_jar_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist/maven/java
+
+  # Nintendo Switch (devkitPro devkitA64 + libnx): a build check only. Consoles ship as source,
+  # like PlayStation, so nothing is uploaded.
+  build_switch_devkita64:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    container:
+      image: devkitpro/devkita64@sha256:1fc388c3a0d34bd2045a6dadcb1020e069d5f876a187fd705de14b4440c00282
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build the static library
+        run: |
+          export PATH="/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH"
+          cmake -S src -B build_switch \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake \
+            -DCMAKE_BUILD_TYPE=Release
+          grep -q '^TARGET_PLATFORM:STRING=switch$' build_switch/CMakeCache.txt
+          cmake --build build_switch -j 4
+      - name: Check that the console symbols are absent
+        run: |
+          LIB=$(find artifacts/static_lib -name 'libBqLog.a' | head -n 1)
+          test -n "$LIB" || { echo "libBqLog.a not found" >&2; exit 1; }
+          echo "checking $LIB"
+          if aarch64-none-elf-nm -u "$LIB" | grep -wE 'mmap|munmap|msync|sigaction|backtrace|flock|pthread_setname_np'; then
+            echo "a console build must not reference these symbols" >&2
+            exit 1
+          fi
+      - name: Build the unit test ELF
+        run: |
+          export PATH="/opt/devkitpro/devkitA64/bin:/opt/devkitpro/tools/bin:$PATH"
+          cmake -S test/cpp -B build_switch_test \
+            -DCMAKE_TOOLCHAIN_FILE=/opt/devkitpro/cmake/Switch.cmake \
+            -DCMAKE_BUILD_TYPE=Release
+          grep -q '^TARGET_PLATFORM:STRING=switch$' build_switch_test/CMakeCache.txt
+          cmake --build build_switch_test -j 4

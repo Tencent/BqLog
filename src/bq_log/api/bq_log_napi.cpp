@@ -112,6 +112,13 @@ BQ_NAPI_DEF(get_recovery_capability, napi_env, env, napi_callback_info, info)
     return bq::make_napi_u32(env, static_cast<uint32_t>(bq::api::__api_get_recovery_capability()));
 }
 
+// get_platform_capabilities(): number
+BQ_NAPI_DEF(get_platform_capabilities, napi_env, env, napi_callback_info, info)
+{
+    (void)info;
+    return bq::make_napi_u32(env, bq::api::__api_get_platform_capabilities());
+}
+
 // create_log(name: string, config: string, categories_count: number, categories: string[]): bigint
 BQ_NAPI_DEF(create_log, napi_env, env, napi_callback_info, info)
 {
@@ -664,7 +671,7 @@ BQ_NAPI_DEF(log_device_console, napi_env, env, napi_callback_info, info)
     }
 
     int32_t level = bq::get_napi_i32(env, argv[0]);
-    auto tls_str = bq::read_utf8_str_tls(env, argv[1], SIZE_MAX);
+    auto tls_str = bq::read_utf8_str_tls(env, argv[1], BQ_SIZE_MAX);
     bq::api::__api_log_device_console((bq::log_level)level, tls_str.str().c_str());
     return bq::make_napi_undefined(env);
 }

@@ -12,10 +12,8 @@
 #include "bq_log/bq_log.h"
 #include "bq_log/global//log_vars.h"
 #include "bq_log/log/log_manager.h"
-#ifdef BQ_POSIX
-#ifndef BQ_PS
+#if BQ_HAS_CRASH_HANDLER
 #include <signal.h>
-#endif
 #endif
 namespace bq {
     static bq::platform::atomic<int32_t> log_worker_name_seq = 0;
@@ -80,7 +78,7 @@ namespace bq {
         assert(thread_mode_ != log_thread_mode::sync && "log_worker started without init");
         tls_log_worker_watch_dog_.get().thread_id_ = bq::platform::thread::get_current_thread_id();
         tls_log_worker_watch_dog_.get().worker_ptr_ = this;
-#ifdef BQ_POSIX
+#if BQ_HAS_CRASH_HANDLER
         // we need flush ring_buffer in signal handler.
         // but handler can not be called in worker thread.(the flush operation is not re-entrant)
         // so we have to block signals for this thread.

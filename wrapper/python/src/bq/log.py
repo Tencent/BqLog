@@ -64,6 +64,14 @@ class log:
         return log_invoker.get_recovery_capability()
 
     @staticmethod
+    def get_platform_capabilities():
+        """
+        What the linked library was built with; attach it to a bug report.
+        Test the bits with bq.defs.platform_capability.
+        """
+        return log_invoker.get_platform_capabilities()
+
+    @staticmethod
     def create_log(name, config):
         """
         Create a log object.

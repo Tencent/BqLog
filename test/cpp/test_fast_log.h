@@ -1025,10 +1025,12 @@ namespace bq {
 
                 // the library republishes on every block change: compaction, then an oversize record (block dropped and re-allocated)
                 bq::block_node_head* before_compaction = info.cur_block_;
+                const uint32_t seq_before_compaction = before_compaction->get_misc_data<bq::log_buffer::block_misc_data>().context_.seq_;
                 before_compaction->get_misc_data<bq::log_buffer::block_misc_data>().need_reallocate_ = true;
                 result.add_result(*state.need_reallocate, "thread state: reallocate flag read through the state");
                 write_fast(log, 3010);
-                result.add_result(info.cur_block_ != before_compaction, "thread state: compaction switched block");
+                result.add_result(info.cur_block_ && info.cur_block_->get_misc_data<bq::log_buffer::block_misc_data>().context_.seq_ != seq_before_compaction,
+                    "thread state: compaction switched block");
                 expect_state_matches("after compaction");
                 bq::array<char> big_text;
                 big_text.fill_uninitialized(200000);

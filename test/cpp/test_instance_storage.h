@@ -15,6 +15,11 @@
 #include "bq_log/bq_log_entry.h"
 #include "bq_log/types/storage/instance_storage.h"
 #include "bq_log/types/storage/log_storage.h"
+#if BQ_HAS_FORK
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
+#endif
 
 namespace bq {
     namespace test {
@@ -76,14 +81,14 @@ namespace bq {
                 const bq::string lock_path = lock_dir + "/t.lock";
                 platform::platform_file_handle h1 = platform::invalid_platform_file_handle;
                 auto first = platform::try_lock_instance_file(lock_path.c_str(), h1);
-                result.add_result(first == platform::instance_lock_result::locked, "lock primitive: first lock succeeds");
+                result.add_result(first == platform::file_lock_result::locked, "lock primitive: first lock succeeds");
                 platform::platform_file_handle h2 = platform::invalid_platform_file_handle;
                 auto second = platform::try_lock_instance_file(lock_path.c_str(), h2);
-                result.add_result(second == platform::instance_lock_result::held_by_other, "lock primitive: second handle in same process is held_by_other");
+                result.add_result(second == platform::file_lock_result::held_by_other, "lock primitive: second handle in same process is held_by_other");
                 platform::unlock_instance_file(h1);
                 platform::platform_file_handle h3 = platform::invalid_platform_file_handle;
                 auto third = platform::try_lock_instance_file(lock_path.c_str(), h3);
-                result.add_result(third == platform::instance_lock_result::locked, "lock primitive: lock succeeds again after unlock");
+                result.add_result(third == platform::file_lock_result::locked, "lock primitive: lock succeeds again after unlock");
                 platform::unlock_instance_file(h3);
                 result.add_result(bq::file_manager::is_file(lock_path), "lock primitive: lock file still exists after unlock");
             }
@@ -484,6 +489,69 @@ namespace bq {
                     "run serial ahead of current: recovery data from a copied directory discarded");
             }
 
+#if BQ_HAS_FORK
+            // A forked child keeps nothing of the parent's runtime: it claims an instance of its own,
+            // and the log it creates writes there while the parent's claim stays untouched.
+            static void test_fork_new_runtime(test_result& result)
+            {
+                if (!instance_available()) {
+                    result.add_result(true, "fork: no instance claim to inherit");
+                    return;
+                }
+                auto* parent_inst = bq::instance_storage::get();
+                const uint32_t parent_index = parent_inst->index();
+                char name[96];
+                snprintf(name, sizeof(name), "fork_child_log_%" PRIu64, bq::platform::high_performance_epoch_ms());
+
+                const pid_t child = fork();
+                if (child == 0) {
+                    // Another thread of the parent may have held the console mutex at fork time.
+                    bq::util::set_log_device_console_min_level(bq::log_level::log_level_max);
+                    int32_t stage = 0;
+                    auto* child_inst = bq::instance_storage::acquire();
+                    if (!child_inst || child_inst->index() == parent_index) {
+                        stage = 1; // the child must claim an instance of its own
+                    }
+                    // async mode: the appender runs in the worker thread this child had to start again
+                    char config_text[512];
+                    snprintf(config_text, sizeof(config_text),
+                        "appenders_config.out.type=text_file\n"
+                        "appenders_config.out.levels=[all]\n"
+                        "appenders_config.out.file_name=output/%s/out\n"
+                        "appenders_config.out.base_dir_type=0\n"
+                        "appenders_config.out.enable_rolling_log_file=false\n"
+                        "log.buffer_size=4096\n"
+                        "log.recovery=true\n"
+                        "log.thread_mode=async\n",
+                        name);
+                    bq::log child_log = bq::log::create_log(name, config_text);
+                    const bq::string output_dir = TO_ABSOLUTE_PATH("output", 0) + "/" + name;
+                    if (stage == 0 && !child_log.is_valid()) {
+                        stage = 2;
+                    }
+                    if (stage == 0) {
+                        for (int32_t i = 0; i < 100 && !bq::file_manager::is_dir(output_dir); ++i) {
+                            child_log.info("logged in a forked child, round %d", i);
+                            bq::platform::thread::sleep(20);
+                        }
+                        child_log.force_flush();
+                        // only the appender in the child's own worker creates this directory
+                        if (!bq::file_manager::is_dir(output_dir)) {
+                            stage = 3;
+                        }
+                    }
+                    _exit(stage);
+                }
+                int32_t status = 0;
+                result.add_result(child > 0 && waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0,
+                    "fork: the child claims its own instance and its log lands there");
+                bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("output", 0) + "/" + name);
+                auto* after_inst = bq::instance_storage::get();
+                result.add_result(after_inst != nullptr && after_inst->index() == parent_index,
+                    "fork: the parent keeps its own instance claim");
+            }
+#endif
+
         public:
             virtual test_result test() override
             {
@@ -496,6 +564,9 @@ namespace bq {
                 test_escape_name(result);
                 test_lock_primitive(result);
                 test_instance_identity(result);
+#if BQ_HAS_FORK
+                test_fork_new_runtime(result);
+#endif
                 test_cleanup_legacy_dirs(result);
                 test_no_recovery_no_disk(result);
                 if (recovery_available()) {

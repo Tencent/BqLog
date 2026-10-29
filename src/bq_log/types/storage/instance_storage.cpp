@@ -41,12 +41,12 @@ namespace bq {
             snprintf(name, sizeof(name), "/locks/p%" PRIu32 ".lock", k);
             platform::platform_file_handle h;
             auto lock_result = platform::try_lock_instance_file((base + name).c_str(), h);
-            if (lock_result == platform::instance_lock_result::error) {
+            if (lock_result == platform::file_lock_result::error) {
                 // e.g. the base directory is not writable: the loop would never succeed.
                 util::log_device_console(log_level::warning, "bqlog instance storage disabled: cannot create lock file %s", (base + name).c_str());
                 return nullptr;
             }
-            if (lock_result == platform::instance_lock_result::held_by_other) {
+            if (lock_result == platform::file_lock_result::held_by_other) {
                 continue;
             }
             auto inst = bq::make_unique<instance_storage>();
@@ -89,6 +89,14 @@ namespace bq {
         auto& vars = log_global_vars::get();
         bq::platform::scoped_spin_lock lock(vars.instance_storage_lock_);
         return vars.instance_storage_.get();
+    }
+
+    void instance_storage::close_lock_after_fork()
+    {
+        // The parent's descriptor refers to the same open description, so this close releases
+        // nothing; it only stops a long-lived child from keeping the instance locked.
+        platform::unlock_instance_file(lock_handle_);
+        head_ = nullptr;
     }
 
     bq::string instance_storage::logs_dir() const

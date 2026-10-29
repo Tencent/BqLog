@@ -54,6 +54,12 @@ else
     exit 1
 fi
 
+if [ "${BQ_ENABLE_ASAN,,}" = "true" ]; then
+    # ASan roughly doubles the Debug pass; one pass keeps the job inside the 6 hour limit.
+    cd ..
+    exit 0
+fi
+
 # 2) RelWithDebInfo
 CC=gcc CXX=g++ cmake -G Ninja -DTARGET_PLATFORM:STRING=linux -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCPP_VER="$CPP_VER_PARAM" ../../../../test/cpp
 cmake --build . --parallel

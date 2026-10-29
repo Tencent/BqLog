@@ -14,6 +14,23 @@
 #include "bq_log/log/log_worker.h"
 
 namespace bq {
+    const platform_capability_row* platform_capability_rows(uint32_t& out_count)
+    {
+        static const platform_capability_row rows[] = {
+            { "mmap", platform_capability::memory_map, BQ_HAS_MMAP },
+            { "multi_process", platform_capability::multi_process, BQ_HAS_MULTI_PROCESS },
+            { "file_lock", platform_capability::cross_process_file_lock, BQ_HAS_CROSS_PROCESS_FILE_LOCK },
+            { "crash_handler", platform_capability::crash_handler, BQ_HAS_CRASH_HANDLER },
+            { "backtrace", platform_capability::backtrace, BQ_HAS_BACKTRACE },
+            { "dirent", platform_capability::dirent, BQ_HAS_DIRENT },
+            { "thread_name", platform_capability::thread_name, BQ_HAS_THREAD_NAME },
+            { "default_base_dir", platform_capability::default_base_dir, BQ_HAS_DEFAULT_BASE_DIR },
+            { "user_counter", platform_capability::user_counter, BQ_HAS_USER_COUNTER },
+        };
+        out_count = static_cast<uint32_t>(sizeof(rows) / sizeof(rows[0]));
+        return rows;
+    }
+
     log_manager::log_manager()
     {
         phase_ = phase::invalid;
@@ -25,6 +42,19 @@ namespace bq {
 #if !defined(NDEBUG)
         bq::util::log_device_console(log_level::info, "log_manager is constructed");
 #endif
+        {
+            bq::string base_dir;
+            const bool base_dir_ready = bq::platform::try_get_base_dir(0, base_dir);
+            uint32_t capability_count = 0;
+            const platform_capability_row* rows = platform_capability_rows(capability_count);
+            bq::string report;
+            for (uint32_t i = 0; i < capability_count; ++i) {
+                char item[64];
+                snprintf(item, sizeof(item), "%s=%" PRId32 "%s", rows[i].name_, rows[i].supported_, (i + 1 < capability_count) ? " " : "");
+                report += item;
+            }
+            bq::util::log_device_console(log_level::info, "platform capabilities: %s base_dir=%s", report.c_str(), base_dir_ready ? base_dir.c_str() : "<unset>");
+        }
     }
 
     log_manager& log_manager::instance()
@@ -273,6 +303,7 @@ namespace bq {
         }
         bq::util::log_device_console(log_level::info, "BqLog is uninited!");
     }
+
 
     bq::layout& log_manager::get_public_layout()
     {

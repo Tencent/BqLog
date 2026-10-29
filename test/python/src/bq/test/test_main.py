@@ -46,6 +46,7 @@ def main():
             raise RuntimeError("Failed to get version")
         # The recovery capability query must be reachable from this wrapper as well.
         print("Recovery capability: " + str(log.get_recovery_capability()))
+        print("Platform capabilities: " + str(log.get_platform_capabilities()))
 
         test_manager.add_test(test_log_1("Test Log Basic"))
         test_manager.add_test(test_log_2("Test Log MultiThread"))

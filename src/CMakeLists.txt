@@ -6,16 +6,8 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../CMake_utils.txt)
 endif()
 
-# A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
-bq_default_target_platform()
-
 set(BUILD_LIB_TYPE "static_lib" CACHE STRING "Choose the build type")
 set_property(CACHE BUILD_LIB_TYPE PROPERTY STRINGS "static_lib" "dynamic_lib" "both")
-
-if(TARGET_PLATFORM STREQUAL "mac" OR TARGET_PLATFORM STREQUAL "ios")
-set(APPLE_LIB_FORMAT "framework" CACHE STRING "Apple build format")
-set_property(CACHE APPLE_LIB_FORMAT PROPERTY STRINGS "framework" "dylib" "a")
-endif()
 
 OPTION(JAVA_SUPPORT "Support Java" OFF)
 OPTION(NODE_API_SUPPORT "Support Node-API(NodeJs)" OFF)
@@ -58,6 +50,18 @@ bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/vers
 
 project(BqLog VERSION ${BQ_VERSION} LANGUAGES CXX)
 BQ_DETECT_ARCH(DETECTED_ARCH)
+
+bq_default_target_platform()
+
+if(TARGET_PLATFORM MATCHES "^(switch|ps4|ps5)$" AND NOT BUILD_LIB_TYPE STREQUAL "static_lib")
+    message(WARNING "TARGET_PLATFORM=${TARGET_PLATFORM} builds a static library only, ignoring BUILD_LIB_TYPE=${BUILD_LIB_TYPE}")
+    set(BUILD_LIB_TYPE "static_lib" CACHE STRING "Choose the build type" FORCE)
+endif()
+
+if(TARGET_PLATFORM STREQUAL "mac" OR TARGET_PLATFORM STREQUAL "ios")
+set(APPLE_LIB_FORMAT "framework" CACHE STRING "Apple build format")
+set_property(CACHE APPLE_LIB_FORMAT PROPERTY STRINGS "framework" "dylib" "a")
+endif()
 
 
 if(NOT DEFINED CPP_VER)

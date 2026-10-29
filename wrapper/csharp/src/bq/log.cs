@@ -153,6 +153,14 @@ namespace bq
         }
 
         /// <summary>
+        /// What the linked library was built with; attach it to a bug report.
+        /// </summary>
+        public static platform_capability get_platform_capabilities()
+        {
+            return (platform_capability)log_invoker.__api_get_platform_capabilities();
+        }
+
+        /// <summary>
         /// If bqLog is stored in a relative path, the base dir is determined by the value of base_dir_type.
         /// This will return the absolute paths corresponding to both scenarios.
         /// </summary>

@@ -55,6 +55,23 @@ namespace bq.def
         no_instance_lock,   // no cross-process file lock to keep a second process out
     }
 
+    /// <summary>
+    /// Bits of log.get_platform_capabilities(): what the linked library was built with.
+    /// </summary>
+    [Flags]
+    public enum platform_capability : uint
+    {
+        memory_map = 1u << 0,           // files can be mapped; crash recovery needs this
+        multi_process = 1u << 1,        // several processes may share one storage directory
+        cross_process_file_lock = 1u << 2, // a second process can be kept out of an instance
+        crash_handler = 1u << 3,        // buffers can be flushed from a crash handler
+        backtrace = 1u << 4,            // stack traces can be collected
+        dirent = 1u << 5,               // directories can be enumerated (expire_time, capacity)
+        thread_name = 1u << 6,          // threads can be named
+        default_base_dir = 1u << 7,     // a writable default directory exists; consoles reset it
+        user_counter = 1u << 8,         // a user mode hardware counter is available
+    }
+
     internal enum log_arg_type_enum
     {
         unsupported_type,

@@ -12,8 +12,11 @@
 // Per-thread hardware counter clock, re-anchored to the wall clock every BQ_FAST_CLOCK_RESYNC_INTERVAL_MS.
 #include "bq_common/bq_common_public_include.h"
 #include "bq_common/platform/atomic/atomic.h"
-#if defined(BQ_MSVC)
+#if defined(BQ_MSVC) && !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <intrin.h>
+#endif
+#if defined(BQ_IOS) && !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
+#include <mach/mach_time.h>
 #endif
 #if defined(BQ_MSVC) && defined(BQ_ARM_64)
 // ARM64_SYSREG encodings from winnt.h, without including windows.h
@@ -26,7 +29,7 @@
 #define BQ_FAST_CLOCK_RESYNC_INTERVAL_MS 1000
 #endif
 
-#if defined(BQ_ARM_64) || defined(BQ_X86_64)
+#if (defined(BQ_ARM_64) || defined(BQ_X86_64)) && BQ_HAS_USER_COUNTER
 #define BQ_FAST_CLOCK_SUPPORTED 1
 #endif
 
@@ -78,7 +81,15 @@ namespace bq {
 
             bq_forceinline uint64_t read_counter()
             {
-#if defined(BQ_ARM_64) && (defined(BQ_GCC) || defined(BQ_CLANG))
+#if defined(BQ_IOS)
+                // Apple guarantees mach_absolute_time, not EL0 access to CNTVCT_EL0: some iOS versions on
+                // older devices trap the MRS below and raise SIGILL, which kills the process on the first
+                // log call (an A9 based iPhone 6s Plus on iOS 15.8 did; newer devices did not). On arm64 the
+                // timebase keeps the same 24 MHz tick, so the counter semantics are unchanged.
+                // TODO: probe the MRS once at initialization (sigaction + sigsetjmp) and keep the inline
+                // read where the kernel allows it; a call costs about 4 ns, which is the p50 of a log call.
+                return static_cast<uint64_t>(mach_absolute_time());
+#elif defined(BQ_ARM_64) && (defined(BQ_GCC) || defined(BQ_CLANG))
                 uint64_t value;
                 __asm__ volatile("mrs %0, cntvct_el0" : "=r"(value));
                 return value;
@@ -99,11 +110,20 @@ namespace bq {
                 typedef shared_state<> s;
                 uint64_t frequency = s::counter_frequency_.load_relaxed();
                 out_settled = true;
-#if defined(BQ_ARM_64)
+#if defined(BQ_ARM_64) || defined(BQ_IOS)
                 if (frequency) {
                     return frequency;
                 }
-#if defined(BQ_GCC) || defined(BQ_CLANG)
+#if defined(BQ_IOS)
+                // Same reasoning as read_counter: CNTFRQ_EL0 is the companion of CNTVCT_EL0 and is not
+                // documented for EL0 either, so the frequency is derived from the timebase instead
+                // (ns = ticks * numer / denom, hence ticks per second = 1e9 * denom / numer).
+                mach_timebase_info_data_t timebase;
+                if (mach_timebase_info(&timebase) != 0 || timebase.numer == 0 || timebase.denom == 0) {
+                    return 0; // resync() falls back to the system clock
+                }
+                frequency = static_cast<uint64_t>(static_cast<double>(ns_per_second()) * static_cast<double>(timebase.denom) / static_cast<double>(timebase.numer));
+#elif defined(BQ_GCC) || defined(BQ_CLANG)
                 __asm__ volatile("mrs %0, cntfrq_el0" : "=r"(frequency));
 #elif defined(BQ_MSVC)
                 frequency = static_cast<uint64_t>(_ReadStatusReg(BQ_ARM64_SYSREG_CNTFRQ));
@@ -229,7 +249,7 @@ namespace bq {
             if (timespec_get(&ts, TIME_UTC) != TIME_UTC) {
                 return false;
             }
-#elif defined(BQ_POSIX) && !defined(BQ_PS)
+#elif defined(BQ_POSIX)
             struct timespec ts;
             if (clock_gettime(CLOCK_REALTIME, &ts) != 0) {
                 return false;
@@ -238,7 +258,7 @@ namespace bq {
             (void)out_epoch_ns;
             return false;
 #endif
-#if defined(BQ_WIN) || (defined(BQ_POSIX) && !defined(BQ_PS))
+#if defined(BQ_WIN) || defined(BQ_POSIX)
             out_epoch_ns = static_cast<uint64_t>(ts.tv_sec) * fast_clock_detail::ns_per_second() + static_cast<uint64_t>(ts.tv_nsec);
             return true;
 #endif

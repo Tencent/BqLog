@@ -14,6 +14,8 @@ These rules keep BqLog consistent across platforms, compilers and languages. The
 
 Clarity, elegance and modularity come first: code is read far more often than it is written. One subject per file and per class, a narrow interface that keeps its state to itself, and a one-way layer direction (`bq_common` → `bq_log` → wrapper / plugin / tools).
 
+- A `.cpp` includes the header that carries its own name first, before any other include. The Unreal Build Tool validates that order when the plugin compiles the library, so a system header placed first fails the Unreal build.
+
 ## 2. Naming
 
 - `snake_case` for files, types, functions, variables, enum values and members: `meta_registry`, `enable_meta_records`, `run_version()`, `log_level::info`.
@@ -42,7 +44,10 @@ Anything that crosses a binary/library boundary — the C API, the language wrap
 - Macros live in `include/bq_common/platform/macros.h` and start with `BQ_`. A macro that configures one component may live in that component's header (`BQ_LOG_META_SEGMENT_SIZE`), still `BQ_`-prefixed.
 - Platform, compiler and architecture detection goes through the macros defined in `macros.h` — `BQ_WIN`/`BQ_WIN64`, `BQ_APPLE`/`BQ_MAC`/`BQ_IOS`, `BQ_LINUX`, `BQ_UNIX`, `BQ_POSIX`, `BQ_ANDROID`, `BQ_OHOS`, `BQ_PS`, `BQ_MSVC`/`BQ_GCC`/`BQ_CLANG`, `BQ_ARM*`/`BQ_X86*`. Do not test raw compiler macros (`_WIN32`, `__APPLE__`, `__sun`, `_MSC_VER`) and do not define a platform macro of your own.
 - The only exception is a feature macro that must be defined before the first system header is included (`_GNU_SOURCE` at the top of `src/bq_common/platform/posix_misc.cpp`); keep such a case in one place.
-- Test for the availability of a feature, not for a platform, whenever possible: `#if defined(F_OFD_SETLK)`, then `#if defined(LOCK_EX) && defined(LOCK_NB)`, as in `try_lock_instance_file`.
+- Platform detection uses only what the compiler and the toolchain already define, plus probes this header can run itself (`__has_include`, architecture). It must never need a `BQ_*` platform macro supplied by an external build: the library ships as source and is dropped into arbitrary projects that know nothing about our switches.
+- An external `-D` exists for the build and the tests, not for identification: it picks the toolchain, names the target platform for the build scripts, or turns on a degraded test configuration. Which platform the code is compiled for is decided by the compiler and the probes in `macros.h`, never by a definition the integrator has to remember.
+- Test for the availability of a feature, not for a platform. A header that may be absent is probed once and turned into a `BQ_HAS_*` switch, as `BQ_HAS_DIRENT` and `BQ_HAS_EXECINFO` do in `macros.h`; a symbol that only goes missing at link time is probed where it is called: `#if defined(F_OFD_SETLK)`, then `#if defined(LOCK_EX) && defined(LOCK_NB)`, as in `try_lock_instance_file`.
+- A system header enters in exactly two places: in an ordinary header, inside `#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)`; in a module entry (`*.cppm` and the generator template), only by including `module_system_headers.h` from that library's root, never by copying its list. Add or remove a system header in that one file, then build every module entry. `macros.h` is the one exception: it supplies the system headers its platform probe needs and comes first in the fragment.
 - Use inline functions and templates instead of function-like macros wherever the language allows it.
 
 ## 6. No C++ standard library in the library

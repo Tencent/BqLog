@@ -243,13 +243,6 @@ namespace bq {
         bool seek(const file_handle& handle, seek_option opt, int64_t offset);
 
         /// <summary>
-        /// set file write exclusive
-        /// </summary>
-        /// <param name="handle"></param>
-        /// <returns>true if set success, false if file does not exist or has already be locked by another process</returns>
-        bool lock_file(const file_handle& handle);
-
-        /// <summary>
         /// read text data from file.
         /// </summary>
         /// <param name="handle">file handle</param>
@@ -275,6 +268,12 @@ namespace bq {
         /// <param name="handle">file handle</param>
         /// <returns>true means call this function without any error</returns>
         bool close_file(file_handle& handle);
+
+        /// <summary>
+        /// for a forked child: drops the descriptors it inherited, without flushing them and without
+        /// releasing a lock the parent still holds. Every handle copied before the fork turns invalid.
+        /// </summary>
+        void discard_all_after_fork();
 
         /// <summary>
         /// get size of file by file handle

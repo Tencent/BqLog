@@ -51,6 +51,11 @@ namespace bq {
         return api::__api_get_recovery_capability();
     }
 
+    inline uint32_t log::get_platform_capabilities()
+    {
+        return api::__api_get_platform_capabilities();
+    }
+
     inline void log::enable_auto_crash_handle()
     {
         api::__api_enable_auto_crash_handler();

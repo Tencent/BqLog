@@ -30,6 +30,7 @@ public class BqLog : ModuleRules
         });
 
         ConfigureSourceBuild();
+        ConfigureConsolePlatformMacros(Target);
         ConfigurePrebuilt(Target);
         //OptimizeCode = CodeOptimization.Never;
         //bUseUnity = false;
@@ -54,6 +55,23 @@ public class BqLog : ModuleRules
         if (Directory.Exists(coreSrcDir))
         {
             PrivateIncludePaths.Add(coreSrcDir);
+        }
+    }
+
+    private void ConfigureConsolePlatformMacros(ReadOnlyTargetRules Target)
+    {
+        string platform = Target.Platform.ToString();
+        if (platform == "PS4")
+        {
+            PublicDefinitions.Add("__ORBIS__=1");
+        }
+        else if (platform == "PS5")
+        {
+            PublicDefinitions.Add("__PROSPERO__=1");
+        }
+        else if (platform == "Switch")
+        {
+            PublicDefinitions.Add("NN_NINTENDO_SDK=1");
         }
     }
 

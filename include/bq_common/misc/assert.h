@@ -18,5 +18,7 @@
 //
 
 #ifndef BQ_SRC
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <assert.h>
+#endif
 #endif

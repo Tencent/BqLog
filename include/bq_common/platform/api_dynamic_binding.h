@@ -24,15 +24,19 @@
 #endif
 
 #if defined(BQ_WIN)
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdint.h>
+#endif
 struct HINSTANCE__;
 #elif defined(BQ_POSIX)
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <dlfcn.h>
+#endif
 #else
 #error "bq api dynamic binding is not supported on this platform"
 #endif
 
-#if defined(BQ_MSVC)
+#if defined(BQ_MSVC) && !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <intrin.h>
 #endif
 

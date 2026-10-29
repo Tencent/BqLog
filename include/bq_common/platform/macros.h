@@ -51,11 +51,18 @@
 #endif
 #endif
 #endif
-#elif defined(__ORBIS__)
+#elif defined(__ORBIS__) || defined(__PROSPERO__) || defined(__Prospero__)
 #define BQ_PS 1
 #define BQ_POSIX 1
-#elif defined(__Prospero__)
-#define BQ_PS 1
+#if defined(__ORBIS__)
+#define BQ_PS4 1
+#else
+#define BQ_PS5 1
+#endif
+#elif defined(__SWITCH__) || defined(NN_NINTENDO_SDK) || defined(NN_BUILD_TARGET_PLATFORM_NX)
+// Not predefined by the compiler: devkitPro passes __SWITCH__, the Nintendo SDK the NN_ macros.
+// After Windows on purpose: an SDK build that also has _WIN32 runs on a PC and needs the Win32 backend.
+#define BQ_SWITCH 1
 #define BQ_POSIX 1
 #elif defined(__linux__)
 #define BQ_LINUX 1
@@ -65,8 +72,16 @@
 #define BQ_UNIX 1
 #elif defined(_POSIX_VERSION)
 #define BQ_POSIX 1
-#else
+#elif defined(__aarch64__) && defined(__ELF__) && defined(__has_include)
+// Bare-metal aarch64 that was not told it targets Switch: only libnx ships <switch.h> there.
+#if __has_include(<switch.h>)
+#define BQ_SWITCH 1
+#define BQ_POSIX 1
+#endif
+#endif
 
+#if !defined(BQ_WIN) && !defined(BQ_POSIX)
+#error "BqLog: the toolchain did not define a platform this header recognizes"
 #endif
 
 #ifdef __clang__
@@ -401,3 +416,141 @@
 #else
 #define BQ_API_DEF(return_type, name, parameters, arguments) BQ_API return_type name parameters
 #endif
+
+// Each switch guards the #include, the body and every symbol reference, and -D can force it.
+//
+// A console gives up what a desktop takes for granted: Horizon maps memory but never files,
+// a title is the only process on its storage, the game mounts that storage instead of the
+// path being guessed, thread naming goes through the SDK, and a kernel may trap user mode
+// reads of the cycle counter.
+
+#if !defined(BQ_HAS_MMAP)
+#if defined(BQ_SWITCH)
+#define BQ_HAS_MMAP 0
+#else
+#define BQ_HAS_MMAP 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_MULTI_PROCESS)
+#if defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_MULTI_PROCESS 0
+#else
+#define BQ_HAS_MULTI_PROCESS 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_CROSS_PROCESS_FILE_LOCK)
+#if defined(BQ_WIN) || (defined(BQ_POSIX) && BQ_HAS_MULTI_PROCESS)
+#define BQ_HAS_CROSS_PROCESS_FILE_LOCK 1
+#else
+#define BQ_HAS_CROSS_PROCESS_FILE_LOCK 0
+#endif
+#endif
+
+#if !defined(BQ_HAS_FORK)
+#if defined(BQ_WIN) || defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_FORK 0
+#else
+#define BQ_HAS_FORK 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_CRASH_HANDLER)
+#if defined(BQ_POSIX) && !defined(BQ_PS) && !defined(BQ_SWITCH)
+#define BQ_HAS_CRASH_HANDLER 1
+#else
+#define BQ_HAS_CRASH_HANDLER 0
+#endif
+#endif
+
+#if !defined(BQ_HAS_BACKTRACE)
+#if defined(BQ_WIN) || defined(BQ_ANDROID) || defined(BQ_IOS) || defined(BQ_OHOS)
+#define BQ_HAS_BACKTRACE 1
+#elif defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_BACKTRACE 0
+#elif defined(__has_include)
+#if __has_include(<execinfo.h>)
+#define BQ_HAS_BACKTRACE 1
+#else
+#define BQ_HAS_BACKTRACE 0
+#endif
+#else
+#define BQ_HAS_BACKTRACE 0
+#endif
+#endif
+
+#if !defined(BQ_HAS_EXECINFO)
+// Android, iOS and OHOS walk the stack in their own platform file.
+#if BQ_HAS_BACKTRACE && defined(BQ_POSIX) && !defined(BQ_ANDROID) && !defined(BQ_IOS) && !defined(BQ_OHOS)
+#define BQ_HAS_EXECINFO 1
+#else
+#define BQ_HAS_EXECINFO 0
+#endif
+#endif
+
+#if !defined(BQ_HAS_DIRENT)
+#if defined(BQ_WIN) || defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_DIRENT 1
+#elif defined(__has_include)
+#if __has_include(<dirent.h>)
+#define BQ_HAS_DIRENT 1
+#else
+#define BQ_HAS_DIRENT 0
+#endif
+#else
+#define BQ_HAS_DIRENT 0
+#endif
+#endif
+
+#if !defined(BQ_HAS_THREAD_NAME)
+#if defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_THREAD_NAME 0
+#else
+#define BQ_HAS_THREAD_NAME 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_DEFAULT_BASE_DIR)
+#if defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_DEFAULT_BASE_DIR 0
+#else
+#define BQ_HAS_DEFAULT_BASE_DIR 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_POSIX_MEMALIGN)
+#if defined(BQ_WIN) || defined(BQ_SWITCH)
+#define BQ_HAS_POSIX_MEMALIGN 0
+#else
+#define BQ_HAS_POSIX_MEMALIGN 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_FDATASYNC)
+#if defined(BQ_WIN) || defined(BQ_APPLE) || defined(BQ_SWITCH)
+#define BQ_HAS_FDATASYNC 0
+#else
+#define BQ_HAS_FDATASYNC 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_GETPAGESIZE)
+#if defined(BQ_SWITCH)
+#define BQ_HAS_GETPAGESIZE 0
+#else
+#define BQ_HAS_GETPAGESIZE 1
+#endif
+#endif
+
+#if !defined(BQ_HAS_USER_COUNTER)
+#if defined(BQ_PS) || defined(BQ_SWITCH)
+#define BQ_HAS_USER_COUNTER 0
+#else
+#define BQ_HAS_USER_COUNTER 1
+#endif
+#endif
+
+// newlib (devkitA64) has no SSIZE_MAX.
+#define BQ_SIZE_MAX (static_cast<size_t>(~static_cast<size_t>(0)))
+#define BQ_SSIZE_MAX (BQ_SIZE_MAX >> 1)

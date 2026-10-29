@@ -16,7 +16,9 @@
  * \date 2022/09/10
  *
  */
+#if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <string.h>
+#endif
 #include "bq_common/misc/assert.h"
 #include "bq_common/types/type_tools.h"
 #include "bq_common/types/hash_map_def.h"

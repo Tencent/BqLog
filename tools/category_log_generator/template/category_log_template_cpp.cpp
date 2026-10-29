@@ -448,28 +448,10 @@ namespace bq {
  */
 module;
 
-// The system headers the class is written in terms of, listed exactly as bq.log.cppm lists them:
-// they belong to the global module, and keeping them in the global module fragment also keeps
-// their include directives out of the purview (clang -Winclude-angled-in-module-purview).
-#include <ctype.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <stdarg.h>
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
-#include <wchar.h>
-
-#define BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED
-
-// A macro is not exported by a module, so the language-level macros the header uses
-// (BQ_CPP_17, BQ_CPP_20, bq_forceinline, BQ_EBCO) come from this macro-only header.
-#include "bq_common/platform/macros.h"
+// The system headers the class is written in terms of, plus the language-level macros the header
+// uses (BQ_CPP_17, BQ_CPP_20, bq_forceinline, BQ_EBCO): a macro is not exported by a module, so
+// they come from macros.h inside that one list, never from a list copied here.
+#include "bq_log/module_system_headers.h"
 
 export module ${MODULE_NAME};
 

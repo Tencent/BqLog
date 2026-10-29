@@ -108,6 +108,15 @@ namespace bq {
         __test_result_##group_name &= result__##test_type_name.is_all_pass();          \
     }
 
+// Runs the group only where the platform provides what it exercises; the degraded CI
+// configuration reports why it was skipped instead of failing for an absent capability.
+#define TEST_GROUP_IF(cond, group_name, name_space, test_type_name)                                     \
+    if (cond) {                                                                                         \
+        TEST_GROUP(group_name, name_space, test_type_name);                                             \
+    } else {                                                                                            \
+        test_output_param(bq::log_level::info, "SKIP %s: capability not available\n", #test_type_name); \
+    }
+
 #define TEST_GROUP_END(group_name)                                                                                                                                                                                                                              \
     if (__test_result_##group_name) {                                                                                                                                                                                                                           \
         test_output_param(bq::log_level::info, "--------------------------------ALL TEST CASES OF GROUP %s IS PASSED!--------------------------------\n----------------------------Test %s End------------------------------------", #group_name, #group_name); \
