@@ -52,20 +52,6 @@ namespace bq {
         }
     }
 
-    // A forked child keeps nothing of the parent's runtime: its descriptors are closed (which
-    // releases no lock), its mappings lose access, and both collections start over.
-    static void on_fork_in_child()
-    {
-        bq::file_manager::instance().discard_all_after_fork();
-        bq::memory_map::protect_all_after_fork();
-        auto& vars = log_global_vars::get();
-        if (vars.instance_storage_) {
-            vars.instance_storage_->close_lock_after_fork();
-        }
-        common_global_vars::reinit_after_fork();
-        log_global_vars::reinit_after_fork();
-    }
-
     log_global_vars::log_global_vars()
 #if defined(BQ_NAPI)
         : console_callback_dispatcher_(console_callback_handler)
@@ -74,13 +60,6 @@ namespace bq {
 #if defined(BQ_JAVA)
         platform::jni_onload_register register_(&log_global_vars::jni_onload_callback);
 #endif
-        // The collection is constructed again in a forked child, but the handler it inherits is
-        // still registered there, so it must not be chained twice.
-        static bool fork_handler_registered = false;
-        if (!fork_handler_registered) {
-            fork_handler_registered = true;
-            platform::register_after_fork_child_handler(&on_fork_in_child);
-        }
     }
 
 }

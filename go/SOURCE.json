@@ -1,7 +1,7 @@
 {
-  "version": "2.7.2",
+  "version": "2.7.3",
   "module": "github.com/Tencent/BqLog/go/v2",
-  "source_commit": "967f837ad9885fda6ea22a453e0481c4eb6e639e",
+  "source_commit": "86e523215af022d5b7098a8e7dc3b18e38179a5f",
   "sources": [
     {
       "path": "include/bq_common/bq_common_public_include.h",
@@ -49,7 +49,7 @@
     },
     {
       "path": "include/bq_common/platform/macros.h",
-      "sha256": "8292a9c4bc65b01a0e12c15d319031e9e99982f36aa93836e403047420386761"
+      "sha256": "dc41807b364d263cafb61a88ee27ea5e1bc2ac6551a987188bbdb13d503c74f1"
     },
     {
       "path": "include/bq_common/types/allocator.h",
@@ -197,11 +197,11 @@
     },
     {
       "path": "src/bq_common/global/common_vars.cpp",
-      "sha256": "fcc882dc1992fa5ff534416ac3067641d92e0e76aa938c934986d69bc95de3e9"
+      "sha256": "3a58be098e7e2c3601243ba6702a0901789cacb50659ad35595aa671b8cc19b0"
     },
     {
       "path": "src/bq_common/global/common_vars.h",
-      "sha256": "2a656ef3cbf0e2d1c4966e503c93ef36a1fcc7fe28bc6dc1a5fcbac94f82fd5a"
+      "sha256": "4fc2e500b6768b2220bbae19953969c59c86e51611cd8fc7bc29e2f7c2651745"
     },
     {
       "path": "src/bq_common/platform/android_misc.cpp",
@@ -221,11 +221,11 @@
     },
     {
       "path": "src/bq_common/platform/io/memory_map.h",
-      "sha256": "8fb9ca0c8cb070eae51d46a2d4a16a13e65af44831b75ce0d9c5a467ea3d44aa"
+      "sha256": "225516d19ddbb0394b12caa7d74c464f58ca8a746c196c7a121134d043c60be2"
     },
     {
       "path": "src/bq_common/platform/io/memory_map_posix.cpp",
-      "sha256": "dba7bdf0e66e0855c5b1151f5b41f68ac6ce06896274bdf7dfe240377faf402e"
+      "sha256": "306f67b40704bcaeef48938398bb91629b865cbba2721d4d765fda0a2c445a2a"
     },
     {
       "path": "src/bq_common/platform/io/memory_map_posix.h",
@@ -233,7 +233,7 @@
     },
     {
       "path": "src/bq_common/platform/io/memory_map_win.cpp",
-      "sha256": "b4304f6e443320ce37bc2ad4d491ead35c346804dd32b6dfa2d6262ed0cce0a7"
+      "sha256": "28c7cf2d0ae52dd16e069779c1a951346c53b2c74909c8666a72d5e7dd833cbd"
     },
     {
       "path": "src/bq_common/platform/io/memory_map_win.h",
@@ -297,11 +297,11 @@
     },
     {
       "path": "src/bq_common/platform/platform_misc.h",
-      "sha256": "6e12053ed352049aa85303e3476124f630bf60c0569f1fd96ccfdcf68672c25e"
+      "sha256": "f98c7e07306638ecbd46f255d7d0ee889a7f3c5f4d4dc68648bcb65ccb929d4c"
     },
     {
       "path": "src/bq_common/platform/posix_misc.cpp",
-      "sha256": "7d68e534cb4199adc966ebf38559f3c21a003ff7b500b2a68c7d1784e929ff35"
+      "sha256": "0f85e10e45f53cd3cc46b2804c61e96c73e4170679cab375bce71f2c04fa9073"
     },
     {
       "path": "src/bq_common/platform/posix_misc.h",
@@ -413,7 +413,7 @@
     },
     {
       "path": "src/bq_common/platform/win64_misc.cpp",
-      "sha256": "f97c6cbd2072131168752db3f6de2a11c204dc825de300b3f1f72feae8a9eb83"
+      "sha256": "052acdf538e472049da4216d60f0905a6401b626765ff6c9e62414369f377e75"
     },
     {
       "path": "src/bq_common/platform/win64_misc.h",
@@ -429,11 +429,11 @@
     },
     {
       "path": "src/bq_common/utils/file_manager.cpp",
-      "sha256": "f8d447ee63a5ce64074b84ae4ce618c90487e13e46c264ff7527c153e89e7e74"
+      "sha256": "5a895e52872b772d72f02d43dc6b2b7af8ea080416689951f7c6d467fba681fd"
     },
     {
       "path": "src/bq_common/utils/file_manager.h",
-      "sha256": "a7344a0ec2c63f9d111e03fa68065434d8c25aef1dbdbbb3f57324be0997ed0a"
+      "sha256": "750cd9109eee9d201805f1971530180f36a35a2ac30b3b29228fbb95a864536d"
     },
     {
       "path": "src/bq_common/utils/property.cpp",
@@ -505,7 +505,7 @@
     },
     {
       "path": "src/bq_log/global/log_vars.cpp",
-      "sha256": "e6a8522b0c0e7acae2bfb1023c45917ad520344265203173f5fc589b75e7ee98"
+      "sha256": "ec0bad219ec51fabc424ae06ce42a6024baa2ad3c784489792cbc79449cd7e53"
     },
     {
       "path": "src/bq_log/global/log_vars.h",
@@ -513,7 +513,7 @@
     },
     {
       "path": "src/bq_log/global/version.cpp",
-      "sha256": "befa0e777aa7d1dc91acdba441a8be68b4133c47d9e0f51c7d5678e81875b17d"
+      "sha256": "770a0421eb2e366539c083c5e506581ebce0fb453f541da0f1dbecf5d2e4cb24"
     },
     {
       "path": "src/bq_log/global/version.h",
@@ -745,11 +745,11 @@
     },
     {
       "path": "src/bq_log/types/storage/instance_storage.cpp",
-      "sha256": "f02afdb7eff55973358fffe06ef0f29b213db1cf145f9133aeaf1714431f640a"
+      "sha256": "6bc1b3cdf3c33b1c5d8a81e71c9c3eeb176c7f723d1c4cffd8d70dba44f12920"
     },
     {
       "path": "src/bq_log/types/storage/instance_storage.h",
-      "sha256": "094f991177660afca8dea350e55124160f330a4eff45dfc7f794678a7badb651"
+      "sha256": "38ffb91c9791ea63eb191b4bb068b6dde503e6d51fc182037162233f4e27e82a"
     },
     {
       "path": "src/bq_log/types/storage/log_storage.cpp",

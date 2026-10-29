@@ -35,10 +35,6 @@ namespace bq {
         // nullptr if not claimed yet (no recovery log created)
         static instance_storage* get();
 
-        // A forked child closes its copy of the lock descriptor, which releases nothing the parent
-        // holds; it then drops this claim with the rest of the runtime.
-        void close_lock_after_fork();
-
         // the version number every recovery log_buffer of this run shares; bumped once per acquire()
         uint16_t run_version() const { return head_->run_version; }
         // monotonically increasing run counter; never wraps

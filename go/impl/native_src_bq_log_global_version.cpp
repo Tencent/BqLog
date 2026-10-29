@@ -10,7 +10,7 @@
  */
 #include "native_src_bq_log_global_version.h"
 namespace bq {
-    const char* const BQ_LOG_VERSION = "2.7.2";
+    const char* const BQ_LOG_VERSION = "2.7.3";
 
     const char* get_bq_log_version()
     {

@@ -91,14 +91,6 @@ namespace bq {
         return vars.instance_storage_.get();
     }
 
-    void instance_storage::close_lock_after_fork()
-    {
-        // The parent's descriptor refers to the same open description, so this close releases
-        // nothing; it only stops a long-lived child from keeping the instance locked.
-        platform::unlock_instance_file(lock_handle_);
-        head_ = nullptr;
-    }
-
     bq::string instance_storage::logs_dir() const
     {
         return root_ + "/logs";

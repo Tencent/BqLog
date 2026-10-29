@@ -61,10 +61,6 @@ namespace bq {
 
         static void release_memory_map(memory_map_handle& handle);
 
-        // A forked child gives up every mapping it inherited: the pages are the parent's, so a write
-        // through them would land in the parent's file. Touching one after the fork traps instead.
-        static void protect_all_after_fork();
-
     private:
         static size_t get_real_map_offset(size_t offset)
         {

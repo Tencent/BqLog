@@ -448,6 +448,10 @@
 #endif
 #endif
 
+// Whether the platform has fork(). Only the tests use it, to run a check in a child process.
+// BqLog itself has no fork handling: a child that keeps running must not touch what it inherited
+// (the instance claim and the log objects belong to the parent), and a child that execs inherits
+// nothing, because every descriptor is opened close-on-exec and exec drops the mappings.
 #if !defined(BQ_HAS_FORK)
 #if defined(BQ_WIN) || defined(BQ_PS) || defined(BQ_SWITCH)
 #define BQ_HAS_FORK 0
