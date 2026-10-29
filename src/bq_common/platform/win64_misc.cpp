@@ -253,13 +253,6 @@ namespace bq {
             close_descriptor(handle);
         }
 
-        bool register_after_fork_child_handler(void (*handler)())
-        {
-            // CreateProcess starts a new image with no inherited state; there is nothing to drop.
-            (void)handler;
-            return false;
-        }
-
         bq::string get_lexically_path(const bq::string& original_path)
         {
             bq::string result;

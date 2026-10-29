@@ -499,4 +499,6 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 
 ## 7. 多进程与 fork
 
-多个进程可以写同一个目录：每个进程认领自己的实例。`fork()` 之后，子进程必须先 `create_log` 一次才能继续打日志；从父进程继承的日志对象不可用。
+多个进程可以写同一个目录：每个进程认领自己的实例。
+
+BqLog 是多线程运行时，不支持 `fork()`：`fork` 之后的子进程必须马上 `exec` 一个干净的新进程，才能再使用 BqLog。
