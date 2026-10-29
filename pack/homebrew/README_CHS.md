@@ -10,6 +10,8 @@ brew install bqlog
 
 会安装静态库和动态库、头文件（含 C++20 模块 `bq_log/bq.log.cppm`）、`find_package` / pkg-config 文件，以及 `BqLog_CategoryLogGenerator`、`BqLog_LogDecoder` 两个工具。
 
+本 formula 只安装 C/C++ 核心：C 与 C++ 接口以及命令行工具。Java、C#、Node.js、Python 的 wrapper 不在其中 —— 它们各自需要一份带对应语言选项编译的核心库，因此走各自的包管理器发行。各语言的获取渠道见[集成指南](../../docs/INTEGRATION_GUIDE_CHS.md)。
+
 ```cmake
 find_package(BqLog REQUIRED)
 target_link_libraries(app PRIVATE bqlog::BqLogShared)   # 或 bqlog::BqLogStatic

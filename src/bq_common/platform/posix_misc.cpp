@@ -279,16 +279,6 @@ namespace bq {
             in_out_file_handle = invalid_platform_file_handle;
         }
 
-        bool register_after_fork_child_handler(void (*handler)())
-        {
-#if BQ_HAS_FORK
-            return ::pthread_atfork(nullptr, nullptr, handler) == 0;
-#else
-            (void)handler;
-            return false;
-#endif
-        }
-
         bq::string get_lexically_path(const bq::string& original_path)
         {
             bq::string result;

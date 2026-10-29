@@ -21,51 +21,6 @@ namespace bq {
         return common_global_vars::get().page_size_;
     }
 
-#if BQ_HAS_FORK
-    // Every live mapping, so a forked child can give up all of them at once. Zero initialized: a
-    // mapping may be created before any constructor in this file runs.
-    struct mapping_record {
-        void* address_;
-        size_t size_;
-    };
-    static bq::platform::spin_lock_zero_init mappings_lock_;
-    static bq::array<mapping_record>* mappings_ = nullptr;
-
-    static void remember_mapping(void* address, size_t size)
-    {
-        bq::platform::scoped_spin_lock lock(mappings_lock_);
-        if (!mappings_) {
-            mappings_ = new bq::array<mapping_record>();
-        }
-        // reuse a freed slot: a process that never forks must not grow this list for ever
-        for (decltype(mappings_->size()) i = 0; i < mappings_->size(); ++i) {
-            if ((*mappings_)[i].address_ == nullptr) {
-                (*mappings_)[i].address_ = address;
-                (*mappings_)[i].size_ = size;
-                return;
-            }
-        }
-        mapping_record record;
-        record.address_ = address;
-        record.size_ = size;
-        mappings_->push_back(record);
-    }
-
-    static void forget_mapping(void* address)
-    {
-        bq::platform::scoped_spin_lock lock(mappings_lock_);
-        if (!mappings_) {
-            return;
-        }
-        for (decltype(mappings_->size()) i = 0; i < mappings_->size(); ++i) {
-            if ((*mappings_)[i].address_ == address) {
-                (*mappings_)[i].address_ = nullptr;
-                return;
-            }
-        }
-    }
-#endif
-
     bool memory_map::is_platform_support()
     {
         static_assert(sizeof(size_t) <= sizeof(memory_map_handle::platform_data_), "memory_map_handle::platform_data_ size not enough");
@@ -154,9 +109,6 @@ namespace bq {
         result.file_ = map_file;
         result.size_ = size;
         *(size_t*)result.platform_data_ = real_mapping_size;
-#if BQ_HAS_FORK
-        remember_mapping(result.real_data_, real_mapping_size);
-#endif
         return result;
     }
 
@@ -175,9 +127,6 @@ namespace bq {
         if (!handle.has_been_mapped()) {
             return;
         }
-#if BQ_HAS_FORK
-        forget_mapping(handle.real_data_);
-#endif
         if (0 != munmap(handle.real_data_, *(const size_t*)handle.platform_data_)) {
             bq::util::log_device_console(log_level::error, "release_memory_map file failed, error_code:%" PRId32, errno);
         }
@@ -187,28 +136,6 @@ namespace bq {
         handle.real_data_ = nullptr;
         handle.size_ = 0;
         handle.error_code_ = 0;
-    }
-
-    void memory_map::protect_all_after_fork()
-    {
-#if BQ_HAS_FORK
-        // No lock: the child has one thread, and whoever held it is gone. mprotect keeps the mapping
-        // in place, so releasing it later still works and nothing is written back to the file.
-        mappings_lock_.unlock();
-        if (!mappings_) {
-            return;
-        }
-        for (decltype(mappings_->size()) i = 0; i < mappings_->size(); ++i) {
-            mapping_record& record = (*mappings_)[i];
-            if (record.address_ == nullptr) {
-                continue;
-            }
-            if (0 != mprotect(record.address_, record.size_, PROT_NONE)) {
-                bq::util::log_device_console(log_level::error, "protect inherited memory map failed, error code:%" PRId32, errno);
-            }
-        }
-        mappings_->clear();
-#endif
     }
 }
 #elif defined(BQ_POSIX)
@@ -247,10 +174,6 @@ namespace bq {
         handle.real_data_ = nullptr;
         handle.size_ = 0;
         handle.error_code_ = 0;
-    }
-
-    void memory_map::protect_all_after_fork()
-    {
     }
 }
 #endif

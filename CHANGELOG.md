@@ -2,6 +2,9 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.7.3] - 2026-10-29
+- **Bug fix**: removed the `fork()` handling. BqLog is multi-threaded, so it supports only a `fork()` that is followed immediately by `exec()` of a new process; a child must not keep using what it inherited.
+
 ## [v2.7.2] - 2026-10-23
 - **Console platforms**: PlayStation 4, PlayStation 5 and Nintendo Switch support (experimental).
 - **Unreal Engine**: the plugin compiles on the console platforms from the source package, and the prebuilt package no longer lists platforms it has no binaries for.

@@ -136,7 +136,6 @@ namespace bq {
         int32_t close_file(platform_file_handle& in_out_file_handle);
 
         // Drops one reference to the open description and nothing else: no flush, no bookkeeping.
-        // A forked child uses it, because closing that copy releases no lock the parent holds.
         void close_descriptor(platform_file_handle& in_out_file_handle);
 
         int32_t read_file(const platform_file_handle& file_handle, void* target_addr, size_t read_size, size_t& out_real_read_size);
@@ -164,10 +163,6 @@ namespace bq {
         // never deleted: the lock lives in the kernel, so a stale file on disk locks nothing.
         file_lock_result try_lock_instance_file(const char* abs_path, platform_file_handle& out_handle);
         void unlock_instance_file(platform_file_handle& handle);
-
-        // Runs handler in a forked child, before the fork call returns there; false where fork does
-        // not exist. That child has one thread, so a handler must not wait for a lock.
-        bool register_after_fork_child_handler(void (*handler)());
 
         bq::string get_lexically_path(const bq::string& original_path);
 

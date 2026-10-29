@@ -561,4 +561,6 @@ Where:
 
 ## 7. Multi-process and fork
 
-Several processes may write to the same directory: each one claims an instance of its own. After `fork()` the child has to call `create_log` once before it logs again; the log objects it inherited from the parent are not usable.
+Several processes may write to the same directory: each one claims an instance of its own.
+
+BqLog is a multi-threaded runtime and does not support `fork()`: a forked child must `exec` a fresh process before it uses BqLog again.

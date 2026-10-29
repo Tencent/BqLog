@@ -2,6 +2,9 @@
 
 [English](CHANGELOG.md)
 
+## [v2.7.3] - 2026-10-29
+- **问题修复**：去掉对 `fork()` 的错误处理。BqLog 是多线程的，只支持 `fork()` 之后立即 `exec()` 出新进程的用法；子进程不能继续使用从父进程继承的日志对象。
+
 ## [v2.7.2] - 2026-10-23
 - **主机平台**：支持 PlayStation 4、PlayStation 5 与 Nintendo Switch（实验性）。
 - **Unreal Engine**：插件可通过源码包在主机平台编译；预编译包不再声明没有二进制的平台。
