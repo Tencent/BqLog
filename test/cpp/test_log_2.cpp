@@ -444,6 +444,22 @@ namespace bq {
                     }
                 }
                 bq::log::force_flush_all_logs();
+                // The counters are written by whichever thread did the dispatch, so the read below can
+                // land while that thread is still finishing the last chunk - off by one under a loaded
+                // scheduler, which is what this looked like on the NetBSD runners. Flushing again until
+                // the three agree is the same remedy the re-check below always applied; the difference
+                // is that the answer is now taken after it, with a deadline so a record that never
+                // arrives still fails the case instead of spinning.
+                const uint64_t flush_deadline = bq::platform::high_performance_epoch_ms() + 3000;
+                auto flush_counters_agree = []() {
+                    const uint64_t expected = test_force_flush_callback::idx.load_seq_cst();
+                    return expected == test_force_flush_callback::current_idx_sync.load_seq_cst()
+                        && expected == test_force_flush_callback::current_idx_async.load_seq_cst();
+                };
+                while (!flush_counters_agree() && bq::platform::high_performance_epoch_ms() < flush_deadline) {
+                    bq::platform::thread::sleep(5);
+                    bq::log::force_flush_all_logs();
+                }
                 bool force_flush_sync_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_sync.load_seq_cst());
                 bool force_flush_async_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_async.load_seq_cst());
                 result.add_result(force_flush_sync_passed, "force flush test sync total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst());

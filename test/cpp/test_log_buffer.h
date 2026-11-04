@@ -616,11 +616,23 @@ namespace bq {
                 result.add_result(test_buffer.get_groups_count() == 0, "group recycle test, expected left group:0, but: %" PRIu32, test_buffer.get_groups_count());
 #endif
                 test_output_dynamic(bq::log_level::info, "[log buffer] GC...\n");
-                bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS * 2);
+                // A pooled group is only freed once it has been idle for GROUP_NODE_GC_LIFE_TIME_MS
+                // and a read has come in after that, and the collector refuses to run twice inside the
+                // same window (see group_list::garbage_collect). One sleep plus one read is therefore a
+                // bet on where the previous pass happened to land - the emulated BSD runners lost it
+                // with six groups still waiting. Repeating the read until the count settles costs
+                // nothing when it was already zero, and a group that never goes away still fails, just
+                // at the deadline.
                 {
-                    // the read thread frees pooled groups by itself, no explicit garbage_collect() call
-                    auto final_handle = test_buffer.read_chunk();
-                    bq::scoped_log_buffer_handle<bq::log_buffer> scoped_final_handle(test_buffer, final_handle);
+                    const uint64_t gc_deadline = bq::platform::high_performance_epoch_ms()
+                        + (group_list::GROUP_NODE_GC_LIFE_TIME_MS * 5);
+                    while (test_buffer.get_garbage_count() != 0
+                        && bq::platform::high_performance_epoch_ms() < gc_deadline) {
+                        bq::platform::thread::sleep(group_list::GROUP_NODE_GC_LIFE_TIME_MS / 4);
+                        // the read thread frees pooled groups by itself, no explicit garbage_collect() call
+                        auto poll_handle = test_buffer.read_chunk();
+                        bq::scoped_log_buffer_handle<bq::log_buffer> scoped_poll_handle(test_buffer, poll_handle);
+                    }
                 }
                 result.add_result(test_buffer.get_garbage_count() == 0, "group garbage collect test, left:%zu", test_buffer.get_garbage_count());
                 test_output_dynamic(bq::log_level::info, "[log buffer] done.\n");
