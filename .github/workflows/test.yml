@@ -1612,12 +1612,11 @@ jobs:
             # The sparse file in this case starts a segment above 4 GiB, so it only passes where the
             # build really addresses a 64-bit off_t: on x86 this is the check that the large-file
             # definition reached the compiler.
-            if [ "${{ matrix.abi }}" = "x86" ]; then
-              adb shell 'cd /data/local/tmp && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel --large-file-only; echo $? > exit_code_large.txt'
-              adb pull /data/local/tmp/exit_code_large.txt .
-              echo "Large File Test Exit Code: $(cat exit_code_large.txt | xargs)"
-              [ "$(cat exit_code_large.txt | xargs)" = "0" ]
-            fi
+            #
+            # One line on purpose. This runner hands the script to sh -c a line at a time, so a bare
+            # "if ...; then" on a line of its own is already a syntax error - it never reaches the
+            # condition, which is why an indented block here failed on every ABI and not only on x86.
+            if [ "${{ matrix.abi }}" = "x86" ]; then adb shell 'cd /data/local/tmp && TMPDIR=/data/local/tmp ./BqLogUnitTest_rel --large-file-only; echo $? > exit_code_large.txt' && adb pull /data/local/tmp/exit_code_large.txt . && echo "Large File Test Exit Code: $(cat exit_code_large.txt | xargs)" && [ "$(cat exit_code_large.txt | xargs)" = "0" ]; fi
 
   java_wrapper_win64:
     name: java_wrapper (win-${{ matrix.runner.label }}${{ matrix.cc }})
