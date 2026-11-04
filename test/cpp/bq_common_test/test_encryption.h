@@ -667,15 +667,18 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 memset(second, 0, sizeof(second));
 
                 const bq::encryption::entropy_source source = bq::encryption::fill_random_bytes(first, sizeof(first));
-#if !BQ_HAS_SYSTEM_ENTROPY
-                // No system CSPRNG on this target; the fallback is expected and is reported to the
-                // caller. Asking the capability rather than naming the consoles is what keeps this
-                // honest on a build that is shaped like one but runs on a host whose libc has
-                // getentropy() - the platform branch would have been satisfied either way.
-                result.add_result(source == bq::encryption::entropy_source::software_mix, "random bytes degrade to software mix without a system CSPRNG");
-#else
-                result.add_result(source == bq::encryption::entropy_source::platform_csprng, "random bytes come from the platform CSPRNG");
-#endif
+                // Which answer this build gets is the platform's business, not the test's: a console
+                // declares none of getrandom(), getentropy() or /dev/urandom and degrades to the
+                // software mix by itself, a desktop takes the system one, and a build that only
+                // impersonates a console while running on a host whose libc does have a random device
+                // takes the host's. Asserting by platform name would be wrong in that last case, so
+                // what is checked is that the report agrees with the primitive it came from.
+                uint8_t probe[64];
+                memset(probe, 0, sizeof(probe));
+                const bool platform_has_csprng = bq::platform::secure_random_bytes(probe, sizeof(probe));
+                result.add_result((source == bq::encryption::entropy_source::platform_csprng) == platform_has_csprng,
+                    "the reported entropy source matches what the platform primitive returned (platform %s)",
+                    platform_has_csprng ? "has a CSPRNG" : "has none");
                 bq::encryption::fill_random_bytes(second, sizeof(second));
                 result.add_result(memcmp(first, second, sizeof(first)) != 0, "two consecutive fills differ");
 

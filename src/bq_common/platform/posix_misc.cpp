@@ -39,13 +39,10 @@ namespace bq {
 // Where the C library declares getrandom() or getentropy(), one system call fills the buffer and no
 // file is opened. Which of the two a target has is asked of the compiler instead of a version macro
 // (see the probes further down); all this line does is make the declarations visible where the
-// header exists at all. Nothing below is compiled when the platform has no CSPRNG, so the header is
-// not needed there either.
-#if BQ_HAS_SYSTEM_ENTROPY
+// header exists at all.
 #if defined(__has_include)
 #if __has_include(<sys/random.h>)
 #include <sys/random.h>
-#endif
 #endif
 #endif
 
@@ -842,7 +839,6 @@ namespace bq {
         }
 
         namespace {
-#if BQ_HAS_SYSTEM_ENTROPY
             // Whether the C library declares these is a question about declarations, not versions,
             // and it can be asked without naming a platform. The argument type depends on a template
             // parameter, so the call is looked up at instantiation time; a name that is not there is
@@ -914,15 +910,14 @@ namespace bq {
             {
                 return false;
             }
-#endif // BQ_HAS_SYSTEM_ENTROPY
         }
 
-        // One definition for every POSIX target, consoles included, and BQ_HAS_SYSTEM_ENTROPY decides
-        // how it is answered. A console SDK declares neither getrandom() nor getentropy() and has no
-        // /dev/urandom, so those targets report failure here and the caller falls back to the software
-        // mix and warns. Keeping one definition rather than a console stub beside it means there is no
-        // duplicate symbol to keep in step, and the same definition is what a normal build compiles
-        // when the capability is switched off to exercise that fallback.
+        // One definition for every POSIX target, consoles included. A console SDK declares neither
+        // getrandom() nor getentropy() and has no /dev/urandom, so the probes below answer no and this
+        // returns false on its own: the caller derives its keys from the software mix, warns once, and
+        // the title is expected to have called bq::log::set_secure_random_source() before that. No
+        // platform macro is needed to say so - asking the C library is what tells the two apart, and a
+        // separate console definition would only be a second answer to keep in step.
         bool secure_random_bytes(void* buf, size_t size)
         {
             if (!buf || size == 0) {
@@ -933,7 +928,6 @@ namespace bq {
                 return false;
             }
 #endif
-#if BQ_HAS_SYSTEM_ENTROPY
             uint8_t* out = static_cast<uint8_t*>(buf);
             // One system call fills the whole buffer where the C library has one.
             typedef decltype(detects_getrandom<uint8_t>(0)) has_getrandom_t;
@@ -966,12 +960,6 @@ namespace bq {
             }
             close(fd);
             return ok;
-#else
-            // No system CSPRNG on this target. The caller derives what it needs from the software mix
-            // and the appender warns once, so the platform has to be told about it before the first
-            // encrypted log is created rather than being served a key that only looks random.
-            return false;
-#endif // BQ_HAS_SYSTEM_ENTROPY
         }
     }
 }

@@ -862,7 +862,6 @@ namespace bq {
                 return false;
             }
 #endif
-#if BQ_HAS_SYSTEM_ENTROPY
             // The system-preferred RNG needs no CRT feature macro ahead of the includes, and it
             // fills the whole buffer in one call instead of four bytes at a time.
             uint8_t* out = static_cast<uint8_t*>(buf);
@@ -877,11 +876,6 @@ namespace bq {
                 done += chunk;
             }
             return true;
-#else
-            // Switched off by the capability, which is what a console-shaped build does and what the
-            // degraded build uses to exercise the software-mix fallback.
-            return false;
-#endif
         }
 
     }

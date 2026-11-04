@@ -242,9 +242,7 @@ namespace bq {
             bool get_short_write_limit(size_t& out_bytes);
 
             // Makes secure_random_bytes() report failure on a platform that really has a CSPRNG, so
-            // the "no secure source" path can be exercised in a normal build. A build with
-            // BQ_HAS_SYSTEM_ENTROPY at 0 runs that path everywhere without this; the hook is what
-            // covers it on the ordinary jobs, where every host has one.
+            // the "no secure source" path can be exercised where consoles are not available.
             void set_disable_secure_random(bool disable);
             bool get_disable_secure_random();
 

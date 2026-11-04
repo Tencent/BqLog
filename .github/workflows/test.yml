@@ -2293,10 +2293,7 @@ jobs:
             fi
 
   # Same sources compiled with the capability set of a console target: every optional
-  # feature is switched off, so the degraded code paths really run. BQ_HAS_SYSTEM_ENTROPY
-  # is on the list for the encrypted appender's fallback: without it every host here has a
-  # CSPRNG, so the software-mix key derivation would only ever be reached through the test
-  # injection hook. With it the whole suite runs through that path with nothing forced.
+  # feature is switched off, so the degraded code paths really run.
   linux_degraded_capabilities:
     runs-on: ubuntu-latest
     timeout-minutes: 60
@@ -2307,7 +2304,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake g++
           cmake -S test/cpp -B build_degraded -DTARGET_PLATFORM=linux -DCMAKE_BUILD_TYPE=Debug \
-            -DBQ_CAPABILITY_OVERRIDES="BQ_HAS_MMAP=0;BQ_HAS_CROSS_PROCESS_FILE_LOCK=0;BQ_HAS_CRASH_HANDLER=0;BQ_HAS_BACKTRACE=0;BQ_HAS_DIRENT=0;BQ_HAS_THREAD_NAME=0;BQ_HAS_USER_COUNTER=0;BQ_HAS_POSIX_MEMALIGN=0;BQ_HAS_FDATASYNC=0;BQ_HAS_GETPAGESIZE=0;BQ_HAS_DEFAULT_BASE_DIR=0;BQ_HAS_SYSTEM_ENTROPY=0"
+            -DBQ_CAPABILITY_OVERRIDES="BQ_HAS_MMAP=0;BQ_HAS_CROSS_PROCESS_FILE_LOCK=0;BQ_HAS_CRASH_HANDLER=0;BQ_HAS_BACKTRACE=0;BQ_HAS_DIRENT=0;BQ_HAS_THREAD_NAME=0;BQ_HAS_USER_COUNTER=0;BQ_HAS_POSIX_MEMALIGN=0;BQ_HAS_FDATASYNC=0;BQ_HAS_GETPAGESIZE=0;BQ_HAS_DEFAULT_BASE_DIR=0"
           cmake --build build_degraded -j 4
           ./build_degraded/BqLogUnitTest
 

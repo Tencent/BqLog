@@ -421,8 +421,8 @@
 //
 // A console gives up what a desktop takes for granted: Horizon maps memory but never files,
 // a title is the only process on its storage, the game mounts that storage instead of the
-// path being guessed, thread naming goes through the SDK, a kernel may trap user mode
-// reads of the cycle counter, and there is no system CSPRNG to open.
+// path being guessed, thread naming goes through the SDK, and a kernel may trap user mode
+// reads of the cycle counter.
 
 #if !defined(BQ_HAS_MMAP)
 #if defined(BQ_SWITCH)
@@ -552,20 +552,6 @@
 #define BQ_HAS_USER_COUNTER 0
 #else
 #define BQ_HAS_USER_COUNTER 1
-#endif
-#endif
-
-// A title on a console takes its randomness from the platform holder's API, which the application
-// passes in with bq::log::set_secure_random_source(); there is no getrandom(), getentropy() or
-// /dev/urandom to reach on either machine. This is a statement about the platform, not about the
-// linker: with it at 0 the entropy calls are not compiled at all, so a host libc that happens to
-// have them cannot leak into a build that is supposed to behave like a console, and switching it
-// off in a build is how the software-mix fallback gets exercised.
-#if !defined(BQ_HAS_SYSTEM_ENTROPY)
-#if defined(BQ_PS) || defined(BQ_SWITCH)
-#define BQ_HAS_SYSTEM_ENTROPY 0
-#else
-#define BQ_HAS_SYSTEM_ENTROPY 1
 #endif
 #endif
 
