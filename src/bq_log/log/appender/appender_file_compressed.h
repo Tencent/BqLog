@@ -65,7 +65,10 @@ namespace bq {
         };
 
     public:
-        static constexpr uint32_t format_version = 10;
+        // 11 changed what a segment carries and how its payload is encrypted. A v10 file cannot be
+        // read by v11 code and vice versa, so the number is the whole of the check. The value itself
+        // is owned by the segment layer, which also binds it into the key derivation.
+        static constexpr uint32_t format_version = appender_file_binary::format_version;
         static constexpr uint32_t DEFAULT_FORMAT_TEMPLATE_CACHE_MAX_ENTRIES = 100000;
         static constexpr uint32_t DEFAULT_THREAD_INFO_CACHE_MAX_ENTRIES = 2048;
 

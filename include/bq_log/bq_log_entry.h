@@ -30,6 +30,12 @@
 #endif
 
 namespace bq {
+    /// <summary>
+    /// Fills buf with size bytes of cryptographically secure random data and returns true, or
+    /// returns false when it cannot. The library treats a false return as "no source available".
+    /// </summary>
+    typedef bool (*type_func_ptr_secure_random_source)(void* buf, size_t size);
+
     BQ_MODULE_EXPORT_BEGIN
     class log {
     private:
@@ -148,6 +154,23 @@ namespace bq {
         /// to ensure that all data in the buffer is processed after the call.
         /// </summary>
         static void force_flush_all_logs();
+
+        /// <summary>
+        /// Supplies the secure random source used for log encryption keys.
+        /// Console platforms (PS4, PS5, Switch) have no CSPRNG the library can call and their SDK's
+        /// is under NDA, so the application injects one. Without it an encrypted appender still
+        /// works, but its segment keys come from a software mix of clocks, thread ids and addresses
+        /// that anyone holding the file can search, and it warns once when it is created. The
+        /// callback must fill the whole buffer and return true; returning false is treated as
+        /// "no source". Hosts that do have an OS CSPRNG do not need to call this.
+        /// </summary>
+        /// <param name="fn">Callback filling buf with size bytes of cryptographically secure random data, or null to remove it</param>
+        static void set_secure_random_source(bq::type_func_ptr_secure_random_source fn);
+
+        /// <summary>
+        /// True when the platform, or an injected callback, can supply key material from a CSPRNG.
+        /// </summary>
+        static bool has_secure_random_source();
 
         /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output.

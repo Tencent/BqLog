@@ -14,6 +14,7 @@
 #include "bq_log/utils/log_utils.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_types.h"
+#include "bq_log/types/buffer/log_buffer.h"
 
 bq::appender_decode_result bq::appender_decoder_compressed::init_private()
 {
@@ -67,6 +68,55 @@ bq::appender_decode_result bq::appender_decoder_compressed::decode_private()
 uint32_t bq::appender_decoder_compressed::get_binary_format_version() const
 {
     return appender_file_compressed::format_version;
+}
+
+bool bq::appender_decoder_compressed::is_supported_enc_type(appender_file_binary::appender_encryption_type type) const
+{
+    // rsa_aes_xor is a v10 segment. It cannot appear in a file that passed the version check above,
+    // so seeing one means the file is corrupt, not old.
+    return type == appender_file_binary::appender_encryption_type::plaintext
+        || type == appender_file_binary::appender_encryption_type::rsa_kem_chacha;
+}
+
+    bool bq::appender_decoder_compressed::setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start)
+    {
+        bq::encryption::secure_zero(&seg_key_, sizeof(seg_key_));
+        seg_chacha_rounds_ = 0;
+        seg_enc_type_ = head.enc_type;
+        seg_payload_base_ = seg_start + appender_file_binary::plaintext_payload_base_offset;
+        if (head.enc_type == appender_file_binary::appender_encryption_type::plaintext) {
+            return true;
+        }
+        if (private_key_.n_.size() != 256) {
+            bq::util::log_device_console(bq::log_level::error, "It's an encrypted log file, private key is not specified");
+            return false;
+        }
+        appender_file_binary::appender_segment_encryption_head enc_head;
+        const size_t read_size = read_from_file_directly(&enc_head, sizeof(enc_head));
+        if (read_size < sizeof(enc_head)) {
+            bq::util::log_device_console(bq::log_level::error, "decode log file failed, read segment encryption head failed");
+            return false;
+        }
+        if (!appender_file_binary::derive_segment_key_from_head(enc_head, private_key_, seg_key_, seg_chacha_rounds_)) {
+            return false;
+        }
+        seg_payload_base_ = seg_start + appender_file_binary::encrypted_payload_base_offset;
+        return true;
+    }
+
+bool bq::appender_decoder_compressed::decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos)
+{
+    if (seg_enc_type_ != appender_file_binary::appender_encryption_type::rsa_kem_chacha) {
+        return true;
+    }
+    if (file_pos < seg_payload_base_) {
+        // The chunk would start before the segment's payload, so its keystream offset would wrap. The
+        // read cache never asks for one - a segment switch drops the previous segment's cache - but a
+        // decoder fed a corrupt file must fail cleanly instead of computing that offset.
+        return false;
+    }
+    appender_file_binary::transform_segment_payload(data, size, file_pos - seg_payload_base_, seg_key_, seg_chacha_rounds_);
+    return true;
 }
 
 bq::tuple<bq::appender_decode_result, bq::appender_file_compressed::item_type, bq::appender_decoder_base::read_with_cache_handle> bq::appender_decoder_compressed::read_item_data()
@@ -173,12 +223,21 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_thread_info_te
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, parse_thread_info_template vlq decode error, thread id length exceed data length: thread id data to:%" PRIu32 ", data length:%" PRIu64, read_cursor, static_cast<uint64_t>(read_handle.len()));
         return appender_decode_result::failed_decode_error;
     }
+    const size_t thread_name_len = read_handle.len() - read_cursor;
+    // The writer never exceeds MAX_THREAD_NAME_LEN, and the ext head carries the length in a single
+    // byte that the layout turns into a stack buffer, so a longer name is a corrupt item, not a
+    // thread with an unusual name.
+    if (thread_name_len > bq::log_thread_info::MAX_THREAD_NAME_LEN) {
+        bq::util::log_device_console(log_level::error, "decode compressed log file failed, thread name length %" PRIu64 " exceeds %u",
+            static_cast<uint64_t>(thread_name_len), static_cast<unsigned>(bq::log_thread_info::MAX_THREAD_NAME_LEN));
+        return appender_decode_result::failed_decode_error;
+    }
     decoder_thread_info_template& info = thread_info_templates_map_[thread_info_idx];
     info.thread_id = thread_id;
     info.thread_name.clear();
-    info.thread_name.fill_uninitialized(read_handle.len() - read_cursor);
+    info.thread_name.fill_uninitialized(thread_name_len);
     if (info.thread_name.size() > 0) {
-        memcpy(&info.thread_name[0], read_handle.data() + read_cursor, read_handle.len() - read_cursor);
+        memcpy(&info.thread_name[0], read_handle.data() + read_cursor, thread_name_len);
     }
     return appender_decode_result::success;
 }

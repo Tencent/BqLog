@@ -1,0 +1,75 @@
+{
+  "format_version": 9,
+  "source_tag": "Release_2.3.1",
+  "source_commit": "eafdb24b",
+  "build_command": "cmake <tag>/tools/legacy_gen -DTARGET_PLATFORM:STRING=mac -DBQ_WERROR=OFF && make -j8",
+  "key": "legacy_key.pem / legacy_pub.txt (the pair the unit tests already carry)",
+  "samples": [
+    {
+      "id": "plain",
+      "file": "plain.logcompr",
+      "expected": "plain.expected.txt",
+      "description": "clean run, plaintext",
+      "size": 2215,
+      "segments": [
+        "normal",
+        "normal"
+      ],
+      "enc_types": [
+        1
+      ],
+      "sha256_file": "48aa20ee950ccdf6fbfc5836c576c8f364ec6bdd5b893a61d475845c284da1a8",
+      "sha256_expected": "86bdbcdda6c802cd41469616a360071577547ded08374d658351375f71610c1a"
+    },
+    {
+      "id": "enc",
+      "file": "enc.logcompr",
+      "expected": "enc.expected.txt",
+      "description": "clean run, encrypted",
+      "size": 35255,
+      "segments": [
+        "normal",
+        "normal"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "3d2c4961bef07fbb4c9c9bc752484f61a93329e7085986dd07f5deca785c4d51",
+      "sha256_expected": "ce77701bffa050f707dc15ab2b483d19c24792f4366bf40c2f3f27be371bbf62"
+    },
+    {
+      "id": "enc_recover_buffer",
+      "file": "enc_recover_buffer.logcompr",
+      "expected": "enc_recover_buffer.expected.txt",
+      "description": "crashed with a dirty log_buffer",
+      "size": 36948,
+      "segments": [
+        "normal",
+        "recovery_by_log_buffer",
+        "normal"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "d1c14f0c07c6a44338bf00fbd77ee637c352f35da21fbae58261e442ea897fba",
+      "sha256_expected": "caac6e7fe8293fb6dc8162ec0f9f001b39ea886d39d49e10f54fb1c09e40f128"
+    },
+    {
+      "id": "enc_recover_appender",
+      "file": "enc_recover_appender.logcompr",
+      "expected": "enc_recover_appender.expected.txt",
+      "description": "crashed with a dirty appender",
+      "size": 71391,
+      "segments": [
+        "normal",
+        "normal",
+        "recovery_by_appender"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "d040752789e6b775199fa7657a9316c1df0f33957dada72641462b8964da4ad4",
+      "sha256_expected": "128326178c8219331c5a2d38f1a3eb6bee801c682a30b8ee057502ac93bd4dcf"
+    }
+  ]
+}

@@ -1389,7 +1389,7 @@ namespace bq {
                     config_.storage->remove(full_path);
                     continue;
                 }
-                size_t file_size = bq::file_manager::get_file_size(full_path);
+                uint64_t file_size = bq::file_manager::get_file_size(full_path);
                 uint32_t default_buffer_size = static_cast<uint32_t>(BQ_CACHE_LINE_SIZE);
                 while (default_buffer_size < UINT32_MAX) {
                     uint32_t map_size = oversize_buffer::calculate_size_of_memory(default_buffer_size);

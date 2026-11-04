@@ -23,6 +23,38 @@ namespace bq {
     static constexpr size_t CACHE_WRITE_MIN_SIZE = 64 * 1024;
     static constexpr size_t CACHE_WRITE_MAX_SIZE = 4 * 1024 * 1024;
 
+#if defined(BQ_UNIT_TEST)
+    static appender_file_base::flush_hook_fn s_flush_hook_fn = nullptr;
+    static void* s_flush_hook_user = nullptr;
+
+    void appender_file_base::set_flush_hook(flush_hook_fn fn, void* user)
+    {
+        s_flush_hook_fn = fn;
+        s_flush_hook_user = user;
+    }
+
+    void appender_file_base::invoke_flush_hook(flush_hook_point point) const
+    {
+        if (s_flush_hook_fn) {
+            s_flush_hook_fn(this, point, s_flush_hook_user);
+        }
+    }
+
+    size_t appender_file_base::test_flush_state_offset()
+    {
+        return offsetof(mmap_head, flush_state_);
+    }
+
+    void appender_file_base::test_append_write_cache_tail(const void* data, size_t size)
+    {
+        // Deliberately does not call mark_write_finished: the finished cursor is the flush's
+        // snapshot, and these bytes arrive after it was taken, which is exactly the case under test.
+        const write_with_cache_handle handle = alloc_write_cache(size);
+        memcpy(handle.data_, data, size);
+        return_write_cache(handle);
+    }
+#endif
+
     appender_file_base::~appender_file_base()
     {
         if (get_pendding_flush_written_size() == 0) {
@@ -35,6 +67,64 @@ namespace bq {
         }
     }
 
+    void appender_file_base::set_flush_state_transforming()
+    {
+        auto& state = BQ_PACK_ACCESS_BY_TYPE(cache_write_head_->flush_state_, bq::platform::atomic<uint32_t>);
+        state.store(static_cast<uint32_t>(flush_transforming), bq::platform::memory_order::seq_cst);
+        // The store above is a release: it orders the ciphertext behind itself for a reader that
+        // acquires. It does not stop the ciphertext from being written ahead of it, and a crash
+        // between the two would leave an uninterpretable buffer marked plaintext. This fence does.
+        bq::platform::atomic_thread_fence_seq_cst();
+    }
+
+    void appender_file_base::set_flush_state_idle()
+    {
+        auto& state = BQ_PACK_ACCESS_BY_TYPE(cache_write_head_->flush_state_, bq::platform::atomic<uint32_t>);
+        // Release, and deliberately after finished/cursor/file size have been updated: reversing
+        // those two would let recovery mistake an unaccounted window for a completed one.
+        state.store_release(static_cast<uint32_t>(flush_idle));
+    }
+
+#if defined(BQ_UNIT_TEST)
+    uint32_t appender_file_base::test_read_flush_state() const
+    {
+        return read_flush_state_is_transforming() ? static_cast<uint32_t>(flush_transforming) : static_cast<uint32_t>(flush_idle);
+    }
+#endif
+
+    bool appender_file_base::read_flush_state_is_transforming() const
+    {
+        if (!cache_write_head_) {
+            return false;
+        }
+        const auto& state = BQ_PACK_ACCESS_BY_TYPE(cache_write_head_->flush_state_, bq::platform::atomic<uint32_t>);
+        const uint32_t value = state.load_acquire();
+        return value != flush_idle;
+    }
+
+    void appender_file_base::clear_flush_state()
+    {
+        if (!cache_write_head_) {
+            return;
+        }
+        auto& state = BQ_PACK_ACCESS_BY_TYPE(cache_write_head_->flush_state_, bq::platform::atomic<uint32_t>);
+        state.store_release(static_cast<uint32_t>(flush_idle));
+    }
+
+    void appender_file_base::on_flush_transform(uint8_t* data, size_t size, uint64_t file_pos)
+    {
+        (void)data;
+        (void)size;
+        (void)file_pos;
+    }
+
+    bool appender_file_base::on_flush_before_transform(size_t pending_size, uint64_t file_pos)
+    {
+        (void)pending_size;
+        (void)file_pos;
+        return true;
+    }
+
     void appender_file_base::flush_write_cache()
     {
         if (!file_) {
@@ -42,16 +132,43 @@ namespace bq {
         }
         size_t real_write_size = 0;
         size_t need_write_size = static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_);
-        int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_, need_write_size, real_write_size);
-        if (real_write_size < need_write_size) {
-            memcpy(cache_write_, cache_write_ + static_cast<ptrdiff_t>(real_write_size), need_write_size - real_write_size);
+        // The buffer starts at the current end of the file, so this is the position every byte in the
+        // window will occupy once written, and the position the transform has to key the keystream to.
+        const uint64_t flush_file_pos = current_file_size_;
+        if (transform_enabled_) {
+            if (!on_flush_before_transform(need_write_size, flush_file_pos)) {
+                return;
+            }
+            set_flush_state_transforming();
+            on_flush_transform(cache_write_, need_write_size, flush_file_pos);
+#if defined(BQ_UNIT_TEST)
+            invoke_flush_hook(flush_hook_point::after_transform);
+#endif
         }
-        if (cache_write_cursor_ > cache_write_head_->cache_write_finished_cursor_) {
-            memmove(cache_write_, cache_write_ + need_write_size, cache_write_cursor_ - need_write_size);
+        int32_t error_code = bq::platform::write_file(file_.platform_handle(), (const void*)cache_write_, need_write_size, real_write_size);
+        // Whatever the write did not take is still sitting in the buffer as ciphertext, at the file
+        // position it was encrypted for. Re-running the same transform on exactly those bytes returns
+        // them to plaintext; this is the only reason the transform may not hold any state.
+        if (transform_enabled_ && real_write_size < need_write_size) {
+            on_flush_transform(cache_write_ + real_write_size, need_write_size - real_write_size, flush_file_pos + real_write_size);
+        }
+#if defined(BQ_UNIT_TEST)
+        invoke_flush_hook(flush_hook_point::after_write);
+#endif
+        // Everything the write did not take stays in the cache, and the bytes a producer appended
+        // while the write was in flight line up behind them. Both have to slide down by the same
+        // amount, so this is one move over the whole window, not one for each case: a separate copy
+        // of the unwritten part would be overwritten by the tail (D-6).
+        if (cache_write_cursor_ > real_write_size) {
+            memmove(cache_write_, cache_write_ + static_cast<ptrdiff_t>(real_write_size), static_cast<size_t>(cache_write_cursor_ - real_write_size));
         }
         cache_write_head_->cache_write_finished_cursor_ -= real_write_size;
         cache_write_cursor_ -= real_write_size;
         current_file_size_ += real_write_size;
+        // Only now: the buffer holds plaintext again and the bookkeeping matches the file.
+        if (transform_enabled_) {
+            set_flush_state_idle();
+        }
         if (cache_write_entity_->size() > write_cache_target_size_
             && get_total_used_write_cache_size() <= (CACHE_READ_DEFAULT_SIZE >> 1)) {
             resize_cache_write_entity(write_cache_target_size_);
@@ -135,9 +252,11 @@ namespace bq {
         (void)is_new_created;
     }
 
-    bool appender_file_base::seek_read_file_absolute(size_t pos)
+    bool appender_file_base::seek_read_file_absolute(uint64_t pos)
     {
-        bool result = file_manager::instance().seek(file_, file_manager::seek_option::begin, (int32_t)pos);
+        // A segment start above 2 GiB is a normal position, so the offset keeps its width all the
+        // way down to lseek.
+        bool result = file_manager::instance().seek(file_, file_manager::seek_option::begin, static_cast<int64_t>(pos));
         if (result) {
             read_file_pos_ = pos;
             clear_read_cache();
@@ -151,7 +270,7 @@ namespace bq {
         int64_t final_cursor = (int64_t)cache_read_cursor_ + offset;
         if (final_cursor >= 0 && final_cursor <= (int64_t)cache_read_.size()) {
             cache_read_cursor_ = static_cast<size_t>(static_cast<size_t_to_int_t>(cache_read_cursor_) + offset);
-            read_file_pos_ = static_cast<size_t>(static_cast<size_t_to_int_t>(read_file_pos_) + offset);
+            read_file_pos_ = static_cast<uint64_t>(static_cast<int64_t>(read_file_pos_) + offset);
         } else {
             assert(false && "not implemented");
         }
@@ -180,16 +299,16 @@ namespace bq {
             cache_read_.erase(cache_read_.begin(), cache_read_cursor_);
             auto total_size = bq::max_value(size, CACHE_READ_DEFAULT_SIZE);
             auto fill_size = total_size - left_size;
-            size_t physical_read_pos = read_file_pos_ + left_size;
-            size_t file_readable_left = (current_file_size_ > physical_read_pos)
+            uint64_t physical_read_pos = read_file_pos_ + left_size;
+            uint64_t file_readable_left = (current_file_size_ > physical_read_pos)
                 ? (current_file_size_ - physical_read_pos)
-                : static_cast<size_t>(0);
-            if (fill_size > file_readable_left) {
+                : static_cast<uint64_t>(0);
+            if (static_cast<uint64_t>(fill_size) > file_readable_left) {
                 // `fill_size` may be a corrupt / grossly oversized value (e.g. a bogus item
                 // length decoded from a damaged binary log file, up to ~4GB). Without
                 // this clamp, fill_uninitialized() below would try to allocate gigabytes
                 // up front and abort on low-memory devices.
-                fill_size = file_readable_left;
+                fill_size = static_cast<size_t>(file_readable_left);
             }
             cache_read_.fill_uninitialized(fill_size);
             auto read_size = file_manager::instance().read_file(file_, cache_read_.begin() + static_cast<ptrdiff_t>(left_size), fill_size);
@@ -280,6 +399,11 @@ namespace bq {
         flush_when_destruct_ = flush;
     }
 
+    bool appender_file_base::get_flush_when_destruct() const
+    {
+        return flush_when_destruct_;
+    }
+
     bool appender_file_base::open_file_for_entry(const log_entry_handle& handle)
     {
         bool need_create_new_file = (!file_) || is_file_oversize();
@@ -334,6 +458,10 @@ namespace bq {
         cache_write_head_ = static_cast<mmap_head*>(cache_write_entity_->data());
         if (new_created) {
             cache_write_head_->cache_write_finished_cursor_ = 0;
+            // A fresh mapping starts as plaintext. For the recovery mapping this also covers the
+            // case where the file is new and therefore blank; for a heap buffer it is the only
+            // initialisation the word ever needs.
+            cache_write_head_->flush_state_ = flush_idle;
         }
         refresh_cache_write_ptr();
     }
@@ -358,6 +486,10 @@ namespace bq {
     {
         if (cache_write_head_) {
             cache_write_head_->cache_write_finished_cursor_ = 0;
+            // Every switch to a new file comes through here. Without this the transforming state a
+            // killed process left behind would survive into the next file, and the next recovery
+            // would discard a window that never existed.
+            cache_write_head_->flush_state_ = flush_idle;
         }
         cache_write_cursor_ = 0;
         cache_write_padding_ = 0;
@@ -391,10 +523,18 @@ namespace bq {
             always_create_new_file_ = false;
         }
 
+        int64_t configured_max_file_size = 0;
         if (config_obj["max_file_size"].is_integral()) {
-            max_file_size_ = (size_t)(int64_t)config_obj["max_file_size"];
-        } else {
-            max_file_size_ = 0;
+            configured_max_file_size = static_cast<int64_t>(config_obj["max_file_size"]);
+        }
+        // A build whose off_t is 32 bits cannot address past 2 GiB: the write that crosses it fails
+        // and the bytes after it are gone, so the appender stops one file short instead.
+        const int64_t platform_max_file_size = bq::platform::get_max_supported_file_size();
+        max_file_size_ = static_cast<uint64_t>(bq::platform::cap_max_file_size(configured_max_file_size, platform_max_file_size));
+        if (max_file_size_ != static_cast<uint64_t>(configured_max_file_size)) {
+            bq::util::log_device_console(bq::log_level::warning,
+                "this build addresses at most %" PRId64 " bytes of one file, so \"%s\" starts a new file at that size instead of %" PRId64,
+                platform_max_file_size, config_file_name_.c_str(), configured_max_file_size);
         }
 
         if (config_obj["expire_time_seconds"].is_integral()) {
@@ -453,27 +593,44 @@ namespace bq {
         resize_cache_write_entity(new_total_size);
     }
 
+    bool appender_file_base::discard_recovery_cache()
+    {
+        // What is left behind by a failed recovery is what makes it dangerous rather than merely
+        // useless. init_impl() calls clean_cache_write() unconditionally right after this returns,
+        // and that dereferences cache_write_head_ to zero the finished cursor. When the mapping
+        // failed, the head points into freed memory. When the mapping survived but its metadata is
+        // bogus, the head still describes an append into a file we could not open, and the next
+        // flush writes through a stale path. Both cases start over from a fresh cache instead.
+        cache_write_head_ = nullptr;
+        cache_write_ = nullptr;
+        cache_write_entity_.reset();
+        cache_write_head_size_ = sizeof(mmap_head);
+        cache_write_cursor_ = 0;
+        cache_write_padding_ = 0;
+        return false;
+    }
+
     bool appender_file_base::try_recover()
     {
         bq::string mmap_file_path = get_mmap_file_path();
-        size_t file_size = bq::file_manager::get_file_size(mmap_file_path);
-        cache_write_entity_ = bq::make_unique<bq::normal_buffer>(file_size, mmap_file_path, false);
+        // The recovery mapping is one run's window, never a whole log file, so it fits a buffer.
+        const uint64_t file_size = bq::file_manager::get_file_size(mmap_file_path);
+        cache_write_entity_ = bq::make_unique<bq::normal_buffer>(static_cast<size_t>(file_size), mmap_file_path, false);
         if (!cache_write_entity_->is_memory_mapped()) {
-            cache_write_entity_.reset();
-            return false;
+            return discard_recovery_cache();
         }
 
         cache_write_head_ = static_cast<mmap_head*>(cache_write_entity_->data());
         if (cache_write_entity_->size() <= BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_)) {
             bq::util::log_device_console(bq::log_level::warning, "%s too small, give up recovery!", mmap_file_path.c_str());
-            return false;
+            return discard_recovery_cache();
         }
         const size_t file_path_offset = BQ_POD_RUNTIME_OFFSET_OF(mmap_head, file_path_);
         const size_t file_path_capacity = cache_write_entity_->size() - file_path_offset;
         if (cache_write_head_->file_path_size_ == 0
             || static_cast<size_t>(cache_write_head_->file_path_size_) > file_path_capacity) {
             bq::util::log_device_console(bq::log_level::warning, "%s has no valid recovery file path, give up recovery!", mmap_file_path.c_str());
-            return false;
+            return discard_recovery_cache();
         }
         bq::string current_file_path;
         current_file_path.insert_batch(current_file_path.end(), cache_write_head_->file_path_, static_cast<size_t>(cache_write_head_->file_path_size_));
@@ -485,8 +642,7 @@ namespace bq {
         }
         if (!file_) {
             bq::util::log_device_console(bq::log_level::warning, "%s failed to open log file %s, give up recovery!", mmap_file_path.c_str(), current_file_path.c_str());
-            cache_write_head_size_ = sizeof(mmap_head);
-            return false;
+            return discard_recovery_cache();
         }
         current_file_size_ = file_manager::instance().get_file_size(file_);
         cache_write_cursor_ = static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_);
@@ -494,23 +650,40 @@ namespace bq {
         if (caculated_padding < static_cast<int64_t>(0) || caculated_padding >= static_cast<int64_t>(UINT8_MAX)) {
             bq::util::log_device_console(bq::log_level::warning, "%s invalid mmap head data, give up recovery! calculated padding:%" PRId64, mmap_file_path.c_str(), caculated_padding);
             file_manager::instance().close_file(file_);
-            cache_write_head_size_ = sizeof(mmap_head);
-            return false;
+            return discard_recovery_cache();
         }
         cache_write_padding_ = static_cast<uint8_t>(caculated_padding);
         refresh_cache_write_ptr();
-        if (cache_write_head_->cache_write_finished_cursor_ > 0) {
+        // Read before looking at the cursor: a window that was opened but never closed can have
+        // finished == 0 (the write landed and the accounting did not), and that case has to be
+        // distinguished from "nothing pending" rather than folded into it.
+        const bool was_transforming = read_flush_state_is_transforming();
+        if (was_transforming) {
+            const size_t discarded = static_cast<size_t>(cache_write_head_->cache_write_finished_cursor_);
+            if (discarded > 0) {
+                // The window never closed. The buffer may already be ciphertext and the client holds
+                // no segment key to tell, and there is no record of how much of the window reached
+                // the file - so replaying it would either duplicate bytes or encrypt them twice.
+                // Dropping one flush window is the only outcome that cannot corrupt the file.
+                bq::util::log_device_console(bq::log_level::warning,
+                    "%s was interrupted during a flush window, discarding %" PRIu64 " bytes of pending data; the log file itself is left as it is",
+                    mmap_file_path.c_str(), static_cast<uint64_t>(discarded));
+                cache_write_head_->cache_write_finished_cursor_ = 0;
+                cache_write_cursor_ = 0;
+            }
+            // Whether or not anything was dropped, the buffer is not in a window any more. No warning
+            // for the discarded == 0 case: the flush had already accounted for every byte.
+            clear_flush_state();
+        } else if (cache_write_head_->cache_write_finished_cursor_ > 0) {
             if (!on_appender_file_recovery_begin()) {
                 file_manager::instance().close_file(file_);
-                cache_write_head_size_ = sizeof(mmap_head);
-                return false;
+                return discard_recovery_cache();
             }
             flush_write_cache();
             if (get_pendding_flush_written_size() != 0) {
                 bq::util::log_device_console(bq::log_level::warning, "%s recovery data was not fully flushed, give up recovery!", mmap_file_path.c_str());
                 file_manager::instance().close_file(file_);
-                cache_write_head_size_ = sizeof(mmap_head);
-                return false;
+                return discard_recovery_cache();
             }
             on_appender_file_recovery_end();
         }
@@ -659,7 +832,7 @@ namespace bq {
                 continue;
             }
             uint64_t last_m_time_ms = bq::file_manager::get_file_last_modified_epoch_ms(full_name_in_absolute_path);
-            size_t file_size = 0;
+            uint64_t file_size = 0;
             int32_t file_size_result = bq::platform::get_file_size(full_name_in_absolute_path.c_str(), file_size);
             if (file_size_result != 0) {
                 bq::util::log_device_console(log_level::error, "failed to get size of file:%s, error code:%" PRId32, full_name_in_absolute_path.c_str(), file_size_result);

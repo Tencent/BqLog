@@ -78,7 +78,7 @@ namespace bq {
         // header, "===== RECOVER START =====\n", etc.) into the output stream.
         // Return false to signal that the segment marker could NOT be emitted
         // (e.g. disk-full, refresh_file_handle failed, file_ stays closed) so
-        // subclasses can bail BEFORE mutating subclass-side state (xor_key_blob_,
+        // subclasses can bail BEFORE mutating subclass-side state (segment key,
         // cache padding, segment counters, etc.). The caller in log_imp.cpp
         // ignores the return value today; this is purely a chain-of-responsibility
         // signal between base and derived hooks.

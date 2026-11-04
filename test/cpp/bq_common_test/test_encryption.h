@@ -11,12 +11,16 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include <iostream>
+#include <cstdlib>
 #include <thread>
 #include <utility>
 #include "test_base.h"
-#include "bq_common/encryption/vernam.h"
+// v9/v10 ciphers: they live with the standalone decoder now, so these tests build them from there.
+#include "legacy/crypto/vernam.h"
 #include "bq_common/encryption/rsa.h"
-#include "bq_common/encryption/aes.h"
+#include "legacy/crypto/aes.h"
+#include "bq_common/encryption/chacha20.h"
+#include "bq_common/encryption/random_bytes.h"
 
 namespace bq {
     namespace test {
@@ -87,28 +91,9 @@ namespace bq {
                 }
             }
 
-            void test_rsa(test_result& result, int32_t key_bits, int32_t test_count)
+            static const char* rsa_2048_private_pem()
             {
-                bq::hash_map<int32_t, bq::tuple<bq::string, bq::string>> prepared_keys;
-                prepared_keys.add(1024, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
-MIICXQIBAAKBgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa
-3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuu
-qmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQIDAQAB
-AoGBAJD0E0GOkiWxLAf0SxaWJnz/wHgf4F0laVKM5/h4XDdE4WT9SFu4t94uYh77
-YJfJDlOHr0mviAASImO5C1jYNIzWi+ThvW+8IEgpE8t/+tE8x0BGvwBauQfk397k
-vwf/9Yi666tJYT4h7Ny19oDiaU8R5XeV8LmoCdq/5xhHDT7BAkEA36e9YJsZsF6L
-xlGUQVQR90sI5bovtu4b7tjrewJCTB29fR7fduk0fayUeiZ2gDyxdCYM7hR/TuAT
-XO51nFUjcQJBANrO2g4UUqyeKEpL2JPCNWCUZCaJnNyQSeaaZuDcb5PQrKNtXgiY
-xj09w9/+bIjbsau6aAp1Tqj9OtsOL4ohpA0CQBQt1TdXJx0zmpbdG2w9gpV2Tqoz
-f0SY/SoypiRmEsc9U7BrTawz5EmGfar7t2tgjn41RKtibA4Yx4Z1+WSOhfECQQCe
-RwlHK/5N7a45aDoHUHHqJg14Lw1wI1PB4yjOOcbghw+KvH9L+q9T94zsSA/cxAb2
-sUW3Yvn+lgdwFAfhhMo1AkBSVop+u94LplzwfOH5U2q7dWnhZvSY1bMd+d/ZFPar
-eSFkEwI+QE7YZLQUCjw/GRTS6LczBS+EOgpfomXN272r
------END RSA PRIVATE KEY-----
-)",
-                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuuqmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQ== pippocao@PIPPOCAO-PC6
-)"));
-                prepared_keys.add(2048, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
+                return R"(-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEAsDsX+mR4jZ+E9Y3I7gqAQ20PZ7w59xxMMkQmI4h4f3+h8/gp
 jUKnehK3HI46kDvweUdi6QtvwaxEkl2tPLt6HtXvgIRQnHRZkzr85Wpn04zsBRMI
 jsbdmgTpBZoXuFE4mysTViuDgzoEqTf+MWaqPjY6cfzUchsI+m9KMVK3TfiyF1OD
@@ -135,9 +120,39 @@ xzlyjQKBgQCS5jIIWeN5wODwa+N2pZ6JrnooN/NmF+5ElfoToLh3Yb/yYqYQSM8e
 4mDhezXYzHmEuHxQp9URDdcoGcLxcH+eg1MZvuUVt0OdIdb8Ai7zXG1zw7QNWK6j
 4lI5KbODGCPuKpSUdRbJLaCvwT0MgO18buV4Z9e+qZKTdwYaZtW6dw==
 -----END RSA PRIVATE KEY-----
+)";
+            }
+
+            static const char* rsa_2048_public_ssh()
+            {
+                return R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwOxf6ZHiNn4T1jcjuCoBDbQ9nvDn3HEwyRCYjiHh/f6Hz+CmNQqd6ErccjjqQO/B5R2LpC2/BrESSXa08u3oe1e+AhFCcdFmTOvzlamfTjOwFEwiOxt2aBOkFmhe4UTibKxNWK4ODOgSpN/4xZqo+Njpx/NRyGwj6b0oxUrdN+LIXU4NhOBz8aovF9wdbmgvAAUdRToSthO1gS1k5w15/XvtGV2mxRtU3gGtrmpl6KvWq+r3oYSAgBO4N+4DQ7oGsp/k5NkaZXumlUD4LRPLTuh/iEx7V68FMTh6BJklkE6ZtBxwJD94NO4Yut3LPM2bUE2aLCf5unloezAdytKrB pippocao@PIPPOCAO-PC6
+)";
+            }
+
+            void test_rsa(test_result& result, int32_t key_bits, int32_t test_count)
+            {
+                bq::hash_map<int32_t, bq::tuple<bq::string, bq::string>> prepared_keys;
+                prepared_keys.add(1024, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
+MIICXQIBAAKBgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa
+3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuu
+qmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQIDAQAB
+AoGBAJD0E0GOkiWxLAf0SxaWJnz/wHgf4F0laVKM5/h4XDdE4WT9SFu4t94uYh77
+YJfJDlOHr0mviAASImO5C1jYNIzWi+ThvW+8IEgpE8t/+tE8x0BGvwBauQfk397k
+vwf/9Yi666tJYT4h7Ny19oDiaU8R5XeV8LmoCdq/5xhHDT7BAkEA36e9YJsZsF6L
+xlGUQVQR90sI5bovtu4b7tjrewJCTB29fR7fduk0fayUeiZ2gDyxdCYM7hR/TuAT
+XO51nFUjcQJBANrO2g4UUqyeKEpL2JPCNWCUZCaJnNyQSeaaZuDcb5PQrKNtXgiY
+xj09w9/+bIjbsau6aAp1Tqj9OtsOL4ohpA0CQBQt1TdXJx0zmpbdG2w9gpV2Tqoz
+f0SY/SoypiRmEsc9U7BrTawz5EmGfar7t2tgjn41RKtibA4Yx4Z1+WSOhfECQQCe
+RwlHK/5N7a45aDoHUHHqJg14Lw1wI1PB4yjOOcbghw+KvH9L+q9T94zsSA/cxAb2
+sUW3Yvn+lgdwFAfhhMo1AkBSVop+u94LplzwfOH5U2q7dWnhZvSY1bMd+d/ZFPar
+eSFkEwI+QE7YZLQUCjw/GRTS6LczBS+EOgpfomXN272r
+-----END RSA PRIVATE KEY-----
 )",
-                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwOxf6ZHiNn4T1jcjuCoBDbQ9nvDn3HEwyRCYjiHh/f6Hz+CmNQqd6ErccjjqQO/B5R2LpC2/BrESSXa08u3oe1e+AhFCcdFmTOvzlamfTjOwFEwiOxt2aBOkFmhe4UTibKxNWK4ODOgSpN/4xZqo+Njpx/NRyGwj6b0oxUrdN+LIXU4NhOBz8aovF9wdbmgvAAUdRToSthO1gS1k5w15/XvtGV2mxRtU3gGtrmpl6KvWq+r3oYSAgBO4N+4DQ7oGsp/k5NkaZXumlUD4LRPLTuh/iEx7V68FMTh6BJklkE6ZtBxwJD94NO4Yut3LPM2bUE2aLCf5unloezAdytKrB pippocao@PIPPOCAO-PC6
+                                            R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuuqmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQ== pippocao@PIPPOCAO-PC6
 )"));
+                prepared_keys.add(2048, bq::make_tuple<bq::string, bq::string>(
+                                                    bq::string(rsa_2048_private_pem()),
+                                                    bq::string(rsa_2048_public_ssh())));
                 prepared_keys.add(3072, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
 MIIG4wIBAAKCAYEAqIFB3BDzMOp0gROwcooA6BBUzgAMHH3Eo5jLIa85r06KCe2q
 iNOF2PkTrWl67/W2PqdX66HVzr9TCQYsZ/KJlnqiq6JZjMBBRIPerZcCoJiqI8oj
@@ -439,11 +454,634 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 }
             }
 
+            void test_chacha20(test_result& result)
+            {
+                // RFC 8439 section 2.3.2 block function vector: key 00..1f, nonce 000000090000004a00000000,
+                // counter 1. A wrong nonce silently produces a valid-looking stream, so the vector is
+                // worth pinning exactly.
+                static const uint8_t rfc_key[32] = {
+                    0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
+                    0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
+                };
+                static const uint8_t rfc_nonce[12] = { 0, 0, 0, 0x09, 0, 0, 0, 0x4a, 0, 0, 0, 0 };
+                static const uint8_t rfc_block[64] = {
+                    0x10, 0xf1, 0xe7, 0xe4, 0xd1, 0x3b, 0x59, 0x15, 0x50, 0x0f, 0xdd, 0x1f, 0xa3, 0x20, 0x71, 0xc4,
+                    0xc7, 0xd1, 0xf4, 0xc7, 0x33, 0xc0, 0x68, 0x03, 0x04, 0x22, 0xaa, 0x9a, 0xc3, 0xd4, 0x6c, 0x4e,
+                    0xd2, 0x82, 0x64, 0x46, 0x07, 0x9f, 0xaa, 0x09, 0x14, 0xc2, 0xd7, 0x05, 0xd9, 0x8b, 0x02, 0xa2,
+                    0xb5, 0x12, 0x9c, 0xd1, 0xde, 0x16, 0x4e, 0xb9, 0xcb, 0xd0, 0x83, 0xe8, 0xa2, 0x50, 0x3c, 0x4e
+                };
+
+                uint8_t block[chacha20::block_size];
+                chacha20::keystream_block(block, rfc_key, rfc_nonce, 1);
+                result.add_result(memcmp(block, rfc_block, sizeof(rfc_block)) == 0, "chacha20 RFC 8439 block vector");
+
+                // Randomised offset consistency: the keystream is seekable, so xoring at an offset has to
+                // match the slice of the stream generated from zero. This is the property the appender
+                // depends on when it resumes in the middle of a file.
+                constexpr size_t stream_size = 8192;
+                bq::array<uint8_t> stream;
+                stream.fill_uninitialized(stream_size);
+                memset(stream.begin(), 0, stream_size);
+                chacha20::keystream_xor(stream.begin(), stream_size, rfc_key, rfc_nonce, 0);
+
+                bool slice_ok = true;
+                bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+                for (int32_t i = 0; i < 64; ++i) {
+                    const size_t offset = bq::util::rand() % stream_size;
+                    const size_t max_len = stream_size - offset;
+                    const size_t len = 1 + bq::util::rand() % max_len;
+                    bq::array<uint8_t> slice;
+                    slice.fill_uninitialized(len);
+                    memset(slice.begin(), 0, len);
+                    chacha20::keystream_xor(slice.begin(), len, rfc_key, rfc_nonce, offset);
+                    if (memcmp(slice.begin(), stream.begin() + static_cast<ptrdiff_t>(offset), len) != 0) {
+                        slice_ok = false;
+                        break;
+                    }
+                }
+                result.add_result(slice_ok, "chacha20 keystream is seekable by absolute byte offset");
+
+                // Every hardware path has to agree byte for byte with the scalar reference, otherwise a
+                // file written on one machine decodes wrong on another.
+                bq::array<uint8_t> reference;
+                reference.fill_uninitialized(stream_size);
+                memset(reference.begin(), 0, stream_size);
+                chacha20::set_hardware_acceleration_mode(chacha20::mode::scalar);
+                chacha20::keystream_xor(reference.begin(), stream_size, rfc_key, rfc_nonce, 0);
+
+                const chacha20::mode paths[] = {
+                    chacha20::mode::auto_detect,
+#if defined(BQ_X86)
+                    chacha20::mode::sse2,
+#endif
+#if defined(BQ_ARM_NEON)
+                    chacha20::mode::neon,
+#endif
+                };
+                for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
+                    bq::array<uint8_t> candidate;
+                    candidate.fill_uninitialized(stream_size);
+                    memset(candidate.begin(), 0, stream_size);
+                    chacha20::set_hardware_acceleration_mode(paths[i]);
+                    chacha20::keystream_xor(candidate.begin(), stream_size, rfc_key, rfc_nonce, 0);
+                    result.add_result(memcmp(reference.begin(), candidate.begin(), stream_size) == 0,
+                        "chacha20 hardware path matches scalar, path index %" PRId32, static_cast<int32_t>(i));
+                }
+#if defined(BQ_X86)
+                // AVX2 is the widest x86 kernel and the one a release build picks on any machine
+                // that has it, so a run where it never executed proves less than its pass count
+                // suggests. BQ_REQUIRE_AVX2=1 is how a job states that it *is* the AVX2 coverage:
+                // there the machine has to have it, instead of quietly validating SSE2 only.
+                const bool avx2_available = bq::common_global_vars::get().avx2_support_;
+                if (avx2_available) {
+                    bq::array<uint8_t> candidate;
+                    candidate.fill_uninitialized(stream_size);
+                    memset(candidate.begin(), 0, stream_size);
+                    chacha20::set_hardware_acceleration_mode(chacha20::mode::avx2);
+                    chacha20::keystream_xor(candidate.begin(), stream_size, rfc_key, rfc_nonce, 0);
+                    result.add_result(memcmp(reference.begin(), candidate.begin(), stream_size) == 0, "chacha20 avx2 matches scalar");
+                }
+                test_output_param(bq::log_level::info, "chacha20 kernel: avx2 %s\n", avx2_available ? "verified" : "not available on this cpu");
+                const char* require_avx2 = getenv("BQ_REQUIRE_AVX2");
+                result.add_result(avx2_available || require_avx2 == nullptr || require_avx2[0] != '1',
+                    "chacha20 avx2 kernel is available where the run requires it");
+#elif defined(BQ_ARM_NEON)
+                test_output(bq::log_level::info, "chacha20 kernel: neon verified\n");
+#endif
+                chacha20::set_hardware_acceleration_mode(chacha20::mode::auto_detect);
+
+                // Different round counts must produce different streams; fewer rounds is a deliberate
+                // speed/strength trade, not an alias.
+                bq::array<uint8_t> r8;
+                r8.fill_uninitialized(stream_size);
+                memset(r8.begin(), 0, stream_size);
+                chacha20::keystream_xor(r8.begin(), stream_size, rfc_key, rfc_nonce, 0, chacha20::round_count::rounds_8);
+                result.add_result(memcmp(reference.begin(), r8.begin(), stream_size) != 0, "chacha8 differs from chacha20");
+
+                bq::array<uint8_t> r12;
+                r12.fill_uninitialized(stream_size);
+                memset(r12.begin(), 0, stream_size);
+                chacha20::keystream_xor(r12.begin(), stream_size, rfc_key, rfc_nonce, 0, chacha20::round_count::rounds_12);
+                result.add_result(memcmp(reference.begin(), r12.begin(), stream_size) != 0
+                        && memcmp(r8.begin(), r12.begin(), stream_size) != 0,
+                    "chacha12 differs from both chacha8 and chacha20");
+
+                // Xor is an involution; the appender relies on it to restore the cache tail after a
+                // partial write.
+                bq::array<uint8_t> roundtrip;
+                roundtrip.fill_uninitialized(stream_size);
+                for (size_t i = 0; i < stream_size; ++i) {
+                    roundtrip[i] = static_cast<uint8_t>(i * 7 + 3);
+                }
+                bq::array<uint8_t> original = roundtrip;
+                chacha20::keystream_xor(roundtrip.begin(), stream_size, rfc_key, rfc_nonce, 37);
+                chacha20::keystream_xor(roundtrip.begin(), stream_size, rfc_key, rfc_nonce, 37);
+                result.add_result(memcmp(original.begin(), roundtrip.begin(), stream_size) == 0, "chacha20 xor is an involution");
+
+                // RFC 8439 section 2.4.2: the block vector's key, nonce and counter applied to the
+                // sunscreen text. It pins the counter/nonce layout end to end, which the single
+                // block vector cannot.
+                {
+                    static const char plain_text[] = "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
+                    static const uint8_t expected[] = {
+                        0x6e, 0x2e, 0x35, 0x9a, 0x25, 0x68, 0xf9, 0x80, 0x41, 0xba, 0x07, 0x28, 0xdd, 0x0d, 0x69, 0x81,
+                        0xe9, 0x7e, 0x7a, 0xec, 0x1d, 0x43, 0x60, 0xc2, 0x0a, 0x27, 0xaf, 0xcc, 0xfd, 0x9f, 0xae, 0x0b,
+                        0xf9, 0x1b, 0x65, 0xc5, 0x52, 0x47, 0x33, 0xab, 0x8f, 0x59, 0x3d, 0xab, 0xcd, 0x62, 0xb3, 0x57,
+                        0x16, 0x39, 0xd6, 0x24, 0xe6, 0x51, 0x52, 0xab, 0x8f, 0x53, 0x0c, 0x35, 0x9f, 0x08, 0x61, 0xd8,
+                        0x07, 0xca, 0x0d, 0xbf, 0x50, 0x0d, 0x6a, 0x61, 0x56, 0xa3, 0x8e, 0x08, 0x8a, 0x22, 0xb6, 0x5e,
+                        0x52, 0xbc, 0x51, 0x4d, 0x16, 0xcc, 0xf8, 0x06, 0x81, 0x8c, 0xe9, 0x1a, 0xb7, 0x79, 0x37, 0x36,
+                        0x5a, 0xf9, 0x0b, 0xbf, 0x74, 0xa3, 0x5b, 0xe6, 0xb4, 0x0b, 0x8e, 0xed, 0xf2, 0x78, 0x5e, 0x42,
+                        0x87, 0x4d
+                    };
+                    static const uint8_t sunscreen_nonce[12] = { 0, 0, 0, 0, 0, 0, 0, 0x4a, 0, 0, 0, 0 };
+                    const size_t text_size = sizeof(plain_text) - 1;
+                    bq::array<uint8_t> cipher;
+                    cipher.fill_uninitialized(text_size);
+                    memcpy(cipher.begin(), plain_text, text_size);
+                    // Section 2.4.2 uses nonce 000000000000004a00000000 and starts at block counter
+                    // 1, so the byte offset into the keystream is 64.
+                    chacha20::keystream_xor(cipher.begin(), text_size, rfc_key, sunscreen_nonce, chacha20::block_size);
+                    result.add_result(sizeof(expected) == text_size && memcmp(cipher.begin(), expected, text_size) == 0,
+                        "chacha20 RFC 8439 section 2.4.2 vector");
+                    // The same text at counter 0 has to differ, otherwise the offset is being ignored.
+                    bq::array<uint8_t> at_zero;
+                    at_zero.fill_uninitialized(text_size);
+                    memcpy(at_zero.begin(), plain_text, text_size);
+                    chacha20::keystream_xor(at_zero.begin(), text_size, rfc_key, sunscreen_nonce, 0);
+                    result.add_result(memcmp(cipher.begin(), at_zero.begin(), text_size) != 0,
+                        "chacha20 keystream depends on the block counter");
+                }
+
+                // U-1: every hardware path against the scalar one for each round count, at an offset
+                // and a length that are not multiples of any chunk size, so the tail handler and the
+                // misaligned first block are both exercised.
+                {
+                    struct round_case {
+                        chacha20::round_count rounds;
+                        const char* name;
+                    };
+                    const round_case round_cases[] = {
+                        { chacha20::round_count::rounds_8, "chacha8" },
+                        { chacha20::round_count::rounds_12, "chacha12" },
+                        { chacha20::round_count::rounds_20, "chacha20" },
+                    };
+                    const size_t path_size = 4096;
+                    const size_t path_offset = 137;
+                    for (size_t c = 0; c < sizeof(round_cases) / sizeof(round_cases[0]); ++c) {
+                        bq::array<uint8_t> scalar_out;
+                        scalar_out.fill_uninitialized(path_size);
+                        for (size_t i = 0; i < path_size; ++i) {
+                            scalar_out[i] = static_cast<uint8_t>((i * 31 + 7) & 0xFFu);
+                        }
+                        bq::array<uint8_t> again = scalar_out;
+                        chacha20::set_hardware_acceleration_mode(chacha20::mode::scalar);
+                        chacha20::keystream_xor(scalar_out.begin(), path_size, rfc_key, rfc_nonce, path_offset, round_cases[c].rounds);
+                        // Same parameters twice on the same bytes: the result may only depend on the
+                        // arguments, which rules out any counter carried inside the kernel.
+                        chacha20::keystream_xor(again.begin(), path_size, rfc_key, rfc_nonce, path_offset, round_cases[c].rounds);
+                        result.add_result(memcmp(scalar_out.begin(), again.begin(), path_size) == 0,
+                            "%s is a pure function of its arguments", round_cases[c].name);
+
+                        for (size_t p = 0; p < sizeof(paths) / sizeof(paths[0]); ++p) {
+                            bq::array<uint8_t> candidate;
+                            candidate.fill_uninitialized(path_size);
+                            for (size_t i = 0; i < path_size; ++i) {
+                                candidate[i] = static_cast<uint8_t>((i * 31 + 7) & 0xFFu);
+                            }
+                            chacha20::set_hardware_acceleration_mode(paths[p]);
+                            chacha20::keystream_xor(candidate.begin(), path_size, rfc_key, rfc_nonce, path_offset, round_cases[c].rounds);
+                            result.add_result(memcmp(scalar_out.begin(), candidate.begin(), path_size) == 0,
+                                "%s hardware path index %" PRId32 " matches scalar at a misaligned offset",
+                                round_cases[c].name, static_cast<int32_t>(p));
+                        }
+                    }
+                    chacha20::set_hardware_acceleration_mode(chacha20::mode::auto_detect);
+                }
+            }
+
+            void test_random_bytes(test_result& result)
+            {
+                uint8_t first[64];
+                uint8_t second[64];
+                memset(first, 0, sizeof(first));
+                memset(second, 0, sizeof(second));
+
+                const bq::encryption::entropy_source source = bq::encryption::fill_random_bytes(first, sizeof(first));
+#if !BQ_HAS_SYSTEM_ENTROPY
+                // No system CSPRNG on this target; the fallback is expected and is reported to the
+                // caller. Asking the capability rather than naming the consoles is what keeps this
+                // honest on a build that is shaped like one but runs on a host whose libc has
+                // getentropy() - the platform branch would have been satisfied either way.
+                result.add_result(source == bq::encryption::entropy_source::software_mix, "random bytes degrade to software mix without a system CSPRNG");
+#else
+                result.add_result(source == bq::encryption::entropy_source::platform_csprng, "random bytes come from the platform CSPRNG");
+#endif
+                bq::encryption::fill_random_bytes(second, sizeof(second));
+                result.add_result(memcmp(first, second, sizeof(first)) != 0, "two consecutive fills differ");
+
+                bool all_zero = true;
+                for (size_t i = 0; i < sizeof(first); ++i) {
+                    if (first[i] != 0) {
+                        all_zero = false;
+                        break;
+                    }
+                }
+                result.add_result(!all_zero, "random bytes are not all zero");
+
+                // rsa::encrypt rejects a leading 0x00 byte because unpadded RSA drops leading zeros on
+                // decrypt, so any key material that gets wrapped has to avoid that byte. The appender
+                // rerolls it; this shows the condition really does occur at the expected rate rather
+                // than being a theoretical worry.
+                int32_t zero_prefix = 0;
+                for (int32_t i = 0; i < 4096; ++i) {
+                    uint8_t sample[32];
+                    bq::encryption::fill_random_bytes(sample, sizeof(sample));
+                    if (sample[0] == 0) {
+                        ++zero_prefix;
+                    }
+                }
+                result.add_result(zero_prefix > 0 && zero_prefix < 128,
+                    "leading zero byte occurs at roughly 1/256 (%" PRId32 "/4096 samples)", zero_prefix);
+            }
+
         public:
+            // The segment format reserves a fixed 256-byte field for the wrapped key, so only a
+            // 2048-bit modulus fits. Anything else has to be refused when the appender is created,
+            // not discovered when someone tries to open the file.
+            void test_public_key_validation(test_result& result)
+            {
+                struct key_case {
+                    int32_t modulus_bytes;
+                    uint8_t low_byte;
+                    int32_t exponent_size;
+                    bool expected;
+                    const char* what;
+                };
+                const key_case cases[] = {
+                    { 256, 0x01, 3, true, "2048-bit modulus, e = 65537" },
+                    { 256, 0x01, 2, false, "2048-bit modulus, e = 257" },
+                    { 256, 0x01, 0, false, "2048-bit modulus, empty exponent" },
+                    { 128, 0x01, 3, false, "1024-bit modulus" },
+                    { 512, 0x01, 3, false, "4096-bit modulus" },
+                    { 256, 0x00, 3, false, "even modulus" },
+                };
+                for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
+                    bq::rsa::public_key key;
+                    key.n_.fill_uninitialized(static_cast<size_t>(cases[i].modulus_bytes));
+                    // Taken by pointer and checked once: bq::array keeps its pointer null until it
+                    // has allocated, which the analyser cannot see through fill_uninitialized(),
+                    // so the writes below would be reported as null dereferences.
+                    uint8_t* modulus = key.n_.begin();
+                    result.add_result(modulus != nullptr, "the test key modulus buffer is allocated");
+                    if (!modulus) {
+                        continue;
+                    }
+                    modulus[0] = 0xC5; // high bit set: the declared bit length is reached
+                    for (int32_t b = 1; b < cases[i].modulus_bytes - 1; ++b) {
+                        modulus[static_cast<size_t>(b)] = static_cast<uint8_t>(b * 7 + 1);
+                    }
+                    modulus[static_cast<size_t>(cases[i].modulus_bytes - 1)] = cases[i].low_byte;
+                    key.e_.fill_uninitialized(static_cast<size_t>(cases[i].exponent_size));
+                    for (int32_t b = 0; b < cases[i].exponent_size; ++b) {
+                        // All 0x01: 3 bytes is 65793 (odd and above the minimum), 2 bytes is 257
+                        // (odd but below it), which is what the two cases are meant to separate.
+                        key.e_[static_cast<size_t>(b)] = 0x01;
+                    }
+                    result.add_result(bq::rsa::validate_public_key(key) == cases[i].expected,
+                        "public key validation: %s is %s", cases[i].what, cases[i].expected ? "accepted" : "rejected");
+                }
+            }
+
+            static void fill_random_bytes(bq::array<uint8_t>& out, size_t size)
+            {
+                out.clear();
+                out.fill_uninitialized(size);
+                for (size_t i = 0; i < size; ++i) {
+                    out[i] = static_cast<uint8_t>(bq::util::rand() & 0xFFu);
+                }
+            }
+
+            void check_mont_against_reference(test_result& result, const bq::array<uint8_t>& a,
+                const bq::array<uint8_t>& e, const bq::array<uint8_t>& n, const char* what)
+            {
+                bq::array<uint8_t> mont_out;
+                bq::array<uint8_t> ref_out;
+                const bool mont_ok = bq::rsa::test_mod_pow_mont(a, e, n, mont_out);
+                const bool ref_ok = bq::rsa::test_mod_pow_reference(a, e, n, ref_out);
+                const bool same = mont_ok && ref_ok
+                    && mont_out.size() == ref_out.size()
+                    && (mont_out.size() == 0 || memcmp(mont_out.begin(), ref_out.begin(), mont_out.size()) == 0);
+                result.add_result(same, "montgomery modexp agrees with the schoolbook one (%s, n = %d B, e = %d B)",
+                    what, static_cast<int32_t>(n.size()), static_cast<int32_t>(e.size()));
+            }
+
+            // Montgomery replaced the schoolbook modexp, so the two have to agree on everything the
+            // RSA round trip cannot see: the round trip only checks that a value comes back, which a
+            // subtly wrong reduction can also manage.
+            void test_montgomery(test_result& result)
+            {
+                bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
+                bq::array<uint8_t> n;
+                bq::array<uint8_t> a;
+                bq::array<uint8_t> e;
+                for (int32_t i = 0; i < 200; ++i) {
+                    // Mostly small moduli to keep the schoolbook reference affordable, with a slice
+                    // at the real key size.
+                    const size_t n_size = (i % 10 == 0) ? (128 + bq::util::rand() % 129) : (2 + bq::util::rand() % 63);
+                    fill_random_bytes(n, n_size);
+                    if (n[0] == 0) {
+                        n[0] = 1;
+                    }
+                    if (i % 2 == 0) {
+                        // The other half leaves the top bit clear, which is the path where R mod n
+                        // is not simply the two's complement of n.
+                        n[0] |= 0x80;
+                    }
+                    n[n.size() - 1] |= 0x01;
+                    fill_random_bytes(a, n_size - 1);
+                    fill_random_bytes(e, 1 + bq::util::rand() % 3);
+                    check_mont_against_reference(result, a, e, n, "random");
+                }
+
+                // Boundary bases and exponents, on the largest modulus the loop above used.
+                fill_random_bytes(n, 256);
+                n[0] |= 0x80;
+                n[n.size() - 1] |= 0x01;
+                bq::array<uint8_t> zero;
+                zero.fill_uninitialized(1);
+                zero[0] = 0;
+                bq::array<uint8_t> one;
+                one.fill_uninitialized(1);
+                one[0] = 1;
+                bq::array<uint8_t> n_minus_one;
+                n_minus_one.fill_uninitialized(n.size());
+                memcpy(n_minus_one.begin(), n.begin(), n.size());
+                for (size_t j = n_minus_one.size(); j > 0; --j) {
+                    if (n_minus_one[j - 1] != 0) {
+                        n_minus_one[j - 1]--;
+                        break;
+                    }
+                    n_minus_one[j - 1] = 0xFF;
+                }
+                bq::array<uint8_t> e_65537;
+                e_65537.fill_uninitialized(3);
+                e_65537[0] = 0x01;
+                e_65537[1] = 0x00;
+                e_65537[2] = 0x01;
+                check_mont_against_reference(result, zero, e_65537, n, "a = 0");
+                check_mont_against_reference(result, one, e_65537, n, "a = 1");
+                check_mont_against_reference(result, n_minus_one, e_65537, n, "a = n - 1");
+                check_mont_against_reference(result, a, zero, n, "e = 0");
+                check_mont_against_reference(result, a, one, n, "e = 1");
+
+                // P1.2 acceptance: one public-key operation on a 2048-bit key. The exponent is the
+                // real one, so this is the cost the appender pays when it wraps a segment key.
+                bq::array<uint8_t> base;
+                fill_random_bytes(base, 255);
+                base[0] |= 0x01;
+                // Enough rounds that a millisecond clock cannot dominate the average: on a fast machine
+                // one operation is a few hundredths of a millisecond.
+                constexpr int32_t timing_rounds = 100;
+                const uint64_t start_ms = bq::platform::high_performance_epoch_ms();
+                for (int32_t i = 0; i < timing_rounds; ++i) {
+                    bq::array<uint8_t> out;
+                    bq::rsa::test_mod_pow_mont(base, e_65537, n, out);
+                }
+                const double per_op_ms = static_cast<double>(bq::platform::high_performance_epoch_ms() - start_ms) / static_cast<double>(timing_rounds);
+                test_output_param(bq::log_level::info, "montgomery 2048-bit public operation: %.3f ms", per_op_ms);
+#if defined(NDEBUG)
+                // Only an optimised build is worth comparing against the budget; the Debug build of
+                // this header-only arithmetic is several times slower and says nothing about it.
+                // The budget separates Montgomery arithmetic from the schoolbook double-and-add it
+                // replaced, which costs an order of magnitude more; it is not a microbenchmark, and
+                // the measured value is printed above for the record. A shared runner reported
+                // 0.35 ms where a local one reports a tenth of that, so the bound sits far enough
+                // above the noise to fail only on a change of algorithm.
+                result.add_result(per_op_ms <= 2.0, "montgomery 2048-bit public operation within 2.0 ms (%.3f ms)", per_op_ms);
+#else
+                result.add_result(true, "montgomery 2048-bit public operation measured in a Debug build (%.3f ms, budget not applied)", per_op_ms);
+#endif
+            }
+
+            static int32_t hex_digit(char c)
+            {
+                if (c >= '0' && c <= '9') {
+                    return c - '0';
+                }
+                if (c >= 'a' && c <= 'f') {
+                    return c - 'a' + 10;
+                }
+                if (c >= 'A' && c <= 'F') {
+                    return c - 'A' + 10;
+                }
+                return -1;
+            }
+
+            static bool hex_to_bytes(const char* hex, bq::array<uint8_t>& out)
+            {
+                size_t n = 0;
+                while (hex[n] != '\0') {
+                    ++n;
+                }
+                if (n % 2 != 0) {
+                    return false;
+                }
+                out.clear();
+                out.fill_uninitialized(n / 2);
+                for (size_t i = 0; i < n / 2; ++i) {
+                    const int32_t hi = hex_digit(hex[i * 2]);
+                    const int32_t lo = hex_digit(hex[i * 2 + 1]);
+                    if (hi < 0 || lo < 0) {
+                        return false;
+                    }
+                    out[i] = static_cast<uint8_t>((hi << 4) | lo);
+                }
+                return true;
+            }
+
+            void check_sha256(test_result& result, const char* message, const char* expected_hex, const char* what)
+            {
+                bq::array<uint8_t> expected;
+                hex_to_bytes(expected_hex, expected);
+                uint8_t digest[bq::sha256::digest_size];
+                bq::sha256::hash(message, strlen(message), digest);
+                result.add_result(expected.size() == sizeof(digest) && memcmp(expected.begin(), digest, sizeof(digest)) == 0,
+                    "sha256 vector: %s", what);
+            }
+
+            // SHA-256 and HKDF only ever run on the segment key path, so a wrong digest would show up
+            // as "the file cannot be opened" long after the mistake. Pin them against the published
+            // vectors instead.
+            void test_sha256_hkdf(test_result& result)
+            {
+                check_sha256(result, "", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "empty message");
+                check_sha256(result, "abc", "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad", "abc");
+                check_sha256(result, "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq",
+                    "248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", "two-block message");
+
+                // Incremental and one-shot must agree: the segment head is hashed in pieces.
+                {
+                    const char* message = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+                    bq::sha256 hasher;
+                    hasher.update(message, 7);
+                    hasher.update(message + 7, strlen(message) - 7);
+                    uint8_t digest[bq::sha256::digest_size];
+                    hasher.finish(digest);
+                    bq::array<uint8_t> expected;
+                    hex_to_bytes("248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1", expected);
+                    result.add_result(memcmp(expected.begin(), digest, sizeof(digest)) == 0, "sha256 incremental equals one-shot");
+                }
+
+                // RFC 5869 test case 1: two expand blocks, which is what the 44-byte segment key
+                // derivation needs (32 bytes of key plus 12 of nonce).
+                {
+                    bq::array<uint8_t> ikm;
+                    bq::array<uint8_t> salt;
+                    bq::array<uint8_t> info;
+                    bq::array<uint8_t> expected;
+                    hex_to_bytes("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", ikm);
+                    hex_to_bytes("000102030405060708090a0b0c", salt);
+                    hex_to_bytes("f0f1f2f3f4f5f6f7f8f9", info);
+                    hex_to_bytes("3cb25f25faacd57a90434f64d0362f2a2d2d0a90cf1a5a4c5db02d56ecc4c5bf34007208d5b887185865", expected);
+                    uint8_t out[42];
+                    const bool ok = bq::hkdf_sha256::derive(salt.begin(), salt.size(), ikm.begin(), ikm.size(),
+                        info.begin(), info.size(), out, sizeof(out));
+                    result.add_result(ok && memcmp(expected.begin(), out, sizeof(out)) == 0, "hkdf-sha256 RFC 5869 test case 1");
+                }
+
+                // RFC 5869 test case 3: no salt and no info. The segment derivation passes no salt,
+                // so this is the shape the appender actually uses.
+                {
+                    bq::array<uint8_t> ikm;
+                    bq::array<uint8_t> expected;
+                    hex_to_bytes("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", ikm);
+                    hex_to_bytes("8da4e775a563c18f715f802a063c5a31b8a11f5c5ee1879ec3454e5f3c738d2d9d201395faa4b61a96c8", expected);
+                    uint8_t out[42];
+                    const bool ok = bq::hkdf_sha256::derive(nullptr, 0, ikm.begin(), ikm.size(), nullptr, 0, out, sizeof(out));
+                    result.add_result(ok && memcmp(expected.begin(), out, sizeof(out)) == 0, "hkdf-sha256 RFC 5869 test case 3");
+                }
+
+                // The output length must not change the prefix of the stream, otherwise a caller that
+                // asks for 44 bytes and one that asks for 32 would derive different keys.
+                {
+                    bq::array<uint8_t> ikm;
+                    hex_to_bytes("0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b0b", ikm);
+                    uint8_t long_out[64];
+                    uint8_t short_out[32];
+                    bq::hkdf_sha256::derive(nullptr, 0, ikm.begin(), ikm.size(), nullptr, 0, long_out, sizeof(long_out));
+                    bq::hkdf_sha256::derive(nullptr, 0, ikm.begin(), ikm.size(), nullptr, 0, short_out, sizeof(short_out));
+                    result.add_result(memcmp(long_out, short_out, sizeof(short_out)) == 0, "hkdf output is a prefix of the longer one");
+                    result.add_result(!bq::hkdf_sha256::derive(nullptr, 0, ikm.begin(), ikm.size(), nullptr, 0,
+                                          long_out, bq::hkdf_sha256::max_output_size + 1),
+                        "hkdf rejects an output longer than 255 blocks");
+                }
+            }
+
+            // The segment key comes out of this, so the two things worth proving are that the wrap
+            // round-trips at the real key size and that the shared secret keeps its full width: an
+            // implementation that returned the minimal encoding would derive a different key for
+            // roughly one segment in 256, and the files would simply fail to open.
+            void test_rsa_kem(test_result& result)
+            {
+                bq::rsa::public_key pub;
+                bq::rsa::private_key pri;
+                if (!bq::rsa::parse_public_key_ssh(bq::string(rsa_2048_public_ssh()), pub)
+                    || !bq::rsa::parse_private_key_pem(bq::string(rsa_2048_private_pem()), pri)) {
+                    result.add_result(false, "rsa kem: the built-in 2048-bit key did not parse");
+                    return;
+                }
+
+                bool all_round_trip = true;
+                bool all_sized = true;
+                bool all_leading_zero_seen = false;
+#if defined(NDEBUG)
+                // The full 10000 the format change was accepted on. A Debug build of the CRT path is
+                // several times slower, and the properties under test do not depend on the count.
+                constexpr int32_t wrap_count = 10000;
+#else
+                constexpr int32_t wrap_count = 1000;
+#endif
+                for (int32_t i = 0; i < wrap_count; ++i) {
+                    bq::array<uint8_t> ciphertext;
+                    bq::array<uint8_t> sender_secret;
+                    if (!bq::rsa::kem_encapsulate(pub, ciphertext, sender_secret)) {
+                        all_round_trip = false;
+                        break;
+                    }
+                    bq::array<uint8_t> receiver_secret;
+                    if (!bq::rsa::kem_decapsulate(pri, ciphertext, receiver_secret)) {
+                        all_round_trip = false;
+                        break;
+                    }
+                    if (ciphertext.size() != 256 || sender_secret.size() != 256 || receiver_secret.size() != 256) {
+                        all_sized = false;
+                        break;
+                    }
+                    if (memcmp(sender_secret.begin(), receiver_secret.begin(), 256) != 0) {
+                        all_round_trip = false;
+                        break;
+                    }
+                    if (sender_secret[0] == 0) {
+                        all_leading_zero_seen = true;
+                    }
+                }
+                result.add_result(all_round_trip, "rsa kem: every wrap round-trips to the same secret");
+                result.add_result(all_sized, "rsa kem: both halves are always 256 bytes");
+                test_output_param(bq::log_level::info, "rsa kem: %d wraps, a zero leading byte occurred: %d",
+                    wrap_count, all_leading_zero_seen ? 1 : 0);
+
+                // A leading zero has to be constructed rather than waited for: pick a value whose
+                // top byte is zero, wrap it with the public key, and check the unwrap restores all
+                // 256 bytes instead of dropping to 255.
+                {
+                    bq::array<uint8_t> chosen;
+                    chosen.fill_uninitialized(256);
+                    chosen[0] = 0;
+                    for (size_t i = 1; i < chosen.size(); ++i) {
+                        chosen[i] = static_cast<uint8_t>((i * 37 + 11) & 0xFFu);
+                    }
+                    // Trimming the leading zero gives the integer; it has to stay below the modulus.
+                    bq::array<uint8_t> integer;
+                    integer.clear();
+                    integer.insert_batch(integer.end(), chosen.begin() + 1, chosen.size() - 1);
+                    bq::array<uint8_t> ciphertext;
+                    bq::array<uint8_t> exponent;
+                    exponent.insert_batch(exponent.end(), pub.e_.begin(), pub.e_.size());
+                    if (!bq::rsa::test_mod_pow_mont(integer, exponent, pub.n_, ciphertext) || ciphertext.size() != 256) {
+                        result.add_result(false, "rsa kem: the constructed wrap did not produce a fixed-width ciphertext");
+                    } else {
+                        bq::array<uint8_t> recovered;
+                        const bool ok = bq::rsa::kem_decapsulate(pri, ciphertext, recovered);
+                        result.add_result(ok && recovered.size() == 256
+                                && memcmp(recovered.begin(), chosen.begin(), 256) == 0,
+                            "rsa kem: a shared secret with a zero leading byte survives the unwrap");
+                    }
+                }
+
+                // c >= n is not a valid wrap; accepting it would mean the decoder has a branch that
+                // leaks which inputs are structurally invalid.
+                {
+                    bq::array<uint8_t> ciphertext;
+                    ciphertext.fill_uninitialized(256);
+                    memcpy(ciphertext.begin(), pub.n_.begin(), 256);
+                    bq::array<uint8_t> secret;
+                    result.add_result(!bq::rsa::kem_decapsulate(pri, ciphertext, secret), "rsa kem: rejects a ciphertext equal to the modulus");
+                    ciphertext.fill_uninitialized(256);
+                    memset(ciphertext.begin(), 0xFF, 256);
+                    result.add_result(!bq::rsa::kem_decapsulate(pri, ciphertext, secret), "rsa kem: rejects a ciphertext above the modulus");
+                }
+            }
+
             virtual test_result test() override
             {
                 test_result result;
                 test_vernam(result);
+                test_chacha20(result);
+                test_random_bytes(result);
+                test_public_key_validation(result);
+                test_sha256_hkdf(result);
+                test_rsa_kem(result);
+                test_montgomery(result);
 
 #if defined(BQ_UNITE_TEST_LOW_PERFORMANCE_MODE)
                 constexpr uint32_t thread_count = 1;

@@ -160,7 +160,10 @@ namespace bq {
     BQ_LIKELY_IF(len >= 32)                                                      \
     {                                                                            \
         const uint8_t* const src_end = s + len;                                  \
-        uint8_t* const dst_end = d + len;                                        \
+        /* hash_only passes a null destination because it never writes, but the */\
+        /* end pointer is derived before the copy is decided, and offsetting a  */\
+        /* null pointer is undefined behaviour even when the result is unused. */\
+        uint8_t* const dst_end = d + (DO_COPY ? len : 0);                         \
         while (s <= src_end - 32) {                                              \
             uint64_t v1, v2, v3, v4;                                             \
             memcpy(&v1, s, 8);                                                   \

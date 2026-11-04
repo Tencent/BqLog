@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.7.3
+# BqLog (扁鹊日志) V 2.8.0
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.7.3-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.3-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.8.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.8.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -54,19 +54,18 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.3-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.8.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 v2.7.x 更新亮点
+## 📋 v2.8.x 更新亮点
 
-- **主机平台（实验性）**：支持 PlayStation 4、PlayStation 5 与 Nintendo Switch，以源码方式接入。详见[接入指南 — 主机平台](docs/INTEGRATION_GUIDE_CHS.md#主机平台)。
-- **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。
-- **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)`，性能与 `BQ_LOG_FAST_INFO` 相同，IDE 提示完整，任何日志对象都能用。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
-- **包管理器**：支持 Homebrew、vcpkg、NuGet，见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
-- **多进程**：多个进程可以共用同一个日志目录，各自拥有独立的崩溃恢复数据。
-- **问题修复**：修复了快速模式、恢复、格式化、配置解析与解码器等多处问题。
+- **新的加密日志格式（v11）**：每个段有自己的种子，用 RSA-KEM 封装，再经 HKDF-SHA256 派生成密钥与 nonce；载荷用 ChaCha8 加密，并按段内偏移寻址。10 MB 文件、1 MB 分段时体积比之前小约 3%，加密相对明文的开销从 28% 降到 15%。
+- **库只读自己写的格式**：只解 v11。遇到旧文件时 console 会提示使用独立的 `BqLog_LogDecoder`，它同时支持 v9、v10、v11。
+- **更快的 RSA**：模幂改为 Montgomery 乘法，私钥运算用 CRT 与底数盲化。2048 bit 公钥运算约 0.20 ms。
+- **更小的运行时**：AES 与 32 KiB 异或掩码的代码已移出库，只保留在独立解码器里。
+- **问题修复**：进程退出时写缓存尾部的加密字节会以明文落盘；短写会丢字节并让随后的掩码作用在错误区间；在刷盘窗口内崩溃会把已加密的字节当明文重放。
 
 > [!WARNING]
-> **ABI 变更发生在 2.7.x 与 2.6.x 及更早版本之间。** 跨过这条界线时，头文件（或各语言 wrapper）和库需要一起升级；2.7.x 内部彼此 ABI 兼容。
+> **2.8.0 读不了 2.7.x 写的文件，2.7.x 也读不了 2.8.0 写的文件。** 抛开加密，日志格式版本从 10 变成了 11。旧文件请用本次发布自带的 `BqLog_LogDecoder` 解码。**已有的加密文件应视为不再保密**，见[高级用法 — 从格式 v10 迁移](docs/ADVANCED_USAGE_CHS.md#5从格式-v10-迁移)。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 

@@ -184,6 +184,12 @@ After importing the Unreal plugin, BqLog can be called directly in Blueprint:
 
 ---
 
+## 32-bit targets and large files
+
+A log file is addressed with 64-bit positions, and that needs a 64-bit `off_t` from the C library. Our own CMake targets define `_FILE_OFFSET_BITS=64` for every platform: where `off_t` is already 64 bits (macOS, Linux x86_64, `arm64-v8a`) the object code is identical with and without it, and the Windows C library does not read the name at all, so it only does work on 32-bit UNIX (including the Android ABIs below `arm64-v8a`). A project that compiles the BqLog sources inside its own build has to add the same definition to its compile flags. Where it is missing, the library asks the platform how wide `off_t` is, keeps every file below 2 GiB and starts a new one at that point, with one warning in the device console: no log record is lost, but a single file cannot grow past 2 GiB.
+
+---
+
 ## Next Steps
 
 - [Integration Guide](./INTEGRATION_GUIDE.md) — Integration for all platforms and languages

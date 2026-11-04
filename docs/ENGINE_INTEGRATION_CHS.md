@@ -181,6 +181,12 @@ Unreal 插件会自动将所有 BqLog 输出转接到 Unreal 的 Output Log，�
 
 ---
 
+## 32 位平台与大文件
+
+日志文件按 64 位位置寻址，这要求 C 库的 `off_t` 是 64 位。我们自己的 CMake 目标给所有平台都加上 `_FILE_OFFSET_BITS=64`：`off_t` 本来就是 64 位的地方（macOS、Linux x86_64、`arm64-v8a`）加不加是同一份目标代码，Windows 的 C 库根本不认识这个名字，所以只有 32 位 UNIX（包括 `arm64-v8a` 以下的 Android ABI）上它才真的做事。如果项目是把 BqLog 源码编进自己的构建，需要自己加上同一个定义。没有加的时候，库会去问平台 `off_t` 有多宽，把每个文件控制在 2 GiB 以内并在到达时换新文件，同时在设备控制台打一条 warning：不会丢日志，但单个文件长不到 2 GiB。
+
+---
+
 ## 接下来
 
 - [集成指南](./INTEGRATION_GUIDE_CHS.md) — 所有平台和语言的集成步骤

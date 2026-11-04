@@ -2,6 +2,23 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.8.0] - 2026-11-03
+- **Encrypted log format v11.** The encryption layer of `binary_file` appenders was rebuilt:
+  - a segment key is wrapped with RSA-KEM instead of RSA-encrypting an AES key, and derived with HKDF-SHA256 from the shared secret, the format version, the encryption type, the round count, the public-key fingerprint and the KEM ciphertext;
+  - the payload is encrypted with ChaCha8 as a keystream addressed by the offset inside the segment, so decoding can start anywhere in a segment and a damaged region stays local;
+  - the 32 KiB XOR blob is gone. A segment head grows by 256 bytes, so a 10 MB file with a 1 MB segment size shrinks by about 3%.
+- **Compatibility**: v11 writes and reads v11 only. A v9 or v10 file has to be decoded with the standalone `BqLog_LogDecoder`, which reads 9, 10 and 11 (`--version` lists them), and a v11 file cannot be read by an older library. Existing encrypted files were written by the v10 scheme and should be treated as no longer confidential: see the security notes in `docs/`.
+- **RSA**: modular exponentiation moved to Montgomery multiplication with Chinese remaindering and base blinding for private-key operations. A 2048-bit public-key operation costs about 0.20 ms.
+- **ChaCha20 / ChaCha12 / ChaCha8** with NEON, AVX2 and SSE2 kernels, all byte-identical to the portable path.
+- **SHA-256 and HKDF-SHA256** (`bq::sha256`, `bq::hkdf_sha256`), with no platform dependency and no STL.
+- **Behavior change**: on console platforms (PS4, PS5, Switch) an encrypted appender keeps working when the application has not injected a random source with `bq::log::set_secure_random_source()`, but the segment keys then come from a software mix of clocks, thread ids and addresses, and one warning says so at creation. Inject a source there: key material that does not come from a CSPRNG can be searched offline by anyone who reads the file. Plaintext loggers are unaffected.
+- **Behavior change**: a public key is validated before an encrypted appender is created - the modulus must be exactly 2048 bits and the exponent odd and at least 65537. A 1024-bit or 4096-bit key used to produce files that could not be decoded (the segment head reserves a fixed 256-byte field for the wrapped key).
+- **Bug fix**: the write cache was written unencrypted when a log was torn down with bytes still pending (the base class destructor flushed through its own implementation, which knows nothing about the transform).
+- **Bug fix**: after a short write, the bytes the write did not take were dropped, and with encryption on the XOR back then ran over the wrong range.
+- **Bug fix**: a crash inside a flush window used to replay the partially encrypted write cache into a new segment and encrypt it a second time, which produced unreadable output. Recovery now records whether a window is open and discards whatever it still holds, leaving the file untouched.
+- **Bug fix**: a file larger than 2 GiB lost everything from the first segment that starts above 2 GiB. The file position was narrowed to 32 bits before the seek, so above 2 GiB the offset turned negative and the seek failed, and above 4 GiB it wrapped to a small positive offset and landed inside the previous segment's data; either way the reader reported the end of the file and decoding stopped without an error. The same narrowing was in the appender's recovery scan, so such a file could not be appended to after a crash either.
+- **Bug fix**: on a 32-bit target a log file could not grow past 2 GiB, and the write that crossed that line failed without saying so. A file position, a file size and the truncate offset are now 64 bits wide all the way down to the platform layer, and an appender caps its file size at what the build can address instead of trying. Where `off_t` is 32 bits, a single file stops at 2 GiB, a new file starts there and the device console says so once; a build that wants larger files needs a 64-bit `off_t` — our CMake targets define `_FILE_OFFSET_BITS=64` for every platform, which changes nothing where `off_t` is already 64 bits, and a project compiling these sources itself has to add it to its compile flags. See [Engine Integration](./docs/ENGINE_INTEGRATION.md#32-bit-targets-and-large-files).
+
 ## [v2.7.3] - 2026-10-29
 - **Bug fix**: removed the `fork()` handling. BqLog is multi-threaded, so it supports only a `fork()` that is followed immediately by `exec()` of a new process; a child must not keep using what it inherited.
 

@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <errno.h>
+#include <stdlib.h>
 #if BQ_HAS_CROSS_PROCESS_FILE_LOCK
 #include <sys/file.h>
 #endif
@@ -33,6 +35,19 @@ namespace bq {
 }
 #endif
 #include "bq_common/bq_common.h"
+
+// Where the C library declares getrandom() or getentropy(), one system call fills the buffer and no
+// file is opened. Which of the two a target has is asked of the compiler instead of a version macro
+// (see the probes further down); all this line does is make the declarations visible where the
+// header exists at all. Nothing below is compiled when the platform has no CSPRNG, so the header is
+// not needed there either.
+#if BQ_HAS_SYSTEM_ENTROPY
+#if defined(__has_include)
+#if __has_include(<sys/random.h>)
+#include <sys/random.h>
+#endif
+#endif
+#endif
 
 namespace bq {
     namespace platform {
@@ -86,7 +101,7 @@ namespace bq {
         }
 #endif
 
-        int32_t get_file_size(const char* file_path, size_t& size_ref)
+        int32_t get_file_size(const char* file_path, uint64_t& size_ref)
         {
             struct stat buf;
             size_ref = 0;
@@ -95,13 +110,13 @@ namespace bq {
                 if (!S_ISREG(buf.st_mode)) {
                     return EISDIR;
                 }
-                size_ref = static_cast<size_t>(buf.st_size);
+                size_ref = static_cast<uint64_t>(buf.st_size);
                 return 0;
             }
             return errno;
         }
 
-        int32_t get_file_size(const platform_file_handle& file_handle, size_t& size_ref)
+        int32_t get_file_size(const platform_file_handle& file_handle, uint64_t& size_ref)
         {
             struct stat buf;
             size_ref = 0;
@@ -110,10 +125,21 @@ namespace bq {
                 if (!S_ISREG(buf.st_mode)) {
                     return EISDIR;
                 }
-                size_ref = static_cast<size_t>(buf.st_size);
+                size_ref = static_cast<uint64_t>(buf.st_size);
                 return 0;
             }
             return errno;
+        }
+
+        int64_t get_max_supported_file_size()
+        {
+            // off_t is what lseek accepts and what struct stat reports, so its width is the whole
+            // addressable range. 32 bits cannot reach past 2 GiB, and leaving a margin keeps the
+            // last write cache flush below the ceiling.
+            if (sizeof(off_t) >= sizeof(int64_t)) {
+                return 0;
+            }
+            return (static_cast<int64_t>(1) << 31) - (static_cast<int64_t>(16) << 20);
         }
 
         bool is_dir(const char* path)
@@ -369,9 +395,9 @@ namespace bq {
             return false;
         }
 
-        int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
+        int32_t truncate_file(const platform_file_handle& file_handle, uint64_t offset)
         {
-            auto result = ftruncate(file_handle, (off_t)offset);
+            auto result = ftruncate(file_handle, static_cast<off_t>(offset));
             if (result == 0) {
                 return result;
             }
@@ -579,6 +605,15 @@ namespace bq {
                 // tests should scope by clearing the fault before/after the targeted op.
                 return ENOSPC;
             }
+            // Short write: land `limit` bytes, then report the disk as full. The caller sees exactly
+            // what a real ENOSPC mid-write looks like, without needing a full disk.
+            size_t short_write_limit = 0;
+            bool is_short_write = test_inject::get_short_write_limit(short_write_limit);
+            if (is_short_write && write_size > short_write_limit) {
+                write_size = short_write_limit;
+            } else {
+                is_short_write = false;
+            }
 #endif
             const char* current_src = static_cast<const char*>(src_addr);
             size_t remaining = write_size;
@@ -601,6 +636,11 @@ namespace bq {
                     break;
                 }
             }
+#if defined(BQ_UNIT_TEST)
+            if (is_short_write) {
+                return ENOSPC;
+            }
+#endif
             return 0;
         }
 
@@ -799,6 +839,139 @@ namespace bq {
         void aligned_free(void* ptr)
         {
             free(ptr);
+        }
+
+        namespace {
+#if BQ_HAS_SYSTEM_ENTROPY
+            // Whether the C library declares these is a question about declarations, not versions,
+            // and it can be asked without naming a platform. The argument type depends on a template
+            // parameter, so the call is looked up at instantiation time; a name that is not there is
+            // then a substitution failure rather than an error, which is what makes the probe legal
+            // on a target that has neither function.
+            template <typename T>
+            auto detects_getrandom(int) -> decltype(getrandom(static_cast<T*>(nullptr), static_cast<size_t>(0), 0U), bq::true_type());
+            template <typename>
+            auto detects_getrandom(...) -> bq::false_type;
+
+            template <typename T>
+            auto detects_getentropy(int) -> decltype(getentropy(static_cast<T*>(nullptr), static_cast<size_t>(0)), bq::true_type());
+            template <typename>
+            auto detects_getentropy(...) -> bq::false_type;
+
+            // Both bodies are templates as well: the call inside one only has to exist on a target
+            // whose probe said yes, because the other body is never instantiated.
+            template <typename T>
+            bool fill_from_getrandom(T* out, size_t size)
+            {
+                // A short read and an interrupted call both mean "ask again for the rest", not "top
+                // the answer up from a different source".
+                size_t done = 0;
+                while (done < size) {
+                    const ssize_t got = getrandom(out + done, size - done, 0U);
+                    if (got > 0) {
+                        done += static_cast<size_t>(got);
+                    } else if (got < 0 && errno == EINTR) {
+                        continue;
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            template <typename T>
+            bool fill_from_getentropy(T* out, size_t size)
+            {
+                // This one hands out at most 256 bytes per call.
+                size_t done = 0;
+                while (done < size) {
+                    const size_t left = size - done;
+                    const size_t chunk = left > 256 ? 256 : left;
+                    if (getentropy(out + done, chunk) != 0) {
+                        return false;
+                    }
+                    done += chunk;
+                }
+                return true;
+            }
+
+            // getrandom() wins wherever it is declared, because it has no size limit. The overloads
+            // are selected by the two probe results, so exactly one body above is instantiated.
+            template <typename T, typename EntropyTag>
+            bool fill_from_system(T* out, size_t size, bq::true_type, EntropyTag)
+            {
+                return fill_from_getrandom(out, size);
+            }
+
+            template <typename T>
+            bool fill_from_system(T* out, size_t size, bq::false_type, bq::true_type)
+            {
+                return fill_from_getentropy(out, size);
+            }
+
+            template <typename T>
+            bool fill_from_system(T*, size_t, bq::false_type, bq::false_type)
+            {
+                return false;
+            }
+#endif // BQ_HAS_SYSTEM_ENTROPY
+        }
+
+        // One definition for every POSIX target, consoles included, and BQ_HAS_SYSTEM_ENTROPY decides
+        // how it is answered. A console SDK declares neither getrandom() nor getentropy() and has no
+        // /dev/urandom, so those targets report failure here and the caller falls back to the software
+        // mix and warns. Keeping one definition rather than a console stub beside it means there is no
+        // duplicate symbol to keep in step, and the same definition is what a normal build compiles
+        // when the capability is switched off to exercise that fallback.
+        bool secure_random_bytes(void* buf, size_t size)
+        {
+            if (!buf || size == 0) {
+                return true;
+            }
+#if defined(BQ_UNIT_TEST)
+            if (test_inject::get_disable_secure_random()) {
+                return false;
+            }
+#endif
+#if BQ_HAS_SYSTEM_ENTROPY
+            uint8_t* out = static_cast<uint8_t*>(buf);
+            // One system call fills the whole buffer where the C library has one.
+            typedef decltype(detects_getrandom<uint8_t>(0)) has_getrandom_t;
+            typedef decltype(detects_getentropy<uint8_t>(0)) has_getentropy_t;
+            if (fill_from_system(out, size, has_getrandom_t(), has_getentropy_t())) {
+                return true;
+            }
+            // Otherwise the device file is the way in: one open per call, and this runs once per log
+            // segment.
+            const int fd = open("/dev/urandom", O_RDONLY
+#if defined(O_CLOEXEC)
+                    | O_CLOEXEC
+#endif
+            );
+            if (fd < 0) {
+                return false;
+            }
+            size_t done = 0;
+            bool ok = true;
+            while (done < size) {
+                const ssize_t n = read(fd, out + done, size - done);
+                if (n > 0) {
+                    done += static_cast<size_t>(n);
+                } else if (n < 0 && errno == EINTR) {
+                    continue;
+                } else {
+                    ok = false;
+                    break;
+                }
+            }
+            close(fd);
+            return ok;
+#else
+            // No system CSPRNG on this target. The caller derives what it needs from the software mix
+            // and the appender warns once, so the platform has to be told about it before the first
+            // encrypted log is created rather than being served a key that only looks random.
+            return false;
+#endif // BQ_HAS_SYSTEM_ENTROPY
         }
     }
 }

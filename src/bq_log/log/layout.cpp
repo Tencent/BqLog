@@ -15,6 +15,7 @@
 
 #include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
+#include "bq_log/types/buffer/log_buffer.h"
 
 namespace bq {
 
@@ -446,13 +447,16 @@ namespace bq {
             auto iter = thread_names_cache_.find(thread_id);
             if (iter == thread_names_cache_.end()) {
                 const auto& ext_info = log_entry.get_ext_head();
-                char tmp[256];
+                // "[tid-" + up to 20 digits + " " + the name + "]\t" + terminator. The name is
+                // bounded by the format, and the decoder as well as log_record_reader reject
+                // anything longer, so the copy below cannot run past the end by construction.
+                char tmp[bq::log_thread_info::MAX_THREAD_NAME_LEN + 32];
                 uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", thread_id));
                 memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), ext_info.thread_name_len_);
                 cursor += ext_info.thread_name_len_;
                 tmp[cursor++] = ']';
                 tmp[cursor++] = '\t';
-                assert(cursor < 256);
+                assert(cursor < sizeof(tmp));
                 tmp[cursor] = '\0';
                 bq::string thread_name = tmp;
                 iter = thread_names_cache_.add(thread_id, bq::move(thread_name));

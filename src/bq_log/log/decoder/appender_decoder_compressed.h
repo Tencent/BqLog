@@ -32,6 +32,14 @@ namespace bq {
 
         virtual uint32_t get_binary_format_version() const override;
 
+        // Format v11 segment layer: RSA-KEM to wrap the per-segment seed, HKDF-SHA256 to derive
+        // (K, N), ChaCha addressed by the offset from the payload base.
+        virtual bool is_supported_enc_type(appender_file_binary::appender_encryption_type type) const override;
+
+        virtual bool setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start) override;
+
+        virtual bool decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos) override;
+
     private:
         bq::tuple<appender_decode_result, appender_file_compressed::item_type, appender_decoder_base::read_with_cache_handle> read_item_data();
 
@@ -46,5 +54,12 @@ namespace bq {
         bq::array<decoder_log_template> log_templates_array_;
         bq::hash_map<uint64_t, decoder_thread_info_template> thread_info_templates_map_;
         bq::array<uint8_t> raw_data_;
+
+        // The current segment's key material and the position its keystream counts from. Both are
+        // replaced, and wiped, by setup_segment for every segment.
+        appender_file_binary::segment_key seg_key_ {};
+        uint8_t seg_chacha_rounds_ = 0;
+        uint64_t seg_payload_base_ = 0;
+        appender_file_binary::appender_encryption_type seg_enc_type_ = appender_file_binary::appender_encryption_type::plaintext;
     };
 }

@@ -276,6 +276,25 @@ namespace bq {
         }
     }
 
+    void log_manager::test_teardown_appenders(uint64_t log_id)
+    {
+        log_imp* log = get_log_by_id(log_id);
+        if (!log) {
+            return;
+        }
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        log->test_teardown_appenders();
+    }
+
+    void log_manager::test_force_flush(uint64_t log_id)
+    {
+        log_imp* log = get_log_by_id(log_id);
+        if (!log) {
+            return;
+        }
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        log->sync_process(true);
+    }
 #endif
     void log_manager::uninit()
     {

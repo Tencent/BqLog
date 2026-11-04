@@ -20,7 +20,7 @@
  *
  */
 
-#include "bq_common/encryption/vernam.h"
+#include "legacy/crypto/vernam.h"
 #include "bq_common/platform/macros.h"
 namespace bq {
 

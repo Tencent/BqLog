@@ -15,14 +15,16 @@
 #include <sys/stat.h>
 #include <direct.h>
 #include <fileapi.h>
+#include <bcrypt.h>
 #include <DbgHelp.h>
 #include <wchar.h>
 #include "bq_common/bq_common.h"
 
 #ifdef BQ_VISUAL_STUDIO
 #pragma comment(lib, "dbghelp.lib")
+#pragma comment(lib, "bcrypt.lib")
 #else
-#pragma message("Warning: DbgHelp.a is not linked without MSVC automatically. Please link it manually by -ldbghelp. ")
+#pragma message("Warning: DbgHelp.a and bcrypt.a are not linked without MSVC automatically. Please link them manually by -ldbghelp -lbcrypt. ")
 #endif
 
 namespace bq {
@@ -102,7 +104,7 @@ namespace bq {
         }
 #endif
 
-        int32_t get_file_size(const char* file_path, size_t& size_ref)
+        int32_t get_file_size(const char* file_path, uint64_t& size_ref)
         {
             bq::u16string file_path_w = u"\\\\?\\" + trans_to_windows_wide_string(force_to_abs_path(get_lexically_path(file_path)));
             HANDLE file = CreateFileW(
@@ -121,14 +123,20 @@ namespace bq {
             return result;
         }
 
-        int32_t get_file_size(const platform_file_handle& file_handle, size_t& size_ref)
+        int32_t get_file_size(const platform_file_handle& file_handle, uint64_t& size_ref)
         {
             size_ref = 0;
             LARGE_INTEGER file_size;
             if (!GetFileSizeEx(file_handle, &file_size)) {
                 return static_cast<int32_t>(GetLastError());
             }
-            size_ref = static_cast<size_t>(file_size.QuadPart);
+            size_ref = static_cast<uint64_t>(file_size.QuadPart);
+            return 0;
+        }
+
+        int64_t get_max_supported_file_size()
+        {
+            // SetFilePointer takes the offset as two 32-bit halves, so the whole 64-bit range is there.
             return 0;
         }
 
@@ -485,6 +493,14 @@ namespace bq {
             if (test_inject::get_fault() == test_inject::fault_kind::enospc_on_write) {
                 return static_cast<int32_t>(ERROR_DISK_FULL);
             }
+            // Short write: land `limit` bytes, then report the disk as full.
+            size_t short_write_limit = 0;
+            bool is_short_write = test_inject::get_short_write_limit(short_write_limit);
+            if (is_short_write && write_size > short_write_limit) {
+                write_size = short_write_limit;
+            } else {
+                is_short_write = false;
+            }
 #endif
             const char* current_src = static_cast<const char*>(src_addr);
             size_t remaining = write_size;
@@ -505,6 +521,11 @@ namespace bq {
                     break;
                 }
             }
+#if defined(BQ_UNIT_TEST)
+            if (is_short_write) {
+                return static_cast<int32_t>(ERROR_DISK_FULL);
+            }
+#endif
             return 0;
         }
 
@@ -567,7 +588,7 @@ namespace bq {
             return epoch_ms;
         }
 
-        int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
+        int32_t truncate_file(const platform_file_handle& file_handle, uint64_t offset)
         {
             FILE_END_OF_FILE_INFO eof_info;
             eof_info.EndOfFile.QuadPart = static_cast<LONGLONG>(offset);
@@ -829,6 +850,38 @@ namespace bq {
                 return reinterpret_cast<void*>(GetProcAddress(module, api_name));
             }
             return nullptr;
+        }
+
+        bool secure_random_bytes(void* buf, size_t size)
+        {
+            if (!buf || size == 0) {
+                return true;
+            }
+#if defined(BQ_UNIT_TEST)
+            if (test_inject::get_disable_secure_random()) {
+                return false;
+            }
+#endif
+#if BQ_HAS_SYSTEM_ENTROPY
+            // The system-preferred RNG needs no CRT feature macro ahead of the includes, and it
+            // fills the whole buffer in one call instead of four bytes at a time.
+            uint8_t* out = static_cast<uint8_t*>(buf);
+            const ULONG max_chunk = static_cast<ULONG>(-1);
+            size_t done = 0;
+            while (done < size) {
+                const size_t left = size - done;
+                const ULONG chunk = (left < static_cast<size_t>(max_chunk)) ? static_cast<ULONG>(left) : max_chunk;
+                if (BCryptGenRandom(nullptr, out + done, chunk, BCRYPT_USE_SYSTEM_PREFERRED_RNG) != 0) {
+                    return false;
+                }
+                done += chunk;
+            }
+            return true;
+#else
+            // Switched off by the capability, which is what a console-shaped build does and what the
+            // degraded build uses to exercise the software-mix fallback.
+            return false;
+#endif
         }
 
     }

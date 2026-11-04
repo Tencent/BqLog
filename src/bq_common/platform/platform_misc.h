@@ -119,9 +119,29 @@ namespace bq {
 
         bool try_get_base_dir(int32_t base_dir_type, bq::string& out_dir);
 
-        int32_t get_file_size(const char* file_path, size_t& size_ref);
+        // A file is not a buffer: its size and its positions are 64 bits even where size_t is not.
+        int32_t get_file_size(const char* file_path, uint64_t& size_ref);
 
-        int32_t get_file_size(const platform_file_handle& file_handle, size_t& size_ref);
+        int32_t get_file_size(const platform_file_handle& file_handle, uint64_t& size_ref);
+
+        /// <summary>
+        /// The largest file this build can address, or 0 when that is the whole 64-bit range.
+        /// Where off_t is 32 bits wide, a position beyond 2 GiB fails at the seek instead of
+        /// reaching the data, so an appender has to stop before it.
+        /// </summary>
+        int64_t get_max_supported_file_size();
+
+        /// <summary>
+        /// The configured max_file_size, capped to what the build can address. 0 still means
+        /// "unbounded" wherever the platform has no limit.
+        /// </summary>
+        bq_forceinline int64_t cap_max_file_size(int64_t configured, int64_t platform_limit)
+        {
+            if (platform_limit > 0 && (configured <= 0 || configured > platform_limit)) {
+                return platform_limit;
+            }
+            return configured;
+        }
 
         bool is_dir(const char* path);
 
@@ -173,7 +193,7 @@ namespace bq {
         /// <param name="file_handle"></param>
         /// <param name="offset"></param>
         /// <returns>0 means success, otherwise means error code</returns>
-        int32_t truncate_file(const platform_file_handle& file_handle, size_t offset);
+        int32_t truncate_file(const platform_file_handle& file_handle, uint64_t offset);
 
         void get_stack_trace(uint32_t skip_frame_count, const char*& out_str_ptr, uint32_t& out_char_count);
         void get_stack_trace_utf16(uint32_t skip_frame_count, const char16_t*& out_str_ptr, uint32_t& out_char_count);
@@ -183,6 +203,13 @@ namespace bq {
 
         // Commits every page of [addr, addr + size) without changing contents. No concurrent writers.
         void prefault_pages(void* addr, size_t size);
+
+        /// <summary>
+        /// Fills [buf, buf + size) from the operating system's cryptographic random source.
+        /// Returns false when the platform exposes none (consoles), in which case the caller has to
+        /// supply its own fallback. Never returns true with partially filled buffer.
+        /// </summary>
+        bool secure_random_bytes(void* buf, size_t size);
 
 #if defined(BQ_UNIT_TEST)
         // Test-only fault-injection hooks for disk-full / OOM scenarios.
@@ -207,6 +234,19 @@ namespace bq {
             // return null, simulating "mmap fails AND heap fails" on disk full + OOM.
             void set_normal_buffer_alloc_fail(bool fail);
             bool get_normal_buffer_alloc_fail();
+
+            // Short-write hook: write_file() succeeds for at most `bytes` bytes of every call, then
+            // reports ENOSPC. Reproduces the partial-write path (left-align, retry, XOR back) without
+            // filling a real disk. (size_t)-1 disarms it.
+            void set_short_write_limit(size_t bytes);
+            bool get_short_write_limit(size_t& out_bytes);
+
+            // Makes secure_random_bytes() report failure on a platform that really has a CSPRNG, so
+            // the "no secure source" path can be exercised in a normal build. A build with
+            // BQ_HAS_SYSTEM_ENTROPY at 0 runs that path everywhere without this; the hook is what
+            // covers it on the ordinary jobs, where every host has one.
+            void set_disable_secure_random(bool disable);
+            bool get_disable_secure_random();
 
             void set_base_dir_unset(bool unset);
         }

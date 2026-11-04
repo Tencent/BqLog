@@ -11,7 +11,9 @@
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
 #include <atomic>
+#include <cstdio>
 #include <random>
+#include <string>
 #include <thread>
 #include <vector>
 #include "test_base.h"
@@ -23,6 +25,7 @@
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "bq_log/log/appender/appender_file_text.h"
 #include "bq_log/global/log_vars.h"
+#include "bq_log/types/buffer/log_buffer.h"
 #include "bq_log/log/decoder/appender_decoder_base.h"
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 
@@ -243,6 +246,45 @@ namespace bq {
                 return 1;
             }
 
+            // The same v11 segment layer the runtime decoder uses, without the record layer on top:
+            // this decoder only walks the segment chain and hands back the payload bytes.
+            virtual bool is_supported_enc_type(appender_file_binary::appender_encryption_type type) const override
+            {
+                return type == appender_file_binary::appender_encryption_type::plaintext
+                    || type == appender_file_binary::appender_encryption_type::rsa_kem_chacha;
+            }
+
+            virtual bool setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start) override
+            {
+                seg_enc_type_ = head.enc_type;
+                seg_rounds_ = 0;
+                seg_payload_base_ = seg_start + appender_file_binary::plaintext_payload_base_offset;
+                if (head.enc_type == appender_file_binary::appender_encryption_type::plaintext) {
+                    return true;
+                }
+                appender_file_binary::appender_segment_encryption_head enc_head;
+                if (read_from_file_directly(&enc_head, sizeof(enc_head)) < sizeof(enc_head)) {
+                    return false;
+                }
+                if (!appender_file_binary::derive_segment_key_from_head(enc_head, private_key_, seg_key_, seg_rounds_)) {
+                    return false;
+                }
+                seg_payload_base_ = seg_start + appender_file_binary::encrypted_payload_base_offset;
+                return true;
+            }
+
+            virtual bool decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos) override
+            {
+                if (seg_enc_type_ == appender_file_binary::appender_encryption_type::plaintext) {
+                    return true;
+                }
+                if (file_pos < seg_payload_base_) {
+                    return false;
+                }
+                bq::appender_file_binary::transform_segment_payload(data, size, file_pos - seg_payload_base_, seg_key_, seg_rounds_);
+                return true;
+            }
+
         public:
             bool read_payload_for_test(const bq::array<uint8_t>& expected)
             {
@@ -255,6 +297,12 @@ namespace bq {
             {
                 return read_with_cache(1).len() == 0;
             }
+
+        private:
+            bq::appender_file_binary::segment_key seg_key_ {};
+            uint8_t seg_rounds_ = 0;
+            uint64_t seg_payload_base_ = 0;
+            bq::appender_file_binary::appender_encryption_type seg_enc_type_ = bq::appender_file_binary::appender_encryption_type::plaintext;
         };
 
         template <typename AppenderType>
@@ -419,7 +467,7 @@ namespace bq {
             {
                 return mode == recovery_encryption_mode::plaintext
                     ? appender_file_binary::appender_encryption_type::plaintext
-                    : appender_file_binary::appender_encryption_type::rsa_aes_xor;
+                    : appender_file_binary::appender_encryption_type::rsa_kem_chacha;
             }
 
             static const char* get_encryption_mode_name(recovery_encryption_mode mode)
@@ -632,7 +680,7 @@ namespace bq {
                 if (!file) {
                     return false;
                 }
-                const size_t file_size = bq::file_manager::instance().get_file_size(file);
+                const uint64_t file_size = bq::file_manager::instance().get_file_size(file);
                 appender_file_binary::appender_file_header file_head;
                 bool success = bq::file_manager::instance().seek(file, bq::file_manager::seek_option::begin, 0)
                     && file_size >= sizeof(file_head)
@@ -654,20 +702,18 @@ namespace bq {
                     uint64_t min_segment_end = segment_pos + sizeof(segment_head);
                     uint64_t fingerprint = 0;
                     uint64_t key_data_hash = 0;
-                    if (segment_head.enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor) {
-                        min_segment_end += appender_file_binary::get_encryption_keys_size();
+                    if (segment_head.enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha) {
+                        min_segment_end += sizeof(appender_file_binary::appender_segment_encryption_head);
+                        appender_file_binary::appender_segment_encryption_head enc_head;
                         if (segment_end < min_segment_end
-                            || bq::file_manager::instance().read_file(file, &fingerprint, sizeof(fingerprint)) != sizeof(fingerprint)) {
+                            || bq::file_manager::instance().read_file(file, &enc_head, sizeof(enc_head)) != sizeof(enc_head)) {
                             success = false;
                             break;
                         }
-                        bq::array<uint8_t> key_data;
-                        key_data.fill_uninitialized(appender_file_binary::get_encryption_keys_size() - sizeof(fingerprint));
-                        if (bq::file_manager::instance().read_file(file, key_data.begin(), key_data.size()) != key_data.size()) {
-                            success = false;
-                            break;
-                        }
-                        key_data_hash = bq::util::get_hash_64(key_data.begin(), key_data.size());
+                        fingerprint = enc_head.rsa_key_fingerprint;
+                        // The per-segment key material of v11 is the KEM ciphertext: a fresh seed
+                        // per segment means these must all differ.
+                        key_data_hash = bq::util::get_hash_64(enc_head.kem_ciphertext, sizeof(enc_head.kem_ciphertext));
                     } else if (segment_head.enc_type != appender_file_binary::appender_encryption_type::plaintext) {
                         success = false;
                         break;
@@ -749,7 +795,7 @@ namespace bq {
                         && segment_heads.size() == segment_count;
                     for (uint32_t i = 0; i < segment_count && case_ok; ++i) {
                         const bool encrypted = (mask & (1U << i)) != 0;
-                        case_ok = segment_heads[i].enc_type == (encrypted ? appender_file_binary::appender_encryption_type::rsa_aes_xor : appender_file_binary::appender_encryption_type::plaintext)
+                        case_ok = segment_heads[i].enc_type == (encrypted ? appender_file_binary::appender_encryption_type::rsa_kem_chacha : appender_file_binary::appender_encryption_type::plaintext)
                             && fingerprints[i] == (encrypted ? expected_fingerprint : 0);
                         if (encrypted) {
                             for (uint32_t j = 0; j < i; ++j) {
@@ -794,7 +840,7 @@ namespace bq {
                         && writer.init("segment_key_first", make_binary_recovery_test_config(file_name, pub_key_a), &log_obj)
                         && writer.write_payload_for_test(make_segment_payload(100, 0));
                 }
-                const size_t file_size_before_mismatch = bq::file_manager::get_file_size(file_path);
+                const uint64_t file_size_before_mismatch = bq::file_manager::get_file_size(file_path);
                 bool different_key_rejected = false;
                 {
                     appender_file_binary_appender_recovery_for_test writer;
@@ -869,7 +915,7 @@ namespace bq {
                 old_version_rejected = old_version_rejected
                     && bq::file_manager::instance().write_file(file, &file_head, sizeof(file_head), bq::file_manager::seek_option::begin, 0) == sizeof(file_head);
                 bq::file_manager::instance().close_file(file);
-                const size_t old_version_size = bq::file_manager::get_file_size(old_version_path);
+                const uint64_t old_version_size = bq::file_manager::get_file_size(old_version_path);
                 {
                     appender_file_binary_appender_recovery_for_test writer;
                     old_version_rejected = old_version_rejected
@@ -925,7 +971,7 @@ namespace bq {
                     && plaintext_segments[0].enc_type == appender_file_binary::appender_encryption_type::plaintext
                     && read_binary_segment_chain_for_test(encrypted_path, encrypted_segments)
                     && encrypted_segments.size() == 1
-                    && encrypted_segments[0].enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor;
+                    && encrypted_segments[0].enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha;
                 result.add_result(encryption_switch_ok, "normal appender encryption switch starts a new file");
             }
 
@@ -1184,8 +1230,8 @@ namespace bq {
                 const bool encrypted_writer_chain_ok = bq::file_manager::is_file(plain_to_encrypted_file_path_1)
                     && read_binary_segment_chain_for_test(plain_to_encrypted_file_path_2, segment_heads)
                     && segment_heads.size() == 2
-                    && segment_heads[0].enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor
-                    && segment_heads[1].enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor
+                    && segment_heads[0].enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha
+                    && segment_heads[1].enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha
                     && segment_heads[1].seg_type == appender_file_binary::appender_segment_type::recovery_by_log_buffer;
                 result.add_result(encrypted_writer_recovery_ok, "encrypted log-buffer recovery emits into a new file after a plaintext original");
                 result.add_result(encrypted_writer_recovery_output_path == plain_to_encrypted_file_path_2, "encrypted recovery selects the next indexed file after a plaintext original, got:%s", encrypted_writer_recovery_output_path.c_str());
@@ -1210,7 +1256,7 @@ namespace bq {
                 const bool appender_chain_ok = read_binary_segment_chain_for_test(appender_file_path, segment_heads)
                     && segment_heads.size() == 2
                     && segment_heads[0].next_seg_pos != UINT64_MAX
-                    && segment_heads[1].enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor
+                    && segment_heads[1].enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha
                     && segment_heads[1].seg_type == appender_file_binary::appender_segment_type::recovery_by_appender;
                 result.add_result(appender_recovery_ok, "appender recovery appends across an encryption boundary");
                 result.add_result(appender_chain_ok, "appender recovery links plaintext and encrypted segments without an orphan tail, segment_count:%zu", segment_heads.size());
@@ -1228,7 +1274,7 @@ namespace bq {
                 const bool corrupt_link_ok = invalid_file
                     && bq::file_manager::instance().write_file(invalid_file, &invalid_next_pos, sizeof(invalid_next_pos), bq::file_manager::seek_option::begin, sizeof(appender_file_binary::appender_file_header)) == sizeof(invalid_next_pos);
                 bq::file_manager::instance().close_file(invalid_file);
-                const size_t invalid_file_size_before = bq::file_manager::get_file_size(invalid_file_path);
+                const uint64_t invalid_file_size_before = bq::file_manager::get_file_size(invalid_file_path);
                 bool invalid_recovery_ok = false;
                 {
                     appender_file_binary_appender_recovery_for_test recovery_writer;
@@ -1267,6 +1313,13 @@ namespace bq {
                 }
             }
 
+            static void malformed_put_u64_at(std::vector<uint8_t>& out, size_t offset, uint64_t value)
+            {
+                for (uint32_t i = 0; i < 8; ++i) {
+                    out[offset + static_cast<size_t>(i)] = static_cast<uint8_t>(value >> (8 * i));
+                }
+            }
+
             static std::vector<uint8_t> malformed_file_head(uint32_t category_name_len, const char* category_name)
             {
                 std::vector<uint8_t> out;
@@ -1297,16 +1350,43 @@ namespace bq {
                 out.insert(out.end(), payload.begin(), payload.end());
             }
 
-            // template "x={}", one thread info, then one log entry with the given argument bytes
-            static std::vector<uint8_t> malformed_file_with_entry(const std::vector<uint8_t>& arg_bytes)
+            // template "x={}", one thread info template carrying the given name, then one log entry with
+            // the given argument bytes
+            static void malformed_add_entry_items(std::vector<uint8_t>& out, const char* thread_name, const std::vector<uint8_t>& arg_bytes)
             {
-                std::vector<uint8_t> out = malformed_file_head(0, "");
                 malformed_add_item(out, malformed_item_log_template, { malformed_template_format_utf8, static_cast<uint8_t>(log_level::info), 0x80, 'x', '=', '{', '}' });
-                malformed_add_item(out, malformed_item_log_template, { malformed_template_thread_info, 0x80, 0x80, 't' });
+                std::vector<uint8_t> thread_info_template = { malformed_template_thread_info, 0x80, 0x80 }; // thread info index, thread id
+                thread_info_template.insert(thread_info_template.end(), thread_name, thread_name + strlen(thread_name));
+                malformed_add_item(out, malformed_item_log_template, thread_info_template);
                 std::vector<uint8_t> entry = { 0x80, 0x80, 0x80 }; // epoch offset, template index, thread info index
                 entry.insert(entry.end(), arg_bytes.begin(), arg_bytes.end());
                 malformed_add_item(out, malformed_item_log_entry, entry);
+            }
+
+            // A payload metadata block belongs to the first segment only, so a later segment is a
+            // header followed directly by items.
+            static std::vector<uint8_t> malformed_segment_head(uint64_t next_seg_pos)
+            {
+                std::vector<uint8_t> out;
+                for (uint32_t i = 0; i < 8; ++i) {
+                    out.push_back(static_cast<uint8_t>(next_seg_pos >> (8 * i)));
+                }
+                out.push_back(static_cast<uint8_t>(appender_file_binary::appender_segment_type::normal));
+                out.push_back(static_cast<uint8_t>(appender_file_binary::appender_encryption_type::plaintext));
+                out.insert(out.end(), 2, static_cast<uint8_t>(0));
                 return out;
+            }
+
+            static std::vector<uint8_t> malformed_file_with_thread_name(const char* thread_name, const std::vector<uint8_t>& arg_bytes)
+            {
+                std::vector<uint8_t> out = malformed_file_head(0, "");
+                malformed_add_entry_items(out, thread_name, arg_bytes);
+                return out;
+            }
+
+            static std::vector<uint8_t> malformed_file_with_entry(const std::vector<uint8_t>& arg_bytes)
+            {
+                return malformed_file_with_thread_name("t", arg_bytes);
             }
 
             // A valid first segment linked to a corrupt head: the reader used to end the file there, so
@@ -1376,6 +1456,14 @@ namespace bq {
                     "decoder malformed file: unknown argument type is rejected");
                 result.add_result(malformed_decode("short_double", malformed_file_with_entry({ double_type, 1, 2 }), text) != appender_decode_result::success,
                     "decoder malformed file: truncated double argument is rejected");
+                // The layout expands a thread name into a fixed size stack buffer, and the name arrives
+                // as the rest of the item, so its length has to be bounded by the format. A fuzzer found
+                // this: a name longer than the format allows asserted in insert_thread_info.
+                const std::vector<uint8_t> valid_arg = { int32_type, 0x8A };
+                result.add_result(malformed_decode("max_thread_name", malformed_file_with_thread_name("0123456789abcdef", valid_arg), text) == appender_decode_result::success,
+                    "decoder malformed file: a thread name of exactly the format limit decodes");
+                result.add_result(malformed_decode("long_thread_name", malformed_file_with_thread_name("0123456789abcdefg", valid_arg), text) != appender_decode_result::success,
+                    "decoder malformed file: a thread name longer than the format limit is rejected");
                 std::vector<uint8_t> huge_item = malformed_file_head(0, "");
                 huge_item.push_back(malformed_item_log_entry);
                 const uint8_t vlq_4g[] = { 0x08, 0xFF, 0xFF, 0xFF, 0xE0 }; // 5 byte VLQ: item size close to 4 GiB
@@ -1387,6 +1475,123 @@ namespace bq {
                     "decoder malformed file: draining a well formed file reaches the end of the file");
                 result.add_result(malformed_decode_all("broken_chain", malformed_file_with_broken_segment_chain()) == appender_decode_result::failed_decode_error,
                     "decoder malformed file: a corrupt segment head linked from a valid one fails instead of ending the file");
+            }
+
+
+
+            static bq::string read_text_file(const bq::string& path)
+            {
+                std::string content;
+                FILE* file = fopen(path.c_str(), "rb");
+                if (file == nullptr) {
+                    return bq::string();
+                }
+                char buffer[4096];
+                size_t read_size = 0;
+                while ((read_size = fread(buffer, 1, sizeof(buffer), file)) > 0) {
+                    content.append(buffer, read_size);
+                }
+                fclose(file);
+                return bq::string(content.c_str());
+            }
+
+            // A corrupt item mid-segment makes decode() jump to the next segment. That jump used to
+            // leave the previous segment's read cache in place, so the next fill rewound the file
+            // cursor into the new segment's header - before its payload - and the keystream offset
+            // came from a position the segment does not have: an assertion in a debug build, header
+            // bytes decoded as log data with assertions compiled out. The sample under
+            // test/data/decode_fuzz is the fuzzer run that found it.
+            void do_decoder_resync_test(test_result& result)
+            {
+                bq::string case_path = bq::test::test_data_dir(__FILE__, "decode_fuzz");
+                case_path += "/v11_enc_resync.logcompr";
+                bq::string key_path = bq::test::test_data_dir(__FILE__, "legacy");
+                key_path += "/legacy_key.pem";
+                const bq::string priv_key = read_text_file(key_path);
+                result.add_result(priv_key.size() > 0, "decoder resync: the regression sample's private key is readable");
+                appender_decode_result decode_result = appender_decode_result::success;
+                {
+                    bq::tools::log_decoder decoder(case_path, priv_key);
+                    // Bounded: a decoder that neither fails nor reaches the end is a hang, not a pass.
+                    for (int32_t i = 0; i < 64 && decode_result == appender_decode_result::success; ++i) {
+                        decode_result = decoder.decode();
+                    }
+                }
+                result.add_result(decode_result == appender_decode_result::failed_decode_error,
+                    "decoder resync: a corrupt item that forces a segment jump fails cleanly (got %d)",
+                    static_cast<int32_t>(decode_result));
+            }
+
+            // Builds a file whose first segment ends with a decode failure linked to a second segment
+            // at second_seg_pos, decodes it, and returns the decoded text of the whole run.
+            std::string decode_file_with_segment_at(uint64_t second_seg_pos, uint64_t& out_file_size)
+            {
+                const uint8_t int32_type = static_cast<uint8_t>(log_arg_type_enum::int32_type);
+                // One byte VLQ: 0x8A is zigzag(5) and 0x8C is zigzag(6). The two records have to be
+                // distinguishable, otherwise "the second segment was read" is not observable.
+                std::vector<uint8_t> first = malformed_file_with_entry({ int32_type, 0x8A });
+                // An unknown template sub type ends the first segment with a decode failure, which is
+                // what makes the reader jump to the next segment instead of walking the hole byte by byte.
+                malformed_add_item(first, malformed_item_log_template, { 0x7F, 0x00 });
+                malformed_put_u64_at(first, sizeof(appender_file_binary::appender_file_header), second_seg_pos);
+                // The second segment carries the same templates again, like a file the writer rolled,
+                // and is marked as the last one so the chain ends there.
+                std::vector<uint8_t> second_seg = malformed_segment_head(UINT64_MAX);
+                malformed_add_entry_items(second_seg, "t", { int32_type, 0x8C });
+
+                const bq::string path = TO_ABSOLUTE_PATH("appender_test/decoder_large_offset.logcompr", 0);
+                bq::file_manager::create_directory(TO_ABSOLUTE_PATH("appender_test", 0));
+                bq::file_manager::remove_file_or_dir(path);
+                {
+                    auto handle = bq::file_manager::instance().open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                    bool write_ok = handle
+                        && bq::file_manager::instance().write_file(handle, first.data(), first.size()) == first.size()
+                        && bq::file_manager::instance().write_file(handle, second_seg.data(), second_seg.size(), bq::file_manager::seek_option::begin, static_cast<int64_t>(second_seg_pos)) == second_seg.size();
+                    out_file_size = write_ok ? bq::file_manager::instance().get_file_size(handle) : 0;
+                    bq::file_manager::instance().flush_file(handle);
+                    bq::file_manager::instance().close_file(handle);
+                }
+
+                std::string text;
+                {
+                    bq::tools::log_decoder decoder(path);
+                    appender_decode_result decode_result = decoder.get_last_decode_result();
+                    // Bounded: a decoder that neither fails nor reaches the end is a hang, not a pass.
+                    for (int32_t calls = 0; calls < 16 && decode_result == appender_decode_result::success; ++calls) {
+                        decode_result = decoder.decode();
+                        text += decoder.get_last_decoded_log_entry().c_str();
+                    }
+                }
+                bq::file_manager::remove_file_or_dir(path);
+                return text;
+            }
+
+            // A segment start is an absolute file position, and it is a size_t everywhere it is
+            // produced, but it was narrowed to int32_t on its way into lseek. Above 2 GiB that turns
+            // the offset negative and the seek fails, which the reader reports as the end of the
+            // file, and above 4 GiB it wraps into a small positive offset that lands inside the
+            // previous segment's data. Either way every record from that segment on disappears
+            // without an error. Both sizes are covered because they fail differently. The files are
+            // sparse, so this costs a few KiB of disk - but not every file system keeps a hole a
+            // hole, so the test runs as its own step instead of in the default suite.
+            void do_decoder_large_offset_test(test_result& result)
+            {
+                if (sizeof(size_t) < 8) {
+                    result.add_result(true, "decoder large offset: skipped, size_t is narrower than 64 bit");
+                    return;
+                }
+                const uint64_t segment_positions[] = { 0x80000000ULL + 0x100000ULL, 0x100000000ULL + 0x100000ULL };
+                for (size_t i = 0; i < sizeof(segment_positions) / sizeof(segment_positions[0]); ++i) {
+                    const uint64_t second_seg_pos = segment_positions[i];
+                    uint64_t file_size = 0;
+                    const std::string text = decode_file_with_segment_at(second_seg_pos, file_size);
+                    result.add_result(file_size > second_seg_pos,
+                        "decoder large offset: a segment at %" PRIu64 " can be written (size %" PRIu64 ")",
+                        second_seg_pos, static_cast<uint64_t>(file_size));
+                    result.add_result(text.find("x=5") != std::string::npos && text.find("x=6") != std::string::npos,
+                        "decoder large offset: the segment at %" PRIu64 " is read instead of silently dropped (text:\"%.160s\")",
+                        second_seg_pos, text.c_str());
+                }
             }
 
             // Writes bytes to a test file under appender_test/.
@@ -1620,7 +1825,7 @@ namespace bq {
                     bq::file_manager::instance().write_file(handle, items, sizeof(items), bq::file_manager::seek_option::end, 0);
                     bq::file_manager::instance().flush_file(handle);
                 }
-                size_t corrupt_size = bq::file_manager::get_file_size(first_path);
+                uint64_t corrupt_size = bq::file_manager::get_file_size(first_path);
                 {
                     bq::log log_obj = bq::log::create_log("parse_exist_second", config_str);
                     log_obj.info("second {}", 2);
@@ -1635,6 +1840,15 @@ namespace bq {
             }
 
         public:
+            // Kept out of test(): it writes a file larger than 2 GiB, which is only cheap where the
+            // file system stores a hole as a hole, so it runs as its own step instead.
+            test_result test_large_offset_only()
+            {
+                test_result result;
+                do_decoder_large_offset_test(result);
+                return result;
+            }
+
             virtual test_result test() override
             {
                 test_result result;
@@ -1645,6 +1859,7 @@ namespace bq {
 #endif
                 do_binary_appender_test_with_enc(result);
                 do_decoder_malformed_file_test(result);
+                do_decoder_resync_test(result);
                 do_decoder_untrusted_size_allocation_test(result);
                 do_decoder_write_failure_test(result);
                 do_decoder_fixed_size_arg_test(result);

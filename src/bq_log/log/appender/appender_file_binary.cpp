@@ -12,20 +12,131 @@
 #include "bq_log/log/log_imp.h"
 
 namespace bq {
+    namespace {
+        // The HKDF info string of the v11 format. Its total length is asserted because a silently
+        // dropped or added byte here would derive a different key on read than on write, and nothing
+        // would report it: the segment would just decode to noise.
+        const char segment_key_info_prefix[] = "BqLog v11 segment key";
+        constexpr size_t segment_key_info_size = sizeof(segment_key_info_prefix) - 1 // no terminating NUL
+            + sizeof(uint32_t) // format version
+            + sizeof(uint8_t) // enc_type
+            + sizeof(uint8_t) // chacha_rounds
+            + sizeof(uint64_t) // rsa_key_fingerprint
+            + appender_file_binary::kem_ciphertext_size;
+        static_assert(segment_key_info_size == 291, "segment key info layout changed");
+    }
+
+    bool appender_file_binary::derive_segment_key(const appender_segment_encryption_head& head,
+        const uint8_t* shared_secret, size_t shared_secret_size, segment_key& out)
+    {
+        assert(shared_secret_size == kem_ciphertext_size && "the KEM shared secret is a fixed 256 bytes");
+        if (shared_secret_size != kem_ciphertext_size) {
+            return false;
+        }
+        uint8_t info[segment_key_info_size];
+        uint8_t* cursor = info;
+        memcpy(cursor, segment_key_info_prefix, sizeof(segment_key_info_prefix) - 1);
+        cursor += sizeof(segment_key_info_prefix) - 1;
+        const uint32_t version = format_version;
+        memcpy(cursor, &version, sizeof(version));
+        cursor += sizeof(version);
+        *cursor = static_cast<uint8_t>(appender_encryption_type::rsa_kem_chacha);
+        ++cursor;
+        *cursor = head.chacha_rounds;
+        ++cursor;
+        memcpy(cursor, &head.rsa_key_fingerprint, sizeof(head.rsa_key_fingerprint));
+        cursor += sizeof(head.rsa_key_fingerprint);
+        memcpy(cursor, head.kem_ciphertext, kem_ciphertext_size);
+        cursor += kem_ciphertext_size;
+        assert(static_cast<size_t>(cursor - info) == segment_key_info_size);
+
+        uint8_t okm[chacha20::key_size + chacha20::nonce_size];
+        const bool ok = hkdf_sha256::derive(nullptr, 0, shared_secret, shared_secret_size,
+            info, sizeof(info), okm, sizeof(okm));
+        if (ok) {
+            memcpy(out.key, okm, sizeof(out.key));
+            memcpy(out.nonce, okm + sizeof(out.key), sizeof(out.nonce));
+        }
+        // okm is the segment key in the clear. The caller clears the shared secret, which it owns.
+        memset(okm, 0, sizeof(okm));
+        return ok;
+    }
+
+    bool appender_file_binary::derive_segment_key_from_head(const appender_segment_encryption_head& head,
+        const rsa::private_key& key, segment_key& out, uint8_t& rounds)
+    {
+        // Checked before anything is decrypted. It is the only thing that can tell a wrong key from a
+        // right one: decapsulation succeeds for any c < n, so without this a wrong key would produce
+        // noise that decodes as far as the first record and then looks like a corrupt file.
+        if (head.rsa_key_fingerprint != rsa::get_public_key_fingerprint(key.n_, key.e_)) {
+            bq::util::log_device_console(bq::log_level::error, "decode log file failed, private key does not match the public key this file was encrypted with");
+            return false;
+        }
+        // A round count outside the set the kernel implements would decode to noise rather than fail,
+        // so it is rejected here instead of deeper in the cipher.
+        if (!is_supported_chacha_rounds(head.chacha_rounds)) {
+            bq::util::log_device_console(bq::log_level::error, "decode log file failed, unsupported chacha round count %" PRIu32,
+                static_cast<uint32_t>(head.chacha_rounds));
+            return false;
+        }
+        bq::array<uint8_t> kem_ciphertext;
+        kem_ciphertext.insert_batch(kem_ciphertext.end(), head.kem_ciphertext, kem_ciphertext_size);
+        bq::array<uint8_t> shared_secret;
+        if (!rsa::kem_decapsulate(key, kem_ciphertext, shared_secret)
+            || shared_secret.size() != kem_ciphertext_size) {
+            bq::util::log_device_console(bq::log_level::error, "decode log file failed, RSA-KEM decapsulation failed");
+            return false;
+        }
+        const bool derived = derive_segment_key(head, shared_secret.begin(), shared_secret.size(), out);
+        bq::encryption::secure_zero(shared_secret.begin(), shared_secret.size());
+        if (!derived) {
+            bq::util::log_device_console(bq::log_level::error, "decode log file failed, segment key derivation failed");
+            return false;
+        }
+        rounds = head.chacha_rounds;
+        return true;
+    }
+
+    void appender_file_binary::transform_segment_payload(uint8_t* data, size_t size, uint64_t payload_offset,
+        const segment_key& key, uint8_t rounds)
+    {
+        assert(is_supported_chacha_rounds(rounds) && "unsupported round count reached the transform");
+        chacha20::keystream_xor(data, size, key.key, key.nonce, payload_offset,
+            static_cast<chacha20::round_count>(rounds));
+    }
+
     bool appender_file_binary::init_impl(const bq::property_value& config_obj)
     {
         if (config_obj["pub_key"].is_string()) {
-            enc_type_ = appender_encryption_type::rsa_aes_xor;
+            enc_type_ = appender_encryption_type::rsa_kem_chacha;
             bq::string pub_key_str = config_obj["pub_key"];
             if (!rsa::parse_public_key_ssh(pub_key_str, rsa_pub_key_)) {
                 return false;
             }
             rsa_key_fingerprint_ = rsa::get_public_key_fingerprint(rsa_pub_key_);
+            if (!rsa::validate_public_key(rsa_pub_key_)) {
+                bq::util::log_device_console(bq::log_level::error,
+                    "encrypted appender rejected the public key; the segment format requires a 2048-bit RSA key with an exponent of at least 65537");
+                return false;
+            }
+            // Encryption goes ahead without a CSPRNG, and the segment keys then come from a mix of
+            // clocks, thread ids and addresses that anyone holding the file can search. That is
+            // worth one warning and not worth dropping the log for: the records stay encrypted, the
+            // threat model narrows. Console platforms inject a source to avoid it altogether.
+            if (!bq::encryption::has_secure_random_source()) {
+                bq::util::log_device_console(bq::log_level::warning,
+                    "encrypted appender has no secure random source; segment keys are derived from a software mix and are not cryptographically random. On console platforms call bq::log::set_secure_random_source() before creating the log");
+                warned_weak_key_source_ = true;
+            }
         } else {
             enc_type_ = appender_encryption_type::plaintext;
             rsa_pub_key_ = rsa::public_key();
             rsa_key_fingerprint_ = 0;
         }
+        // Set before the base runs: init_impl() there may go through recovery, which flushes, and a
+        // flush that skipped the transform would put plaintext into a segment header that says
+        // otherwise.
+        transform_enabled_ = (enc_type_ != appender_encryption_type::plaintext);
         if (!appender_file_base::init_impl(config_obj)) {
             return false;
         }
@@ -40,7 +151,7 @@ namespace bq {
         rsa::public_key prev_pub_key = rsa_pub_key_;
         auto prev_encryption_type = enc_type_;
         if (config_obj["pub_key"].is_string()) {
-            enc_type_ = appender_encryption_type::rsa_aes_xor;
+            enc_type_ = appender_encryption_type::rsa_kem_chacha;
             bq::string pub_key_str = config_obj["pub_key"];
             if (!rsa::parse_public_key_ssh(pub_key_str, rsa_pub_key_)) {
                 return false;
@@ -51,13 +162,14 @@ namespace bq {
             rsa_pub_key_ = rsa::public_key();
             rsa_key_fingerprint_ = 0;
         }
+        transform_enabled_ = (enc_type_ != appender_encryption_type::plaintext);
         return (enc_type_ == prev_encryption_type)
             && (rsa_pub_key_ == prev_pub_key);
     }
 
     bool appender_file_binary::parse_exist_log_file(parse_file_context& context)
     {
-        uint32_t format_version = get_binary_format_version();
+        const uint32_t expected_version = get_binary_format_version();
 
         segment_topology_info topology;
         if (enc_type_ != appender_encryption_type::plaintext
@@ -77,7 +189,7 @@ namespace bq {
         }
         appender_file_header file_head;
         memcpy(&file_head, read_handle.data(), sizeof(file_head));
-        if (file_head.version != format_version) {
+        if (file_head.version != expected_version) {
             context.log_parse_fail_reason("format version incompatible");
             return false;
         }
@@ -144,13 +256,12 @@ namespace bq {
     {
         appender_file_base::on_file_open(is_new_created);
         current_file_is_new_created_ = is_new_created;
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor) {
+        if (enc_type_ != appender_encryption_type::plaintext) {
             if (!is_new_created) {
                 bq::util::log_device_console(bq::log_level::error, "encrypted binary appender attempted to reuse an existing file: %s", get_file_handle().abs_file_path().c_str());
                 get_file_handle().invalid();
                 return;
             }
-            xor_key_blob_.clear();
         }
         cur_read_seg_.start_pos = static_cast<uint64_t>(sizeof(appender_file_header));
         cur_read_seg_.end_pos = get_current_file_size();
@@ -197,36 +308,57 @@ namespace bq {
         }
     }
 
-    void appender_file_binary::flush_write_cache()
+    appender_file_binary::~appender_file_binary()
     {
-        if (enc_type_ != appender_encryption_type::rsa_aes_xor || xor_key_blob_.is_empty() || get_pendding_flush_written_size() == 0) {
-            appender_file_base::flush_write_cache();
-            return;
+        // The base destructor flushes too, but it drives the window through on_flush_transform(),
+        // and by the time it runs that call lands on the base class's empty version: this class is
+        // already gone. Whatever is still in the write cache would then go to disk exactly as it
+        // sits in memory - compressed, but not encrypted (D-1). Flush here, while the override is
+        // still reachable and the segment key still exists, and only if the caller wants it: turning
+        // the destructor flush off is how a recovery test leaves data behind in the cache, and it
+        // has to keep working.
+        if (get_flush_when_destruct() && get_pendding_flush_written_size() > 0) {
+            flush_write_cache();
         }
-
-#ifndef NDEBUG
-        assert((get_xor_key_blob_size() & (get_xor_key_blob_size() - 1)) == 0 && "get_xor_key_blob_size() must be power of two");
-#endif
-        vernam::vernam_encrypt_32bytes_aligned(
-            get_cache_write_ptr_base(),
-            get_pendding_flush_written_size(),
-            xor_key_blob_.begin(),
-            get_xor_key_blob_size(),
-            get_current_file_size());
-        appender_file_base::flush_write_cache();
-        update_write_cache_padding();
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor && get_pendding_flush_written_size() > 0) {
-            // revert
-            vernam::vernam_encrypt_32bytes_aligned(
-                get_cache_write_ptr_base(),
-                get_pendding_flush_written_size(),
-                xor_key_blob_.begin(),
-                get_xor_key_blob_size(),
-                get_current_file_size());
-        }
+        bq::encryption::secure_zero(&cur_seg_key_, sizeof(cur_seg_key_));
+        set_flush_when_destruct(false);
     }
 
-    bool appender_file_binary::seek_read_file_absolute(size_t pos)
+    bool appender_file_binary::on_flush_before_transform(size_t pending_size, uint64_t file_pos)
+    {
+        if (file_pos < cur_seg_payload_base_) {
+            // The file position precedes the segment's payload, so the keystream offset would wrap.
+            // Nothing writes before the payload base, so this is a corrupted-state assertion rather
+            // than an expected outcome.
+            assert(false && "flush position precedes the payload base of the current segment");
+            return false;
+        }
+        const uint64_t payload_offset = static_cast<uint64_t>(file_pos - cur_seg_payload_base_);
+        if (payload_offset + static_cast<uint64_t>(pending_size) <= max_segment_payload_size()) {
+            return true;
+        }
+        // The ChaCha counter is 32 bits of 64-byte blocks, so one (key, nonce) pair covers 2^38
+        // bytes of payload and no more. Crossing it would reuse keystream, which is worse than
+        // losing a window: refuse the flush and drop the file handle, so the next entry opens a
+        // fresh file with a fresh segment and a fresh key.
+        bq::util::log_device_console(bq::log_level::error,
+            "segment payload of %s would pass the 2^38 byte keystream range, starting a new file",
+            get_file_handle().abs_file_path().c_str());
+        get_file_handle().invalid();
+        return false;
+    }
+
+    void appender_file_binary::on_flush_transform(uint8_t* data, size_t size, uint64_t file_pos)
+    {
+        assert(transform_enabled_ && "on_flush_transform reached a plaintext appender");
+        if (size == 0) {
+            return;
+        }
+        const uint64_t payload_offset = static_cast<uint64_t>(file_pos - cur_seg_payload_base_);
+        transform_segment_payload(data, size, payload_offset, cur_seg_key_, cur_seg_rounds_);
+    }
+
+    bool appender_file_binary::seek_read_file_absolute(uint64_t pos)
     {
         if (appender_file_base::seek_read_file_absolute(pos)) {
 
@@ -302,13 +434,13 @@ namespace bq {
 
     appender_file_base::read_with_cache_handle appender_file_binary::read_with_cache(size_t size)
     {
-        uint64_t current_read_pos = static_cast<uint64_t>(get_read_file_pos());
+        uint64_t current_read_pos = get_read_file_pos();
         assert(((current_read_pos >= cur_read_seg_.start_pos) && (current_read_pos <= cur_read_seg_.end_pos)) && "read beyond file size");
         while (current_read_pos == cur_read_seg_.end_pos) {
             if (!read_to_next_segment()) {
                 return appender_file_base::read_with_cache(0);
             }
-            current_read_pos = static_cast<uint64_t>(get_read_file_pos());
+            current_read_pos = get_read_file_pos();
         }
         if (current_read_pos + static_cast<uint64_t>(size) > cur_read_seg_.end_pos) {
             size = static_cast<size_t>(cur_read_seg_.end_pos - current_read_pos);
@@ -337,7 +469,7 @@ namespace bq {
         if (new_seg_start_pos == UINT64_MAX) {
             return false;
         }
-        if (!seek_read_file_absolute(static_cast<size_t>(new_seg_start_pos))) {
+        if (!seek_read_file_absolute(new_seg_start_pos)) {
             return false;
         }
         auto read_handle = appender_file_base::read_with_cache(sizeof(appender_file_segment_head));
@@ -346,7 +478,7 @@ namespace bq {
         }
         appender_file_segment_head seg_head;
         memcpy(&seg_head, read_handle.data(), sizeof(seg_head));
-        if ((seg_head.enc_type != appender_encryption_type::plaintext && seg_head.enc_type != appender_encryption_type::rsa_aes_xor)
+        if ((seg_head.enc_type != appender_encryption_type::plaintext && seg_head.enc_type != appender_encryption_type::rsa_kem_chacha)
             || (seg_head.seg_type != appender_segment_type::normal
                 && seg_head.seg_type != appender_segment_type::recovery_by_appender
                 && seg_head.seg_type != appender_segment_type::recovery_by_log_buffer)) {
@@ -372,7 +504,7 @@ namespace bq {
             return false;
         }
 
-        const uint64_t file_size = static_cast<uint64_t>(get_current_file_size());
+        const uint64_t file_size = get_current_file_size();
         if (file_size < sizeof(appender_file_header) || !seek_read_file_absolute(0)) {
             return false;
         }
@@ -394,7 +526,7 @@ namespace bq {
         while (true) {
             if (current_segment_start_pos > file_size
                 || file_size - current_segment_start_pos < sizeof(appender_file_segment_head)
-                || !seek_read_file_absolute(static_cast<size_t>(current_segment_start_pos))) {
+                || !seek_read_file_absolute(current_segment_start_pos)) {
                 return false;
             }
             read_handle = appender_file_base::read_with_cache(sizeof(appender_file_segment_head));
@@ -404,7 +536,8 @@ namespace bq {
 
             appender_file_segment_head seg_head;
             memcpy(&seg_head, read_handle.data(), sizeof(seg_head));
-            if ((seg_head.enc_type != appender_encryption_type::plaintext && seg_head.enc_type != appender_encryption_type::rsa_aes_xor)
+            if ((seg_head.enc_type != appender_encryption_type::plaintext
+                    && seg_head.enc_type != appender_encryption_type::rsa_kem_chacha)
                 || (seg_head.seg_type != appender_segment_type::normal
                     && seg_head.seg_type != appender_segment_type::recovery_by_appender
                     && seg_head.seg_type != appender_segment_type::recovery_by_log_buffer)) {
@@ -412,23 +545,28 @@ namespace bq {
             }
 
             uint64_t min_next_segment_pos = current_segment_start_pos + sizeof(appender_file_segment_head);
-            if (seg_head.enc_type == appender_encryption_type::rsa_aes_xor) {
-                if (file_size - min_next_segment_pos < get_encryption_keys_size()) {
+            if (seg_head.enc_type == appender_encryption_type::rsa_kem_chacha) {
+                if (file_size - min_next_segment_pos < sizeof(appender_segment_encryption_head)) {
                     return false;
                 }
-                read_handle = appender_file_base::read_with_cache(sizeof(uint64_t));
-                if (read_handle.len() != sizeof(uint64_t)) {
+                appender_segment_encryption_head enc_head;
+                read_handle = appender_file_base::read_with_cache(sizeof(enc_head));
+                if (read_handle.len() != sizeof(enc_head)) {
                     return false;
                 }
-                uint64_t fingerprint;
-                memcpy(&fingerprint, read_handle.data(), sizeof(fingerprint));
+                memcpy(&enc_head, read_handle.data(), sizeof(enc_head));
+                // A round count outside the set the kernel implements would silently decode to
+                // noise, so it is a corrupt file rather than an unsupported one.
+                if (!is_supported_chacha_rounds(enc_head.chacha_rounds)) {
+                    return false;
+                }
                 if (!result.has_encrypted_segment) {
                     result.has_encrypted_segment = true;
-                    result.rsa_key_fingerprint = fingerprint;
-                } else if (result.rsa_key_fingerprint != fingerprint) {
+                    result.rsa_key_fingerprint = enc_head.rsa_key_fingerprint;
+                } else if (result.rsa_key_fingerprint != enc_head.rsa_key_fingerprint) {
                     return false;
                 }
-                min_next_segment_pos += get_encryption_keys_size();
+                min_next_segment_pos += sizeof(appender_segment_encryption_head);
             }
 
             result.has_segment = true;
@@ -456,67 +594,72 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::error, "binary appender refused to append a segment to invalid topology: %s", get_file_handle().abs_file_path().c_str());
             return false;
         }
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor
+        if (enc_type_ != appender_encryption_type::plaintext
             && topology.has_encrypted_segment
             && topology.rsa_key_fingerprint != rsa_key_fingerprint_) {
             bq::util::log_device_console(bq::log_level::warning, "binary appender refused to append a segment with a different RSA key: %s", get_file_handle().abs_file_path().c_str());
             return false;
         }
 
-        bq::aes::key_type ciphertext_aes_key;
-        bq::aes::iv_type aes_iv;
-        decltype(xor_key_blob_) xor_key_blob_plaintext;
-        bq::array<uint8_t> xor_key_blob_ciphertext;
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor) {
-            aes aes_obj(bq::aes::enum_cipher_mode::AES_CBC, bq::aes::enum_key_bits::AES_256);
-            auto aes_key = aes_obj.generate_key();
-            if (aes_key.size() != aes_obj.get_key_size()) {
-                bq::util::log_device_console(bq::log_level::error, "generate AES key failed while appending binary segment");
+        // The key of the segment being replaced is about to become unusable; wipe it before the new
+        // one lands on top of it.
+        bq::encryption::secure_zero(&cur_seg_key_, sizeof(cur_seg_key_));
+        appender_segment_encryption_head enc_head {};
+        if (enc_type_ != appender_encryption_type::plaintext) {
+            // Checked again here, not only at init: the application can remove its injected source
+            // at any time, and the keys derived after that are weaker. Said once, not per segment.
+            if (!bq::encryption::has_secure_random_source() && !warned_weak_key_source_) {
+                bq::util::log_device_console(bq::log_level::warning,
+                    "no secure random source left for segment key material; segment keys are derived from a software mix: %s", get_file_handle().abs_file_path().c_str());
+                warned_weak_key_source_ = true;
+            }
+            enc_head.rsa_key_fingerprint = rsa_key_fingerprint_;
+            enc_head.chacha_rounds = default_chacha_rounds;
+            memset(enc_head.reserved, 0, sizeof(enc_head.reserved));
+            // Fixed width on both halves: kem_ciphertext_ is I2OSP(c, 256) and the shared secret is
+            // I2OSP(r, 256). The seed is never encoded at its minimal length, because a seed with a
+            // leading zero byte would then derive a different key than the decoder does for the same
+            // c - one segment in 256, silently.
+            bq::array<uint8_t> kem_ciphertext;
+            bq::array<uint8_t> shared_secret;
+            if (!bq::rsa::kem_encapsulate(rsa_pub_key_, kem_ciphertext, shared_secret)
+                || kem_ciphertext.size() != kem_ciphertext_size
+                || shared_secret.size() != kem_ciphertext_size) {
+                bq::util::log_device_console(bq::log_level::error, "RSA-KEM encapsulation failed while appending binary segment");
                 return false;
             }
-            if (aes_key[0] == 0) {
-                bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
-                aes_key[0] = static_cast<uint8_t>((bq::util::rand() % UINT8_MAX) + 1);
-            }
-            aes_iv = aes_obj.generate_iv();
-            if (aes_iv.size() != aes_obj.get_iv_size()
-                || !bq::rsa::encrypt(rsa_pub_key_, aes_key, ciphertext_aes_key)
-                || ciphertext_aes_key.size() != rsa_pub_key_.n_.size()) {
-                bq::util::log_device_console(bq::log_level::error, "generate encrypted segment key failed");
+            memcpy(enc_head.kem_ciphertext, kem_ciphertext.begin(), kem_ciphertext_size);
+            const bool derived = derive_segment_key(enc_head, shared_secret.begin(), shared_secret.size(), cur_seg_key_);
+            // The shared secret is the seed the whole segment rests on; nothing else needs it.
+            bq::encryption::secure_zero(shared_secret.begin(), shared_secret.size());
+            if (!derived) {
+                bq::util::log_device_console(bq::log_level::error, "segment key derivation failed while appending binary segment");
                 return false;
             }
-            xor_key_blob_plaintext.fill_uninitialized(get_xor_key_blob_size());
-            bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
-            uint64_t* xor_key_blob_64 = reinterpret_cast<uint64_t*>(&xor_key_blob_plaintext[0]);
-            for (size_t i = 0; i < xor_key_blob_plaintext.size() / sizeof(uint64_t); ++i) {
-                xor_key_blob_64[i] = bq::util::rand64();
-            }
-            if (!aes_obj.encrypt(aes_key, aes_iv, xor_key_blob_plaintext, xor_key_blob_ciphertext)) {
-                bq::util::log_device_console(bq::log_level::error, "encrypt VERNAM key blob failed while appending binary segment");
-                return false;
-            }
+            cur_seg_rounds_ = enc_head.chacha_rounds;
         }
 
-        const uint64_t new_seg_start_pos = static_cast<uint64_t>(get_current_file_size());
+        const uint64_t new_seg_start_pos = get_current_file_size();
         appender_file_segment_head new_segment {};
         new_segment.enc_type = enc_type_;
         new_segment.next_seg_pos = UINT64_MAX;
         new_segment.seg_type = type;
         if (direct_write(&new_segment, sizeof(new_segment), bq::file_manager::seek_option::end, 0) != sizeof(new_segment)) {
             bq::util::log_device_console(bq::log_level::error, "write binary segment header failed: %s", get_file_handle().abs_file_path().c_str());
-            bq::file_manager::instance().truncate_file(get_file_handle(), static_cast<size_t>(new_seg_start_pos));
+            bq::file_manager::instance().truncate_file(get_file_handle(), new_seg_start_pos);
             return false;
         }
-        if (enc_type_ == appender_encryption_type::rsa_aes_xor) {
-            if (direct_write(&rsa_key_fingerprint_, sizeof(rsa_key_fingerprint_), bq::file_manager::seek_option::current, 0) != sizeof(rsa_key_fingerprint_)
-                || direct_write(static_cast<const uint8_t*>(ciphertext_aes_key.begin()), ciphertext_aes_key.size(), bq::file_manager::seek_option::current, 0) != ciphertext_aes_key.size()
-                || direct_write(static_cast<const uint8_t*>(aes_iv.begin()), aes_iv.size(), bq::file_manager::seek_option::current, 0) != aes_iv.size()
-                || direct_write(static_cast<const uint8_t*>(xor_key_blob_ciphertext.begin()), xor_key_blob_ciphertext.size(), bq::file_manager::seek_option::current, 0) != xor_key_blob_ciphertext.size()) {
+        if (enc_type_ != appender_encryption_type::plaintext) {
+            if (direct_write(&enc_head, sizeof(enc_head), bq::file_manager::seek_option::current, 0) != sizeof(enc_head)) {
                 bq::util::log_device_console(bq::log_level::error, "write binary segment encryption data failed: %s", get_file_handle().abs_file_path().c_str());
-                bq::file_manager::instance().truncate_file(get_file_handle(), static_cast<size_t>(new_seg_start_pos));
+                bq::file_manager::instance().truncate_file(get_file_handle(), new_seg_start_pos);
                 return false;
             }
         }
+        cur_seg_payload_base_ = new_seg_start_pos
+            + (enc_type_ == appender_encryption_type::plaintext
+                    ? plaintext_payload_base_offset
+                    : encrypted_payload_base_offset);
         flush_write_io();
         if (topology.has_segment
             && direct_write(&new_seg_start_pos, sizeof(new_seg_start_pos), bq::file_manager::seek_option::begin,
@@ -526,23 +669,7 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::error, "link previous binary segment failed: %s", get_file_handle().abs_file_path().c_str());
             return false;
         }
-        xor_key_blob_ = bq::move(xor_key_blob_plaintext);
         flush_write_io();
-        update_write_cache_padding();
         return true;
-    }
-
-    void appender_file_binary::update_write_cache_padding()
-    {
-        if (enc_type_ != appender_encryption_type::rsa_aes_xor || xor_key_blob_.is_empty()) {
-            set_cache_write_padding(0);
-        } else {
-            auto file_pos = get_current_file_size();
-            auto enc_start_pos = static_cast<size_t>(file_pos & (xor_key_blob_.size() - 1));
-            size_t target_align = enc_start_pos & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
-            size_t current_align = get_cache_write_head_size() & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
-            uint8_t target_padding = (target_align + appender_file_base::DEFAULT_BUFFER_ALIGNMENT - current_align) & (appender_file_base::DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1));
-            set_cache_write_padding(target_padding);
-        }
     }
 }

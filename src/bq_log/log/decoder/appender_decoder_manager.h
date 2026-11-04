@@ -25,6 +25,19 @@ namespace bq {
         static appender_decoder_manager& instance();
 
         /// <summary>
+        /// Makes a decoder class available for a log format version other than the one this runtime
+        /// writes. The runtime registers none, because it decodes exactly one version; the standalone
+        /// tool registers the old formats at startup, and its own code lives with it rather than here.
+        /// </summary>
+        typedef bq::unique_ptr<appender_decoder_base> (*decoder_factory_fn)();
+        void register_decoder_factory(uint32_t format_version, decoder_factory_fn factory);
+
+        /// <summary>
+        /// The format versions this build can decode, oldest first.
+        /// </summary>
+        bq::array<uint32_t> get_supported_format_versions() const;
+
+        /// <summary>
         /// create a file decoder
         /// </summary>
         /// <param name="path"></param>
@@ -54,5 +67,7 @@ namespace bq {
 #endif
         bq::platform::atomic<uint32_t> idx_seq_;
         bq::hash_map<uint32_t, bq::unique_ptr<appender_decoder_base>> decoders_map_;
+        // Filled by register_decoder_factory; empty in the runtime.
+        bq::hash_map<uint32_t, decoder_factory_fn> extra_factories_;
     };
 }

@@ -308,29 +308,30 @@ Segments preserve encoding work already completed. The template state to use dep
 
 Running a public-key operation for every log would multiply its fixed cost by the record count. Copying an entire buffer before encrypting it would add another read and write of the payload.
 
-The current implementation separates preparation from payload processing:
+The current implementation (format version 11) separates preparation from payload processing:
 
-1. At segment creation, generate an AES-256 key and IV (initialization vector), protect the key with RSA-2048, and encrypt a 32 KiB mask with AES-CBC.
-2. During writing, XOR the payload in the Appender's batch buffer with the repeating mask, indexed by file position.
+1. At segment creation, draw a 256-byte seed from the platform CSPRNG and wrap it with RSA-2048: `c = seed^e mod n`, stored as a fixed 256-byte field.
+2. Derive the segment key and nonce with HKDF-SHA256 from the shared secret, the format version, the encryption type, the round count, the public-key fingerprint and the KEM ciphertext.
+3. During writing, XOR the payload in the Appender's batch buffer with the ChaCha8 keystream addressed by the offset inside the segment payload.
 
 ![Per-segment preparation and per-batch payload processing](img/performance/encryption-segments.png)
 
 <p align="center"><em>Figure 7: the upper section runs once per segment; the lower section transforms each payload batch in place.</em></p>
 
-Encryption material occupies 33048 bytes: an eight-byte public-key fingerprint, 256 bytes of RSA ciphertext, a 16-byte IV and 32768 bytes of encrypted mask. For a 1 KiB payload, this fixed material exceeds the payload itself. With tens of MiB per segment, it is shared across much more data. Segment creation frequency therefore matters alongside processing cost per byte.
+Encryption metadata occupies 268 bytes: an eight-byte public-key fingerprint, the ChaCha round count, three reserved bytes and 256 bytes of KEM ciphertext. It is written once per segment, so a segment that holds megabytes of logs pays for it once.
 
-The payload uses absolute file offsets:
+The payload is addressed by its offset inside the segment:
 
 ```text
-mask_index = file_offset & (32768 - 1)
-data[i] ^= mask[(file_offset + i) & (32768 - 1)]
+keystream = ChaCha8(key, nonce)
+data[payload_offset + i] ^= keystream[payload_offset + i]
 ```
 
-Since 32768 is a power of two, a bitwise AND implements the modulo. Each batch derives its position independently. SSE, AVX2 or NEON can load data and mask blocks, XOR them and store the result.
+Because the keystream is a function of the offset rather than of the preceding bytes, a decoder can start at any payload offset, and a damaged region stays where it is instead of corrupting everything after it. The same property lets a batch be transformed again after a short write: re-running the transform on the unwritten tail at the same absolute offsets returns those bytes to plaintext, so the pending write can be retried without keeping a copy.
 
-The Appender adjusts write-cache padding to keep the data address and mask position relatively aligned. After an incomplete write, the unwritten cache portion must be restored to a state that can be processed again; the next flush must not mistake transformed bytes for plaintext.
+The cost is one ChaCha8 pass over the payload. At 8 rounds and 7.55 GB/s on an ARM core with NEON, a 23-byte record pays about 3 ns, roughly a fifth of what the same record costs to compress.
 
-The main work of per-batch processing is the XOR loop. The protection level is limited: this is an obfuscation layer that stops the logs from being read directly. The payload does not go through AES batch by batch; it is XORed with an AES-protected mask that repeats every 32 KiB, so known plaintext can reveal a mask segment. The format has no AEAD (authenticated encryption) tag: it does not detect tampering and cannot stop a motivated attacker. Applications needing those guarantees must add a mechanism.
+The protection level is deliberate about what it is not. There is no AEAD tag: anyone who can write the file can flip bits, and the result is wrong plaintext in that region, undetected. What the format does provide is that a keystream is never reused — every segment derives a new key from a new seed — so ciphertext positions carry no reuse structure to exploit. Applications that need tamper detection must add a mechanism on top.
 
 ## 10. Where writing and reading do their work
 

@@ -15,6 +15,7 @@
 #include <iostream>
 #include <stdarg.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 
@@ -79,6 +80,41 @@ namespace bq {
         printf(FORMAT, __VA_ARGS__);                                        \
         fflush(stdout);                                                     \
     }
+
+        // Files that ship with the sources - the legacy format samples, the fuzzer regression input -
+        // are addressed relative to the header that reads them: <repo>/test/cpp/<header> means
+        // <repo>/test/data/<sub>. That holds wherever the binary runs from a checkout. A binary that
+        // runs away from it, on a device or copied out of the build tree, is pointed at the directory
+        // with BQ_TEST_DATA_DIR instead. The source-tree answer is returned even when it does not
+        // exist, so a failure names the path that was expected rather than an empty string.
+        inline bq::string test_data_dir(const char* header_file, const char* sub_dir)
+        {
+            // Two separators back from the file name: <...>/<test dir>/<header>.
+            size_t prev_sep = 0;
+            size_t last_sep = 0;
+            for (size_t i = 0; header_file[i] != '\0'; ++i) {
+                if (header_file[i] == '/' || header_file[i] == '\\') {
+                    prev_sep = last_sep;
+                    last_sep = i;
+                }
+            }
+            char buffer[4096];
+            snprintf(buffer, sizeof(buffer), "%.*s/data/%s", static_cast<int32_t>(prev_sep), header_file, sub_dir);
+            bq::string from_source(buffer);
+            if (bq::platform::is_dir(from_source.c_str())) {
+                return from_source;
+            }
+            const char* injected = getenv("BQ_TEST_DATA_DIR");
+            if (injected && injected[0] != '\0') {
+                bq::string from_env(injected);
+                from_env += "/";
+                from_env += sub_dir;
+                if (bq::platform::is_dir(from_env.c_str())) {
+                    return from_env;
+                }
+            }
+            return from_source;
+        }
 
         // The recovery suites ask the library instead of testing the platform themselves.
         inline bool recovery_available()

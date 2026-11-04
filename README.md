@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (BianQue Log) V 2.7.3
+# BqLog (BianQue Log) V 2.8.0
 
 **English** | [简体中文](./README_CHS.md)
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.7.3-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.7.3-orange.svg?style=flat)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/release-2.8.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.8.0-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -55,19 +55,18 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_Download-Release_2.7.3-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.8.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
-## 📋 What's New in v2.7.x
+## 📋 What's New in v2.8.x
 
-- **Console platforms (experimental)**: PlayStation 4, PlayStation 5 and Nintendo Switch, integrated as source. See [Integration Guide — console platforms](docs/INTEGRATION_GUIDE.md#console-platforms).
-- **C++20 modules**: `import bq.log;`, as an alternative to `#include "bq_log/bq_log.h"`, with no change to the logging code.
-- **Macro-free fast log (C++20)**: `log.fast_info<"...">(args...)`, the same speed as `BQ_LOG_FAST_INFO` with full IDE support, and usable with any log object. See [API Reference — fast mode](docs/API_REFERENCE.md#fast-info).
-- **Package managers**: Homebrew, vcpkg and NuGet. See [Integration Guide](docs/INTEGRATION_GUIDE.md).
-- **Multi-process**: several processes can share one log directory, each with its own crash recovery data.
-- **Bug fixes**: fast mode, recovery, formatting, config parsing and the decoder, among others.
+- **New encrypted log format (v11)**: every segment gets its own seed, wrapped with RSA-KEM and turned into a key and nonce with HKDF-SHA256; the payload is encrypted with ChaCha8 and addressed by the offset inside the segment. A 10 MB file with 1 MB segments is about 3% smaller than before, and the cost of encryption relative to plaintext fell from 28% to 15%.
+- **The library reads what it writes**: v11 only. An older file produces a console message naming the standalone `BqLog_LogDecoder`, which reads v9, v10 and v11.
+- **Faster RSA**: Montgomery multiplication, CRT and base blinding for private-key operations. A 2048-bit public-key operation takes about 0.20 ms.
+- **Smaller runtime**: the AES and 32 KiB XOR-mask code left the library and now lives only in the standalone decoder.
+- **Bug fixes**: the encrypted tail of the write cache was written unencrypted on exit, short writes dropped bytes and then masked the wrong range, and a crash inside a flush window replayed already-encrypted bytes as plaintext.
 
 > [!WARNING]
-> **The ABI changed between 2.7.x and 2.6.x or earlier.** Crossing that boundary requires upgrading the headers (or language wrapper) and the library together. Releases inside 2.7.x are ABI-compatible with each other.
+> **2.8.0 does not read files written by 2.7.x, and 2.7.x does not read files written by 2.8.0.** Encryption aside, the log format version changed from 10 to 11. Decode old files with `BqLog_LogDecoder` from this release. **Existing encrypted files should be treated as no longer confidential** — see [Advanced Usage — Migrating from format v10](docs/ADVANCED_USAGE.md#5-migrating-from-format-v10).
 
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 

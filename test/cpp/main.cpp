@@ -39,6 +39,9 @@
 #include "test_log.h"
 #include "test_layout.h"
 #include "test_disk_full.h"
+#include "test_security_flush.h"
+#include "test_security_destruct.h"
+#include "test_legacy_format.h"
 #include <locale.h>
 #include <stdlib.h>
 #if defined(BQ_WIN)
@@ -163,6 +166,9 @@ int32_t main_logic()
     TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_log);
     TEST_GROUP(Bq_Log_Test, bq::test, test_layout);
     TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_disk_full);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_security_flush);
+    TEST_GROUP_IF(BQ_HAS_DIRENT, Bq_Log_Test, bq::test, test_security_destruct);
+    TEST_GROUP(Bq_Log_Test, bq::test, test_legacy_format);
     TEST_GROUP_END(Bq_Log_Test);
 
     bool test_result = TEST_GROUP_RESULT(Bq_Common_Test) && TEST_GROUP_RESULT(Bq_Log_Test);
@@ -229,6 +235,12 @@ int32_t main(int32_t argc, char** argv)
         result.output("test_log_appender");
         return result.is_all_pass() ? 0 : -1;
     }
+    if (argc > 1 && strcmp(argv[1], "--large-file-only") == 0) {
+        bq::test::test_log_appender large_file_test;
+        auto result = large_file_test.test_large_offset_only();
+        result.output("test_log_appender_large_file");
+        return result.is_all_pass() ? 0 : -1;
+    }
     if (argc > 1 && strcmp(argv[1], "--log-only") == 0) {
         bq::test::test_log log_test;
         auto result = log_test.test();
@@ -239,6 +251,30 @@ int32_t main(int32_t argc, char** argv)
         bq::test::test_instance_storage instance_test;
         auto result = instance_test.test();
         result.output("test_instance_storage");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--security-destruct-only") == 0) {
+        bq::test::test_security_destruct security_destruct_test;
+        auto result = security_destruct_test.test();
+        result.output("test_security_destruct");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--legacy-only") == 0) {
+        bq::test::test_legacy_format legacy_format_test;
+        auto result = legacy_format_test.test();
+        result.output("test_legacy_format");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--security-flush-only") == 0) {
+        bq::test::test_security_flush security_flush_test;
+        auto result = security_flush_test.test();
+        result.output("test_security_flush");
+        return result.is_all_pass() ? 0 : -1;
+    }
+    if (argc > 1 && strcmp(argv[1], "--crypto-only") == 0) {
+        bq::test::test_encryption encryption_test;
+        auto result = encryption_test.test();
+        result.output("test_encryption");
         return result.is_all_pass() ? 0 : -1;
     }
     if (argc > 1 && strcmp(argv[1], "--meta-only") == 0) {

@@ -20,7 +20,8 @@
  *
  */
 
-#include "bq_common/encryption/aes.h"
+#include "legacy/crypto/aes.h"
+#include "bq_common/encryption/random_bytes.h"
 
 namespace bq {
     class aes_core {
@@ -319,11 +320,10 @@ namespace bq {
 
     void aes::fill_random(bq::array<uint8_t>& data)
     {
-        uint32_t seed = static_cast<uint32_t>(bq::platform::high_performance_epoch_ms() % UINT32_MAX);
-        bq::util::srand(seed);
-        for (size_t i = 0; i < data.size(); ++i) {
-            data[i] = static_cast<uint8_t>(bq::util::rand() & static_cast<uint32_t>(0xff));
-        }
+        // Key and IV both come from here, so the strength of every segment rests on this call. It
+        // used to be a xorshift seeded with the wall clock, which made the key guessable within the
+        // time window an attacker cares about; keep it on the OS CSPRNG.
+        bq::encryption::fill_random_bytes(data.begin(), data.size());
     }
 
     aes::key_type aes::generate_key() const

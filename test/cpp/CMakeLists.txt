@@ -93,6 +93,9 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../src ${CMAKE_CURRENT_SOURCE_DIR}/..
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../include ${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/include)
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/thirdparty)
+# The v9/v10 ciphers belong to the standalone decoder now. Their tests still run here, so this
+# target compiles them straight out of the tool's tree and the runtime library carries neither.
+set(LEGACY_CRYPTO_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/log_decoder)
 
 ############################################################
 # Search Include Dirs
@@ -101,6 +104,7 @@ COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${SRC_DIR}")
 COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${PUB_INC_DIR}")
 COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${THIRD_PARTY_DIR}")
 COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${TEST_DIR}")
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${LEGACY_CRYPTO_ROOT}")
 
 ############################################################
 # Search Source Files
@@ -109,6 +113,7 @@ COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
 COLLECT_SRC_FILES(INC_LIST "${PUB_INC_DIR}")
 COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
 COLLECT_SRC_FILES(TEST_LIST "${TEST_DIR}")
+COLLECT_SRC_FILES(LEGACY_CRYPTO_LIST "${LEGACY_CRYPTO_ROOT}/legacy/crypto")
 
 add_compile_definitions(BQ_UNIT_TEST)
 option(BQ_TEST_DISABLE_FILE_LOCK "Deprecated alias for BQ_HAS_CROSS_PROCESS_FILE_LOCK=0" OFF)
@@ -149,6 +154,7 @@ if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ohos")
     # build static library
     add_executable(BqLogUnitTest
             ${SRC_LIST}
+            ${LEGACY_CRYPTO_LIST}
             ${TEST_LIST}
             ${THIRD_PARTY_LIST}
             ${INC_LIST})
@@ -156,6 +162,7 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
     add_library(BqLogUnitTest
         STATIC
         ${SRC_LIST}
+        ${LEGACY_CRYPTO_LIST}
         ${TEST_LIST}
         ${THIRD_PARTY_LIST}
         ${INC_LIST})
@@ -177,11 +184,19 @@ else()
 	endif()
     # The library itself, compiled once: both test entries link it, the include entry's
     # binary and the module entry's. Everything that is not test code belongs to it.
-    add_library(bqlog_lib OBJECT ${SRC_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+    add_library(bqlog_lib OBJECT ${SRC_LIST} ${LEGACY_CRYPTO_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
 
     # build executable
     add_executable(BqLogUnitTest ${TEST_LIST})
     target_link_libraries(BqLogUnitTest PRIVATE bqlog_lib)
+    if (WIN32)
+        # The tests read log files with fopen and read a couple of environment variables on
+        # purpose, which the Windows CRT reports as deprecated calls. The condition is WIN32 and
+        # not MSVC because clang and MinGW reach the same headers here; on a CRT that does not
+        # know the macro it costs nothing. The shipping library uses neither, so the suppression
+        # is scoped to the test binary rather than to the build.
+        target_compile_definitions(BqLogUnitTest PRIVATE _CRT_SECURE_NO_WARNINGS)
+    endif()
 endif()
 
 
@@ -209,7 +224,7 @@ elseif(TARGET_PLATFORM MATCHES "^(unix|ps4|ps5)$")
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(bqlog_lib PRIVATE -ldbghelp)
+        target_link_libraries(bqlog_lib PRIVATE -ldbghelp -lbcrypt)
     endif()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogUnitTest)
 endif()
