@@ -36,10 +36,9 @@ namespace bq {
 #endif
 #include "bq_common/bq_common.h"
 
-// Where the C library declares getrandom() or getentropy(), one system call fills the buffer and no
-// file is opened. Which of the two a target has is asked of the compiler instead of a version macro
-// (see the probes further down); all this line does is make the declarations visible where the
-// header exists at all.
+// Where the C library declares getrandom(), one system call fills the buffer and no file is opened.
+// Whether it does is asked of the compiler instead of a version macro (see the probe further down);
+// all this line does is make the declaration visible where the header exists at all.
 #if defined(__has_include)
 #if __has_include(<sys/random.h>)
 #include <sys/random.h>
@@ -839,23 +838,18 @@ namespace bq {
         }
 
         namespace {
-            // Whether the C library declares these is a question about declarations, not versions,
-            // and it can be asked without naming a platform. The argument type depends on a template
-            // parameter, so the call is looked up at instantiation time; a name that is not there is
-            // then a substitution failure rather than an error, which is what makes the probe legal
-            // on a target that has neither function.
+            // Whether the C library declares getrandom() is a question about declarations, not
+            // versions, and it can be asked without naming a platform. The argument type depends on a
+            // template parameter, so the call is looked up at instantiation time; a name that is not
+            // there is then a substitution failure rather than an error, which is what makes the probe
+            // legal on a target that does not have the function.
             template <typename T>
             auto detects_getrandom(int) -> decltype(getrandom(static_cast<T*>(nullptr), static_cast<size_t>(0), 0U), bq::true_type());
             template <typename>
             auto detects_getrandom(...) -> bq::false_type;
 
-            template <typename T>
-            auto detects_getentropy(int) -> decltype(getentropy(static_cast<T*>(nullptr), static_cast<size_t>(0)), bq::true_type());
-            template <typename>
-            auto detects_getentropy(...) -> bq::false_type;
-
-            // Both bodies are templates as well: the call inside one only has to exist on a target
-            // whose probe said yes, because the other body is never instantiated.
+            // The body is a template as well: the call inside it only has to exist on a target whose
+            // probe said yes, because it is never instantiated otherwise.
             template <typename T>
             bool fill_from_getrandom(T* out, size_t size)
             {
@@ -875,49 +869,34 @@ namespace bq {
                 return true;
             }
 
+            // Selected by the probe result, so the body above is instantiated only where the
+            // declaration exists.
             template <typename T>
-            bool fill_from_getentropy(T* out, size_t size)
-            {
-                // This one hands out at most 256 bytes per call.
-                size_t done = 0;
-                while (done < size) {
-                    const size_t left = size - done;
-                    const size_t chunk = left > 256 ? 256 : left;
-                    if (getentropy(out + done, chunk) != 0) {
-                        return false;
-                    }
-                    done += chunk;
-                }
-                return true;
-            }
-
-            // getrandom() wins wherever it is declared, because it has no size limit. The overloads
-            // are selected by the two probe results, so exactly one body above is instantiated.
-            template <typename T, typename EntropyTag>
-            bool fill_from_system(T* out, size_t size, bq::true_type, EntropyTag)
+            bool fill_from_system(T* out, size_t size, bq::true_type)
             {
                 return fill_from_getrandom(out, size);
             }
 
             template <typename T>
-            bool fill_from_system(T* out, size_t size, bq::false_type, bq::true_type)
-            {
-                return fill_from_getentropy(out, size);
-            }
-
-            template <typename T>
-            bool fill_from_system(T*, size_t, bq::false_type, bq::false_type)
+            bool fill_from_system(T*, size_t, bq::false_type)
             {
                 return false;
             }
         }
 
-        // One definition for every POSIX target, consoles included. A console SDK declares neither
-        // getrandom() nor getentropy() and has no /dev/urandom, so the probes below answer no and this
-        // returns false on its own: the caller derives its keys from the software mix, warns once, and
-        // the title is expected to have called bq::log::set_secure_random_source() before that. No
-        // platform macro is needed to say so - asking the C library is what tells the two apart, and a
-        // separate console definition would only be a second answer to keep in step.
+        // One definition for every POSIX target, consoles included. A console SDK does not declare
+        // getrandom() and has no /dev/urandom, so both steps below answer no and this returns false on
+        // its own: the caller derives its keys from the software mix, warns once, and the title is
+        // expected to have called bq::log::set_secure_random_source() before that. No platform macro
+        // is needed to say so, and a separate console definition would only be a second answer to keep
+        // in step.
+        //
+        // getentropy() used to sit between the two. It is gone because a declaration is not a
+        // promise: devkitA64's newlib declares it and ships sysgetentropy.o, whose body calls
+        // _getentropy_r, which libnx does not provide - so a Switch build that merely mentioned the
+        // name failed to link, and a probe that only asks whether the name exists could not tell.
+        // /dev/urandom answers the same thing for one open() per segment key, which this path can
+        // afford, and it is a name that either resolves or returns an error, never a link failure.
         bool secure_random_bytes(void* buf, size_t size)
         {
             if (!buf || size == 0) {
@@ -931,8 +910,7 @@ namespace bq {
             uint8_t* out = static_cast<uint8_t*>(buf);
             // One system call fills the whole buffer where the C library has one.
             typedef decltype(detects_getrandom<uint8_t>(0)) has_getrandom_t;
-            typedef decltype(detects_getentropy<uint8_t>(0)) has_getentropy_t;
-            if (fill_from_system(out, size, has_getrandom_t(), has_getentropy_t())) {
+            if (fill_from_system(out, size, has_getrandom_t())) {
                 return true;
             }
             // Otherwise the device file is the way in: one open per call, and this runs once per log

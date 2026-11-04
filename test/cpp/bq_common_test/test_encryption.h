@@ -668,11 +668,11 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
 
                 const bq::encryption::entropy_source source = bq::encryption::fill_random_bytes(first, sizeof(first));
                 // Which answer this build gets is the platform's business, not the test's: a console
-                // declares none of getrandom(), getentropy() or /dev/urandom and degrades to the
-                // software mix by itself, a desktop takes the system one, and a build that only
-                // impersonates a console while running on a host whose libc does have a random device
-                // takes the host's. Asserting by platform name would be wrong in that last case, so
-                // what is checked is that the report agrees with the primitive it came from.
+                // declares no getrandom() and has no /dev/urandom, so it degrades to the software mix
+                // by itself, a desktop takes the system one, and a build that only impersonates a
+                // console while running on a host whose libc does have a random device takes the
+                // host's. Asserting by platform name would be wrong in that last case, so what is
+                // checked is that the report agrees with the primitive it came from.
                 uint8_t probe[64];
                 memset(probe, 0, sizeof(probe));
                 const bool platform_has_csprng = bq::platform::secure_random_bytes(probe, sizeof(probe));
