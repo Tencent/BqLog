@@ -148,9 +148,9 @@ function(BQ_DETECT_ARCH OUT_VAR)
     set(${OUT_VAR} "${INNER_DETECTED_ARCH}" PARENT_SCOPE)
 endfunction()
 
-# Every target of this project wants file positions wider than 32 bits where the platform can offer
-# them, so it is one call rather than a line each CMakeLists has to remember. A project that compiles
-# these sources into its own build has to add the same definition itself.
+# File positions wider than 32 bits where the platform can offer them. Each CMakeLists calls this
+# next to bq_default_target_platform(), so the definition a target gets is visible where the target is
+# described; a project that compiles these sources into its own build has to call it as well.
 function(bq_require_large_file_support)
     add_compile_definitions(_FILE_OFFSET_BITS=64)
 endfunction()
@@ -158,8 +158,6 @@ endfunction()
 # A function, not a macro: a macro's return would leave the caller as well.
 # Call it after project(): before that the toolchain file has not set CMAKE_SYSTEM_NAME.
 function(bq_default_target_platform)
-    bq_require_large_file_support()
-
     if(DEFINED TARGET_PLATFORM AND NOT "${TARGET_PLATFORM}" STREQUAL "")
         return()
     endif()

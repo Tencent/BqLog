@@ -14,6 +14,7 @@ bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/src/bq_log/global/version
 project(BqLog VERSION ${BQ_VERSION} LANGUAGES CXX)
 
 # A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
+bq_require_large_file_support()
 bq_default_target_platform()
 
 set(BUILD_LIB_TYPE "static_lib" CACHE STRING "Choose the build type")

@@ -14,6 +14,7 @@ project(BqLog_CategoryLogGenerator VERSION ${BQ_VERSION} LANGUAGES CXX)
 include(GNUInstallDirs)
 
 # A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
+bq_require_large_file_support()
 bq_default_target_platform()
 
 # Packagers turn this off so a new compiler warning cannot fail a package build.

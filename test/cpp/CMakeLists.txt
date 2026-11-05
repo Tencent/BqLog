@@ -47,6 +47,7 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/CMake_uti
 elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include(${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt)
 endif()
+bq_require_large_file_support()
 bq_default_target_platform()
 
 #make __cplusplus correct in Visual Studio
