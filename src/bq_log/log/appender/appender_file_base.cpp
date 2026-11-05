@@ -158,7 +158,7 @@ namespace bq {
         // Everything the write did not take stays in the cache, and the bytes a producer appended
         // while the write was in flight line up behind them. Both have to slide down by the same
         // amount, so this is one move over the whole window, not one for each case: a separate copy
-        // of the unwritten part would be overwritten by the tail (D-6).
+        // of the unwritten part would be overwritten by the tail that is already there.
         if (cache_write_cursor_ > real_write_size) {
             memmove(cache_write_, cache_write_ + static_cast<ptrdiff_t>(real_write_size), static_cast<size_t>(cache_write_cursor_ - real_write_size));
         }

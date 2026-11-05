@@ -28,7 +28,7 @@ namespace bq {
 
         // The only question the flush state word answers: is the write cache plaintext right now?
         // It records no position and no written length on purpose - recovery neither replays into the
-        // old place nor repairs the file, so there is nothing to record (RD §2.4.3).
+        // old place nor repairs the file, so there is nothing to record.
         enum flush_state : uint32_t {
             flush_idle = 0, // plaintext, no flush window in progress
             flush_transforming = 1, // a window is open; the contents are not interpretable
@@ -237,7 +237,7 @@ namespace bq {
 
         void refresh_cache_write_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
 
-        // Drives the flush window in RD §2.4.2. set_flush_state_transforming() opens it and
+        // Drives the flush window. set_flush_state_transforming() opens it and
         // set_flush_state_idle() closes it; both are no-ops for a plaintext appender, which never
         // touches the word. The barrier in the first and the release in the second are what make the
         // ordering against the transform and the accounting hold.

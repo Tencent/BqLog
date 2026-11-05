@@ -313,7 +313,7 @@ namespace bq {
         // The base destructor flushes too, but it drives the window through on_flush_transform(),
         // and by the time it runs that call lands on the base class's empty version: this class is
         // already gone. Whatever is still in the write cache would then go to disk exactly as it
-        // sits in memory - compressed, but not encrypted (D-1). Flush here, while the override is
+        // sits in memory - compressed, but not encrypted. Flush here, while the override is
         // still reachable and the segment key still exists, and only if the caller wants it: turning
         // the destructor flush off is how a recovery test leaves data behind in the cache, and it
         // has to keep working.
