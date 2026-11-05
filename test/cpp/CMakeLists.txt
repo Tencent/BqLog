@@ -93,9 +93,10 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../src ${CMAKE_CURRENT_SOURCE_DIR}/..
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../include ${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/include)
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/thirdparty)
-# The v9/v10 ciphers belong to the standalone decoder now. Their tests still run here, so this
-# target compiles them straight out of the tool's tree and the runtime library carries neither.
-set(LEGACY_CRYPTO_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/log_decoder)
+# The v9/v10 segment layer belongs to the standalone decoder now. Its golden tests still run here,
+# so this target compiles it straight out of the tool's tree - the decoders and the ciphers they
+# use - and the runtime library carries neither.
+set(LEGACY_DECODER_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/log_decoder)
 
 ############################################################
 # Search Include Dirs
@@ -104,7 +105,7 @@ COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${SRC_DIR}")
 COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${PUB_INC_DIR}")
 COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${THIRD_PARTY_DIR}")
 COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${TEST_DIR}")
-COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${LEGACY_CRYPTO_ROOT}")
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${LEGACY_DECODER_ROOT}")
 
 ############################################################
 # Search Source Files
@@ -113,7 +114,7 @@ COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
 COLLECT_SRC_FILES(INC_LIST "${PUB_INC_DIR}")
 COLLECT_SRC_FILES(THIRD_PARTY_LIST "${THIRD_PARTY_DIR}")
 COLLECT_SRC_FILES(TEST_LIST "${TEST_DIR}")
-COLLECT_SRC_FILES(LEGACY_CRYPTO_LIST "${LEGACY_CRYPTO_ROOT}/legacy/crypto")
+COLLECT_SRC_FILES(LEGACY_DECODER_LIST "${LEGACY_DECODER_ROOT}/legacy")
 
 add_compile_definitions(BQ_UNIT_TEST)
 option(BQ_TEST_DISABLE_FILE_LOCK "Deprecated alias for BQ_HAS_CROSS_PROCESS_FILE_LOCK=0" OFF)
@@ -154,7 +155,7 @@ if(TARGET_PLATFORM STREQUAL "android" OR TARGET_PLATFORM STREQUAL "ohos")
     # build static library
     add_executable(BqLogUnitTest
             ${SRC_LIST}
-            ${LEGACY_CRYPTO_LIST}
+            ${LEGACY_DECODER_LIST}
             ${TEST_LIST}
             ${THIRD_PARTY_LIST}
             ${INC_LIST})
@@ -162,7 +163,7 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
     add_library(BqLogUnitTest
         STATIC
         ${SRC_LIST}
-        ${LEGACY_CRYPTO_LIST}
+        ${LEGACY_DECODER_LIST}
         ${TEST_LIST}
         ${THIRD_PARTY_LIST}
         ${INC_LIST})
@@ -184,7 +185,7 @@ else()
 	endif()
     # The library itself, compiled once: both test entries link it, the include entry's
     # binary and the module entry's. Everything that is not test code belongs to it.
-    add_library(bqlog_lib OBJECT ${SRC_LIST} ${LEGACY_CRYPTO_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
+    add_library(bqlog_lib OBJECT ${SRC_LIST} ${LEGACY_DECODER_LIST} ${THIRD_PARTY_LIST} ${INC_LIST})
 
     # build executable
     add_executable(BqLogUnitTest ${TEST_LIST})

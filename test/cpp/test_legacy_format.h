@@ -14,6 +14,7 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
+#include "legacy/legacy_decoders.h"
 
 namespace bq {
     namespace test {
@@ -24,9 +25,10 @@ namespace bq {
         // staring at a decode failure.
         //
         // The samples under test/data/legacy are real files written by Release_2.3.1 (format 9) and
-        // Release_2.7.3 (format 10), with the decoded text their own decoders produced. The tool's
-        // job - decode them byte for byte - is checked by the CI step that runs BqLog_LogDecoder over
-        // that directory; the runtime's job is only to decline them, which is what happens here.
+        // Release_2.7.3 (format 10), with the decoded text their own decoders produced. Two things
+        // are checked here: the runtime declines them, and the tool's segment layers - registered in
+        // this binary exactly as the tool registers them at startup, and nowhere else in the runtime -
+        // reproduce their golden text byte for byte.
         class test_legacy_format : public test_base {
         private:
             // The samples are source-tree data, not generated output: <repo>/test/data/legacy, as seen
@@ -34,6 +36,19 @@ namespace bq {
             static bq::string legacy_data_dir()
             {
                 return bq::test::test_data_dir(__FILE__, "legacy");
+            }
+
+            // What the standalone decoder does at startup, and what the runtime deliberately does
+            // not do. Compiling the two segment layers into the test (see test/cpp/CMakeLists.txt) is
+            // what lets the golden comparison below run at all.
+            static void register_legacy_decoders()
+            {
+                bq::appender_decoder_manager::instance().register_decoder_factory(9, []() -> bq::unique_ptr<bq::appender_decoder_base> {
+                    return bq::make_unique<bq::appender_decoder_legacy_v9>();
+                });
+                bq::appender_decoder_manager::instance().register_decoder_factory(10, []() -> bq::unique_ptr<bq::appender_decoder_base> {
+                    return bq::make_unique<bq::appender_decoder_legacy_v10>();
+                });
             }
 
         public:
@@ -72,11 +87,74 @@ namespace bq {
                 }
             }
 
+            // Byte for byte, against the text the release that wrote the sample produced. A format
+            // this old is a promise to files that already exist, and the only way to keep it honest
+            // is to decode the files.
+            void case_samples_decode_byte_for_byte(test_result& result)
+            {
+                struct sample_case {
+                    const char* dir;
+                    const char* name;
+                    uint32_t version;
+                };
+                const sample_case samples[] = {
+                    { "/v9", "plain", 9 },
+                    { "/v9", "enc", 9 },
+                    { "/v9", "enc_recover_buffer", 9 },
+                    { "/v9", "enc_recover_appender", 9 },
+                    { "/v10", "plain", 10 },
+                    { "/v10", "enc", 10 },
+                    { "/v10", "enc_260", 10 },
+                    { "/v10", "enc_recover_buffer", 10 },
+                    { "/v10", "enc_recover_appender", 10 },
+                };
+                const bq::string base_dir = legacy_data_dir();
+                // Every encrypted sample was wrapped with this key. It is the pair the unit tests
+                // already carry, and it protects nothing: the samples are public by construction.
+                const bq::string priv_key = bq::file_manager::instance().read_all_text(base_dir + "/legacy_key.pem");
+                result.add_result(!priv_key.is_empty(), "the sample private key is readable");
+                if (priv_key.is_empty()) {
+                    return;
+                }
+
+                for (const auto& sample : samples) {
+                    const bq::string sample_path = base_dir + sample.dir + "/" + sample.name + ".logcompr";
+                    const bq::string expected_path = base_dir + sample.dir + "/" + sample.name + ".expected.txt";
+                    const bq::string expected = bq::file_manager::instance().read_all_text(expected_path);
+                    if (expected.is_empty()) {
+                        result.add_result(false, "v%" PRIu32 " %s: the golden text is readable", sample.version, sample.name);
+                        continue;
+                    }
+                    // The same loop the tool runs: one entry per call, one newline after each.
+                    bq::string decoded;
+                    bq::tools::log_decoder decoder(sample_path, priv_key);
+                    while (true) {
+                        const bq::appender_decode_result decode_result = decoder.decode();
+                        if (decode_result == bq::appender_decode_result::eof) {
+                            break;
+                        }
+                        decoded += decoder.get_last_decoded_log_entry();
+                        decoded.push_back('\n');
+                        if (decode_result != bq::appender_decode_result::success) {
+                            break;
+                        }
+                    }
+                    result.add_result(decoded == expected,
+                        "v%" PRIu32 " %s decodes to its golden text (%" PRIu64 " bytes decoded, %" PRIu64 " expected)",
+                        sample.version, sample.name, static_cast<uint64_t>(decoded.size()),
+                        static_cast<uint64_t>(expected.size()));
+                }
+            }
+
             virtual test_result test() override
             {
                 test_result result;
                 case_runtime_supports_one_version(result);
                 case_runtime_declines_old_versions(result);
+                // Only after the runtime has been asked what it supports: from here on this binary
+                // can decode 9 and 10, and the two cases above would no longer describe the runtime.
+                register_legacy_decoders();
+                case_samples_decode_byte_for_byte(result);
                 return result;
             }
         };

@@ -1,9 +1,10 @@
 # Legacy format samples (v9, v10)
 
 Real log files written by old releases, with the decoded text those releases' own
-`BqLog_LogDecoder` produced for them. `test_legacy_decode` reads every sample with the current
-standalone decoder and compares byte for byte, so "the standalone tool still decodes the old
-formats" is a test result rather than a claim.
+`BqLog_LogDecoder` produced for them. `test_legacy_format` (group `Bq_Log_Test`) compiles the
+standalone decoder's v9/v10 segment layers into the test binary, registers them exactly as the tool
+does at startup, and decodes every sample below against its `.expected.txt` byte for byte, so "the
+standalone tool still decodes the old formats" is a test result rather than a claim.
 
 | | written by | format | encryption |
 |---|---|---|---|
