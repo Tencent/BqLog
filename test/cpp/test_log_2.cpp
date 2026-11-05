@@ -444,26 +444,29 @@ namespace bq {
                     }
                 }
                 bq::log::force_flush_all_logs();
-                // The counters are written by whichever thread did the dispatch, so the read below can
-                // land while that thread is still finishing the last chunk - off by one under a loaded
-                // scheduler, which is what this looked like on the NetBSD runners. Flushing again until
-                // the three agree is the same remedy the re-check below always applied; the difference
-                // is that the answer is now taken after it, with a deadline so a record that never
-                // arrives still fails the case instead of spinning.
+                // The one NetBSD run this case ever failed in (clang 17, 2026-11-04) was short by
+                // exactly one async dispatch, and the sync count was exact. force_flush_all holds the
+                // write lock that the worker's whole process() pass holds in read mode, so a record
+                // it had already taken cannot be the missing one; a record the async buffer dropped
+                // while full would not arrive later at all. Re-flushing with a deadline tells the two
+                // apart: a count that arrives on a later flush was committed but not seen by the
+                // first, and one that never arrives fails here after the deadline with the numbers.
                 const uint64_t flush_deadline = bq::platform::high_performance_epoch_ms() + 3000;
                 auto flush_counters_agree = []() {
                     const uint64_t expected = test_force_flush_callback::idx.load_seq_cst();
                     return expected == test_force_flush_callback::current_idx_sync.load_seq_cst()
                         && expected == test_force_flush_callback::current_idx_async.load_seq_cst();
                 };
+                int32_t flush_retries = 0;
                 while (!flush_counters_agree() && bq::platform::high_performance_epoch_ms() < flush_deadline) {
                     bq::platform::thread::sleep(5);
                     bq::log::force_flush_all_logs();
+                    ++flush_retries;
                 }
                 bool force_flush_sync_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_sync.load_seq_cst());
                 bool force_flush_async_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_async.load_seq_cst());
-                result.add_result(force_flush_sync_passed, "force flush test sync total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst());
-                result.add_result(force_flush_async_passed, "force flush test async total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());
+                result.add_result(force_flush_sync_passed, "force flush test sync total count, %" PRIu64 ", %" PRIu64 " after %d extra flushes", test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst(), static_cast<int32_t>(flush_retries));
+                result.add_result(force_flush_async_passed, "force flush test async total count, %" PRIu64 ", %" PRIu64 " after %d extra flushes", test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst(), static_cast<int32_t>(flush_retries));
                 if (!force_flush_sync_passed || !force_flush_async_passed) {
                     bq::log::force_flush_all_logs();
                     test_output_param(bq::log_level::error, "force flush re-check, idx:%" PRIu64 ", sync:%" PRIu64 ", async:%" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());
