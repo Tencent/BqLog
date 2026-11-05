@@ -15,7 +15,7 @@
 #include <thread>
 #include <utility>
 #include "test_base.h"
-// v9/v10 ciphers: they live with the standalone decoder now, so these tests build them from there.
+// Older formats' ciphers, built from the standalone decoder's tree.
 #include "legacy/crypto/vernam.h"
 #include "bq_common/encryption/rsa.h"
 #include "legacy/crypto/aes.h"
@@ -454,9 +454,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
 
             void test_chacha20(test_result& result)
             {
-                // RFC 8439 section 2.3.2 block function vector: key 00..1f, nonce 000000090000004a00000000,
-                // counter 1. A wrong nonce silently produces a valid-looking stream, so the vector is
-                // worth pinning exactly.
+                // RFC 8439 2.3.2 block vector.
                 static const uint8_t rfc_key[32] = {
                     0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
                     0x10, 0x11, 0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f
@@ -473,9 +471,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 chacha20::keystream_block(block, rfc_key, rfc_nonce, 1);
                 result.add_result(memcmp(block, rfc_block, sizeof(rfc_block)) == 0, "chacha20 RFC 8439 block vector");
 
-                // Randomised offset consistency: the keystream is seekable, so xoring at an offset has to
-                // match the slice of the stream generated from zero. This is the property the appender
-                // depends on when it resumes in the middle of a file.
+                // Xoring at an offset must match the same slice of a stream generated from zero.
                 constexpr size_t stream_size = 8192;
                 bq::array<uint8_t> stream;
                 stream.fill_uninitialized(stream_size);
@@ -523,10 +519,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                         "chacha20 hardware path matches scalar, path index %" PRId32, static_cast<int32_t>(i));
                 }
 #if defined(BQ_X86)
-                // AVX2 is the widest x86 kernel and the one a release build picks on any machine
-                // that has it, so a run where it never executed proves less than its pass count
-                // suggests. BQ_REQUIRE_AVX2=1 is how a job states that it *is* the AVX2 coverage:
-                // there the machine has to have it, instead of quietly validating SSE2 only.
+                // BQ_REQUIRE_AVX2=1 makes a job fail when AVX2 is missing instead of testing SSE2 only.
                 const bool avx2_available = bq::common_global_vars::get().avx2_support_;
                 if (avx2_available) {
                     bq::array<uint8_t> candidate;
@@ -573,9 +566,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 chacha20::keystream_xor(roundtrip.begin(), stream_size, rfc_key, rfc_nonce, 37);
                 result.add_result(memcmp(original.begin(), roundtrip.begin(), stream_size) == 0, "chacha20 xor is an involution");
 
-                // RFC 8439 section 2.4.2: the block vector's key, nonce and counter applied to the
-                // sunscreen text. It pins the counter/nonce layout end to end, which the single
-                // block vector cannot.
+                // RFC 8439 2.4.2: pins the counter/nonce layout end to end.
                 {
                     static const char plain_text[] = "Ladies and Gentlemen of the class of '99: If I could offer you only one tip for the future, sunscreen would be it.";
                     static const uint8_t expected[] = {
@@ -607,9 +598,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                         "chacha20 keystream depends on the block counter");
                 }
 
-                // U-1: every hardware path against the scalar one for each round count, at an offset
-                // and a length that are not multiples of any chunk size, so the tail handler and the
-                // misaligned first block are both exercised.
+                // Every hardware path against scalar, at an offset and length that hit the head and the tail.
                 {
                     struct round_case {
                         chacha20::round_count rounds;
@@ -662,18 +651,27 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 memset(second, 0, sizeof(second));
 
                 const bq::encryption::entropy_source source = bq::encryption::fill_random_bytes(first, sizeof(first));
-                // Which answer this build gets is the platform's business, not the test's: a console
-                // declares no getrandom() and has no /dev/urandom, so it degrades to the software mix
-                // by itself, a desktop takes the system one, and a build that only impersonates a
-                // console while running on a host whose libc does have a random device takes the
-                // host's. Asserting by platform name would be wrong in that last case, so what is
-                // checked is that the report agrees with the primitive it came from.
+                // Checked against the primitive rather than the platform name: a console build running
+                // on a host libc that has a random device legitimately gets the host's.
                 uint8_t probe[64];
                 memset(probe, 0, sizeof(probe));
                 const bool platform_has_csprng = bq::platform::secure_random_bytes(probe, sizeof(probe));
                 result.add_result((source == bq::encryption::entropy_source::platform_csprng) == platform_has_csprng,
                     "the reported entropy source matches what the platform primitive returned (platform %s)",
                     platform_has_csprng ? "has a CSPRNG" : "has none");
+
+                struct constant_source {
+                    static bool fill(void* buf, size_t size)
+                    {
+                        memset(buf, 0x5A, size);
+                        return true;
+                    }
+                };
+                bq::encryption::set_secure_random_source(&constant_source::fill);
+                const bq::encryption::entropy_source with_injected = bq::encryption::fill_random_bytes(probe, sizeof(probe));
+                bq::encryption::set_secure_random_source(nullptr);
+                result.add_result(with_injected == (platform_has_csprng ? bq::encryption::entropy_source::platform_csprng : bq::encryption::entropy_source::injected),
+                    "an injected source is used only where the platform has no CSPRNG (got %d)", static_cast<int32_t>(with_injected));
                 bq::encryption::fill_random_bytes(second, sizeof(second));
                 result.add_result(memcmp(first, second, sizeof(first)) != 0, "two consecutive fills differ");
 
@@ -686,9 +684,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 }
                 result.add_result(!all_zero, "random bytes are not all zero");
 
-                // A uniform fill produces 0x00 as the first byte about once in 256 samples. A source
-                // that never does, or does far more often, is not uniform, and that is what this
-                // checks rather than anything specific to key wrapping.
+                // A uniform source starts with 0x00 about once in 256 fills.
                 int32_t zero_prefix = 0;
                 for (int32_t i = 0; i < 4096; ++i) {
                     uint8_t sample[32];
@@ -702,9 +698,6 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
             }
 
         public:
-            // The segment format reserves a fixed 256-byte field for the wrapped key, so only a
-            // 2048-bit modulus fits. Anything else has to be refused when the appender is created,
-            // not discovered when someone tries to open the file.
             void test_public_key_validation(test_result& result)
             {
                 struct key_case {
@@ -725,9 +718,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 for (size_t i = 0; i < sizeof(cases) / sizeof(cases[0]); ++i) {
                     bq::rsa::public_key key;
                     key.n_.fill_uninitialized(static_cast<size_t>(cases[i].modulus_bytes));
-                    // Taken by pointer and checked once: bq::array keeps its pointer null until it
-                    // has allocated, which the analyser cannot see through fill_uninitialized(),
-                    // so the writes below would be reported as null dereferences.
+                    // Checked once for the analyser, which cannot see that fill_uninitialized allocated.
                     uint8_t* modulus = key.n_.begin();
                     result.add_result(modulus != nullptr, "the test key modulus buffer is allocated");
                     if (!modulus) {
@@ -772,9 +763,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                     what, static_cast<int32_t>(n.size()), static_cast<int32_t>(e.size()));
             }
 
-            // Montgomery replaced the schoolbook modexp, so the two have to agree on everything the
-            // RSA round trip cannot see: the round trip only checks that a value comes back, which a
-            // subtly wrong reduction can also manage.
+            // Montgomery against the reference modexp, which a round trip alone cannot catch.
             void test_montgomery(test_result& result)
             {
                 bq::util::srand(static_cast<uint32_t>(bq::platform::high_performance_epoch_ms()));
@@ -847,13 +836,8 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 const double per_op_ms = static_cast<double>(bq::platform::high_performance_epoch_ms() - start_ms) / static_cast<double>(timing_rounds);
                 test_output_param(bq::log_level::info, "montgomery 2048-bit public operation: %.3f ms", per_op_ms);
 #if defined(NDEBUG)
-                // Only an optimised build is worth comparing against the budget; the Debug build of
-                // this header-only arithmetic is several times slower and says nothing about it.
-                // The budget separates Montgomery arithmetic from the schoolbook double-and-add it
-                // replaced, which costs an order of magnitude more; it is not a microbenchmark, and
-                // the measured value is printed above for the record. A shared runner reported
-                // 0.35 ms where a local one reports a tenth of that, so the bound sits far enough
-                // above the noise to fail only on a change of algorithm.
+                // Release builds only. The bound separates Montgomery from schoolbook (10x slower) with room for
+                // noisy shared runners.
                 result.add_result(per_op_ms <= 2.0, "montgomery 2048-bit public operation within 2.0 ms (%.3f ms)", per_op_ms);
 #else
                 result.add_result(true, "montgomery 2048-bit public operation measured in a Debug build (%.3f ms, budget not applied)", per_op_ms);
@@ -906,9 +890,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                     "sha256 vector: %s", what);
             }
 
-            // SHA-256 and HKDF only ever run on the segment key path, so a wrong digest would show up
-            // as "the file cannot be opened" long after the mistake. Pin them against the published
-            // vectors instead.
+            // Published SHA-256 and HKDF vectors.
             void test_sha256_hkdf(test_result& result)
             {
                 check_sha256(result, "", "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", "empty message");
@@ -974,10 +956,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 }
             }
 
-            // The segment key comes out of this, so the two things worth proving are that the wrap
-            // round-trips at the real key size and that the shared secret keeps its full width: an
-            // implementation that returned the minimal encoding would derive a different key for
-            // roughly one segment in 256, and the files would simply fail to open.
+            // The KEM round trip at the real key size, and the shared secret keeps all 256 bytes.
             void test_rsa_kem(test_result& result)
             {
                 bq::rsa::public_key pub;
@@ -1027,9 +1006,7 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 test_output_param(bq::log_level::info, "rsa kem: %d wraps, a zero leading byte occurred: %d",
                     wrap_count, all_leading_zero_seen ? 1 : 0);
 
-                // A leading zero has to be constructed rather than waited for: pick a value whose
-                // top byte is zero, wrap it with the public key, and check the unwrap restores all
-                // 256 bytes instead of dropping to 255.
+                // Build a secret with a leading zero byte and check the unwrap keeps all 256 bytes.
                 {
                     bq::array<uint8_t> chosen;
                     chosen.fill_uninitialized(256);

@@ -446,10 +446,7 @@ namespace bq {
             auto iter = thread_names_cache_.find(thread_id);
             if (iter == thread_names_cache_.end()) {
                 const auto& ext_info = log_entry.get_ext_head();
-                // "[tid-" + up to 20 digits + " " + the name + "]\t" + terminator. The name is
-                // bounded twice on the way here - validate() rejects a record that claims more than
-                // MAX_THREAD_NAME_LEN, and the clamp below covers anything that reaches the layout
-                // without going through it - so the copy cannot run past this buffer.
+                // "[tid-" + up to 20 digits + " " + name + "]\t" + terminator.
                 char tmp[MAX_THREAD_NAME_LEN + 32];
                 uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", thread_id));
                 const uint32_t name_len = bq::min_value(static_cast<uint32_t>(ext_info.thread_name_len_), static_cast<uint32_t>(MAX_THREAD_NAME_LEN));

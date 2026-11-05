@@ -52,16 +52,14 @@ bq::appender_decode_result bq::appender_decoder_manager::create_decoder(const bq
         if (head.version == bq::appender_file_compressed::format_version) {
             decoder = bq::make_unique<bq::appender_decoder_compressed>();
         } else {
-            auto factory_iter = extra_factories_.find(head.version);
-            if (factory_iter == extra_factories_.end()) {
-                // Not "corrupt", not "unsupported by this tool version": the runtime carries one
-                // format version only, so the advice is where to find the other one.
+            const decoder_factory_fn factory = find_decoder_factory(head.version);
+            if (!factory) {
                 bq::util::log_device_console(log_level::error,
                     "decode log file :%s failed, format version %" PRIu32 " is not supported by this runtime (supports %" PRIu32 "), use the standalone BqLog_LogDecoder tool",
                     path.c_str(), head.version, bq::appender_file_compressed::format_version);
                 return appender_decode_result::failed_decode_error;
             }
-            decoder = factory_iter->value()();
+            decoder = factory();
         }
     } else {
         bq::util::log_device_console(log_level::error, "decode log file :%s failed, unrecognized format", path.c_str());
@@ -88,17 +86,29 @@ void bq::appender_decoder_manager::register_decoder_factory(uint32_t format_vers
     extra_factories_.add(format_version, factory);
 }
 
-bq::array<uint32_t> bq::appender_decoder_manager::get_supported_format_versions() const
+bq::appender_decoder_manager::decoder_factory_fn bq::appender_decoder_manager::find_decoder_factory(uint32_t format_version)
+{
+#if !defined(BQ_TOOLS)
+    bq::platform::scoped_mutex lock(mutex_);
+#endif
+    auto iter = extra_factories_.find(format_version);
+    return (iter == extra_factories_.end()) ? nullptr : iter->value();
+}
+
+bq::array<uint32_t> bq::appender_decoder_manager::get_supported_format_versions()
 {
     bq::array<uint32_t> versions;
-    for (auto iter = extra_factories_.begin(); iter != extra_factories_.end(); ++iter) {
-        versions.push_back(iter->key());
+    {
+#if !defined(BQ_TOOLS)
+        bq::platform::scoped_mutex lock(mutex_);
+#endif
+        for (auto iter = extra_factories_.begin(); iter != extra_factories_.end(); ++iter) {
+            versions.push_back(iter->key());
+        }
     }
-    // Copied into a local first: push_back takes a reference, and binding one to a static
-    // constexpr data member is an odr-use that needs an out-of-line definition before C++17.
+    // A local, because push_back binding a reference to a static constexpr member is an odr-use before C++17.
     const uint32_t runtime_version = bq::appender_file_compressed::format_version;
     versions.push_back(runtime_version);
-    // Oldest first, so the list reads the way the formats were added.
     const size_t count = versions.size();
     for (size_t i = 1; i < count; ++i) {
         for (size_t j = i; j > 0 && versions[j - 1] > versions[j]; --j) {

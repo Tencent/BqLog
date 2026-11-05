@@ -14,9 +14,6 @@
 
 namespace bq {
     namespace {
-        // The v9/v10 encryption head, before the payload: [fingerprint] + RSA-2048 wrapped AES key +
-        // AES-CBC IV + the XOR blob encrypted with that key. The blob is 32 KiB because the mask
-        // repeats over a power-of-two window; it is the whole reason these formats are gone.
         constexpr size_t legacy_xor_key_blob_size = 32 * 1024;
 
         size_t legacy_encryption_head_size(size_t fingerprint_size)
@@ -33,8 +30,6 @@ namespace bq {
             || type == appender_file_binary::appender_encryption_type::rsa_aes_xor;
     }
 
-    // The segment start is not needed here: unlike the v11 layer, these formats address the mask by
-    // absolute file position, which decrypt_segment_chunk receives with every chunk.
     bool appender_decoder_legacy::setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t)
     {
         masked_ = false;
@@ -42,8 +37,7 @@ namespace bq {
             return true;
         }
         if (!segment_carries_key(head)) {
-            // A v9 file writes the wrapped key once, in its first segment, and every later segment
-            // reuses it. A file that starts with a keyless encrypted segment has no key at all.
+            // v9 writes the key once and later segments reuse it.
             if (xor_key_blob_.is_empty()) {
                 bq::util::log_device_console(bq::log_level::error, "decode log file failed, encrypted segment carries no key and no earlier segment had one");
                 return false;
@@ -94,13 +88,7 @@ namespace bq {
         if (!masked_) {
             return true;
         }
-        // Addressed by absolute file position, and continuity across segments is the point: a
-        // segment that carries no key continues the previous one's mask rather than restarting it.
-        // The mask is periodic, so every position is valid and there is nothing to reject.
-        //
-        // The period is the size of the key blob, 32 KiB, so the low bits of the position are the
-        // whole address: the truncation a 32-bit build performs here cannot reach a different mask
-        // byte, and saying so keeps it from being a silent narrowing.
+        // The mask repeats every 32 KiB, so the low bits of the position are the whole address.
         vernam::vernam_encrypt_32bytes_aligned(data, size, xor_key_blob_.begin(), xor_key_blob_.size(),
             static_cast<size_t>(file_pos & (legacy_xor_key_blob_size - 1U)));
         return true;
@@ -116,9 +104,7 @@ namespace bq {
 
     bool appender_decoder_legacy_v9::segment_carries_key(const appender_file_binary::appender_file_segment_head& head) const
     {
-        // v9 wrote a bool at segment +0x0A and two bytes of padding after it. The field is gone from
-        // the structure this build compiles against, so it is read at its byte offset - the header is
-        // packed and asserted to 12 bytes, which is what makes the offset stable.
+        // v9 kept a key-present byte where the header now has padding.
         const uint8_t has_key_byte = reinterpret_cast<const uint8_t*>(&head)[offsetof(appender_file_binary::appender_file_segment_head, padding) + 0];
         return head.enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor && has_key_byte != 0;
     }

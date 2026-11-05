@@ -25,7 +25,7 @@
  * 1. File Header (Fixed 8 bytes at file offset 0)
  *    Offset  Size  Field
  *    ------  ----  -----------------------------------------------------------
- *    0x0000     4  uint32_t version                      (11)
+ *    0x0000     4  uint32_t version                      (format_version)
  *    0x0004     1  appender_format_type format           (2=compressed)
  *    0x0005     3  char padding[3]
  *
@@ -44,19 +44,16 @@
  *    B. Encryption Metadata (268 bytes, present only if enc_type == rsa_kem_chacha)
  *       Offset  Size  Field
  *       ------  ----  -------------------------------------------------------
- *       +0x00      8  uint64_t rsa_key_fingerprint   (same value the segment key is bound to)
+ *       +0x00      8  uint64_t rsa_key_fingerprint
  *       +0x08      1  uint8_t  chacha_rounds         (written as 8; 8/12/20 accepted on read)
- *       +0x09      3  char     reserved[3]           (written as 0, not checked on read)
+ *       +0x09      3  char     reserved[3]           (written as 0)
  *       +0x0C    256  uint8_t  kem_ciphertext[256]   (I2OSP(r^e mod n, 256), big endian)
- *       Payload starts at +0x118 (280) relative to the segment start. Every byte from there on is
- *       ciphertext; the key is HKDF-SHA256 over the 256-byte shared secret, and the keystream is
- *       addressed by the offset from that payload start.
+ *       The payload starts at segment +0x118 and is ChaCha ciphertext addressed by its offset from there.
  *
  *    C. Segment Payload (Optional, The content depends on whether it is the First Segment or a subsequent one.)
  *
  *       [First Segment Payload]
- *       Starts with Metadata, followed by Log Entries. The last part of the segment that is not
- *       ciphertext is the encryption metadata above; the payload metadata is encrypted too.
+ *       Starts with Metadata, followed by Log Entries.
  *
  *       Metadata Header (appender_payload_metadata):
  *       Offset  Size  Field
@@ -98,10 +95,7 @@ namespace bq {
         };
         enum class appender_encryption_type : uint8_t {
             plaintext = 1,
-            // v9 / v10 only. v11 code never writes it, and never reads it either: an unencrypted
-            // 32 KiB XOR blob per segment is not something worth carrying in the runtime.
-            rsa_aes_xor = 2,
-            // v11: RSA-KEM to wrap a per-segment seed, then ChaCha over the payload by segment offset.
+            rsa_aes_xor = 2, // read only by the standalone decoder
             rsa_kem_chacha = 3
         };
         enum class appender_segment_type : uint8_t {
@@ -127,24 +121,16 @@ namespace bq {
         } BQ_PACK_END
         static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_segment_head size error");
 
-        /// <summary>
-        /// Rounds the writer uses. The reader accepts only the values in is_supported_chacha_rounds(),
-        /// so a file that claims anything else is rejected rather than run through a mismatched kernel.
-        /// </summary>
         static constexpr uint8_t default_chacha_rounds = 8;
         static constexpr size_t kem_ciphertext_size = 256;
 
-        // One (key, nonce) pair addresses 2^32 blocks of 64 bytes. A segment payload may not reach
-        // that, because the next byte would start the keystream over and reuse it. In practice a
-        // segment is bounded by max_file_size long before this.
+        // 2^32 ChaCha blocks of 64 bytes; one byte more would reuse keystream.
         bq_forceinline static constexpr uint64_t max_segment_payload_size()
         {
             return static_cast<uint64_t>(1) << 38;
         }
 
-        // The version written into appender_file_header.version, and the one bound into the segment
-        // key derivation. It lives here because the segment layer and the file header have to agree;
-        // appender_file_compressed::format_version is an alias for it.
+        // Written into the file header and bound into the segment key derivation.
         static constexpr uint32_t format_version = 11;
 
         bq_forceinline static constexpr bool is_supported_chacha_rounds(uint8_t rounds)
@@ -152,8 +138,7 @@ namespace bq {
             return rounds == 8 || rounds == 12 || rounds == 20;
         }
 
-        // Follows appender_file_segment_head when enc_type == rsa_kem_chacha, and is the last part of
-        // the segment that is not ciphertext: every byte from payload_base onwards is.
+        // Follows appender_file_segment_head when enc_type == rsa_kem_chacha.
         BQ_PACK_BEGIN
         struct appender_segment_encryption_head {
             uint64_t rsa_key_fingerprint;
@@ -162,15 +147,11 @@ namespace bq {
             uint8_t kem_ciphertext[kem_ciphertext_size];
         } BQ_PACK_END
         static_assert(sizeof(appender_segment_encryption_head) == 268, "appender_segment_encryption_head size error");
-        // Offsets are relative to the segment start, and this struct begins right after the 12-byte
-        // segment header. Asserting the struct-relative offsets keeps the table in the header above
-        // and the code that writes it in agreement.
         static_assert(offsetof(appender_segment_encryption_head, rsa_key_fingerprint) == 0x00, "rsa_key_fingerprint must sit at segment +0x0C");
         static_assert(offsetof(appender_segment_encryption_head, chacha_rounds) == 0x08, "chacha_rounds must sit at segment +0x14");
         static_assert(offsetof(appender_segment_encryption_head, reserved) == 0x09, "reserved must sit at segment +0x15");
         static_assert(offsetof(appender_segment_encryption_head, kem_ciphertext) == 0x0C, "kem_ciphertext must sit at segment +0x18");
 
-        // Where the payload starts, relative to the segment start.
         static constexpr size_t encrypted_payload_base_offset = sizeof(appender_file_segment_head) + sizeof(appender_segment_encryption_head);
         static constexpr size_t plaintext_payload_base_offset = sizeof(appender_file_segment_head);
         static_assert(encrypted_payload_base_offset == 280, "encrypted payload must start at segment +0x118");
@@ -202,36 +183,27 @@ namespace bq {
         };
 
     public:
-        // Per-segment ChaCha key material: derived once when the segment is created and once when it
-        // is read back. Both directions go through derive_segment_key(), so there is exactly one
-        // definition of the derivation and no way for the writer and the reader to drift apart.
         struct segment_key {
             uint8_t key[chacha20::key_size];
             uint8_t nonce[chacha20::nonce_size];
         };
 
         /// <summary>
-        /// HKDF-SHA256 over the KEM shared secret. The info string binds every parameter that
-        /// identifies this segment, so the same seed under different parameters derives a completely
-        /// different key. next_seg_pos and seg_type are deliberately left out: next_seg_pos is
-        /// back-filled when the following segment is created, and recovery rewrites it.
+        /// HKDF-SHA256 over the KEM shared secret, bound to every field of the encryption head.
+        /// next_seg_pos and seg_type are left out because they are rewritten after the segment is created.
         /// </summary>
         static bool derive_segment_key(const appender_segment_encryption_head& head,
             const uint8_t* shared_secret, size_t shared_secret_size, segment_key& out);
 
         /// <summary>
-        /// The whole step from "268-byte encryption head on disk" to "usable segment key": checks
-        /// that the private key belongs to the public key the file was written with, decapsulates
-        /// the KEM ciphertext and derives. Shared by the runtime decoder and the standalone tool so
-        /// that a file written by one is read by the other for the same reason.
+        /// Checks the key fingerprint, decapsulates the KEM ciphertext and derives the segment key.
         /// </summary>
         static bool derive_segment_key_from_head(const appender_segment_encryption_head& head,
             const rsa::private_key& key, segment_key& out, uint8_t& rounds);
 
         /// <summary>
-        /// ChaCha over the segment payload in place. payload_offset is relative to payload_base, not
-        /// an absolute file position, and is the only thing besides (key, nonce) the keystream
-        /// depends on, which is what makes a flush window revertible and an arbitrary offset readable.
+        /// XORs the keystream into the payload in place; payload_offset counts from the payload start.
+        /// Applying it twice restores the input.
         /// </summary>
         static void transform_segment_payload(uint8_t* data, size_t size, uint64_t payload_offset,
             const segment_key& key, uint8_t rounds);
@@ -266,12 +238,7 @@ namespace bq {
         seg_info cur_read_seg_;
         appender_encryption_type enc_type_;
         bool current_file_is_new_created_ = false;
-        // Set once the appender has said that key material is not coming from a CSPRNG, so that the
-        // warning is not repeated for every segment.
         bool warned_weak_key_source_ = false;
-        // Where the segment being written starts encrypting, and with what. Both belong to the last
-        // segment created; a flush window never spans two of them because opening a segment flushes
-        // first.
         segment_key cur_seg_key_ {};
         uint64_t cur_seg_payload_base_ = 0;
         uint8_t cur_seg_rounds_ = 0;

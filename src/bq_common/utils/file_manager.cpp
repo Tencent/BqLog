@@ -177,8 +177,7 @@ namespace bq {
 
     bool file_manager::remove_file_or_dir(const bq::string& path)
     {
-        // An empty path resolves to the working directory, so a caller that forgot to fill in a
-        // computed path would silently delete everything the process is sitting in.
+        // An empty path would resolve to the working directory.
         if (path.is_empty()) {
             return false;
         }
@@ -471,7 +470,6 @@ namespace bq {
     bq::string file_manager::read_text(const file_handle& handle)
     {
         const uint64_t file_size = get_file_size(handle);
-        // A string is addressed with size_t, so a file that does not fit one cannot be read whole.
         if (file_size == 0 || file_size > static_cast<uint64_t>(BQ_SIZE_MAX)) {
             return "";
         }

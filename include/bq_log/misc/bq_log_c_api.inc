@@ -360,9 +360,8 @@ BQ_API_DEF(bool, __api_test_get_storage_report, (uint64_t log_id, uint32_t* out_
 BQ_API_DEF(uint32_t, __api_get_platform_capabilities, (void), ());
 
 /// <summary>
-/// Installs the CSPRNG that encrypted appenders use for segment keys, or removes it with null.
-/// A console SDK has none the library can call, so the title passes one in before the first
-/// encrypted log is created. A callback that returns false is treated as "no source".
+/// Installs the CSPRNG used for segment keys where the platform has none, or removes it with null.
+/// A callback that returns false is treated as "no source".
 /// </summary>
 BQ_API_DEF(void, __api_set_secure_random_source, (BQ_LOG_API_TYPE(bq::type_func_ptr_secure_random_source, bq_secure_random_source_fn) fn), (fn));
 

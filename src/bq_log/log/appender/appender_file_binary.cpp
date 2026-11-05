@@ -13,9 +13,7 @@
 
 namespace bq {
     namespace {
-        // The HKDF info string of the v11 format. Its total length is asserted because a silently
-        // dropped or added byte here would derive a different key on read than on write, and nothing
-        // would report it: the segment would just decode to noise.
+        // Part of the file format: changing a byte changes every derived key.
         const char segment_key_info_prefix[] = "BqLog v11 segment key";
         constexpr size_t segment_key_info_size = sizeof(segment_key_info_prefix) - 1 // no terminating NUL
             + sizeof(uint32_t) // format version
@@ -57,23 +55,18 @@ namespace bq {
             memcpy(out.key, okm, sizeof(out.key));
             memcpy(out.nonce, okm + sizeof(out.key), sizeof(out.nonce));
         }
-        // okm is the segment key in the clear. The caller clears the shared secret, which it owns.
-        memset(okm, 0, sizeof(okm));
+        bq::encryption::secure_zero(okm, sizeof(okm));
         return ok;
     }
 
     bool appender_file_binary::derive_segment_key_from_head(const appender_segment_encryption_head& head,
         const rsa::private_key& key, segment_key& out, uint8_t& rounds)
     {
-        // Checked before anything is decrypted. It is the only thing that can tell a wrong key from a
-        // right one: decapsulation succeeds for any c < n, so without this a wrong key would produce
-        // noise that decodes as far as the first record and then looks like a corrupt file.
+        // Decapsulation succeeds for any key, so this is the only way to tell a wrong one.
         if (head.rsa_key_fingerprint != rsa::get_public_key_fingerprint(key.n_, key.e_)) {
             bq::util::log_device_console(bq::log_level::error, "decode log file failed, private key does not match the public key this file was encrypted with");
             return false;
         }
-        // A round count outside the set the kernel implements would decode to noise rather than fail,
-        // so it is rejected here instead of deeper in the cipher.
         if (!is_supported_chacha_rounds(head.chacha_rounds)) {
             bq::util::log_device_console(bq::log_level::error, "decode log file failed, unsupported chacha round count %" PRIu32,
                 static_cast<uint32_t>(head.chacha_rounds));
@@ -119,10 +112,6 @@ namespace bq {
                     "encrypted appender rejected the public key; the segment format requires a 2048-bit RSA key with an exponent of at least 65537");
                 return false;
             }
-            // Encryption goes ahead without a CSPRNG, and the segment keys then come from a mix of
-            // clocks, thread ids and addresses that anyone holding the file can search. That is
-            // worth one warning and not worth dropping the log for: the records stay encrypted, the
-            // threat model narrows. Console platforms inject a source to avoid it altogether.
             if (!bq::encryption::has_secure_random_source()) {
                 bq::util::log_device_console(bq::log_level::warning,
                     "encrypted appender has no secure random source; segment keys are derived from a software mix and are not cryptographically random. On console platforms call bq::log::set_secure_random_source() before creating the log");
@@ -133,9 +122,7 @@ namespace bq {
             rsa_pub_key_ = rsa::public_key();
             rsa_key_fingerprint_ = 0;
         }
-        // Set before the base runs: init_impl() there may go through recovery, which flushes, and a
-        // flush that skipped the transform would put plaintext into a segment header that says
-        // otherwise.
+        // Set before the base init, whose recovery path flushes through the transform.
         transform_enabled_ = (enc_type_ != appender_encryption_type::plaintext);
         if (!appender_file_base::init_impl(config_obj)) {
             return false;
@@ -310,13 +297,7 @@ namespace bq {
 
     appender_file_binary::~appender_file_binary()
     {
-        // The base destructor flushes too, but it drives the window through on_flush_transform(),
-        // and by the time it runs that call lands on the base class's empty version: this class is
-        // already gone. Whatever is still in the write cache would then go to disk exactly as it
-        // sits in memory - compressed, but not encrypted. Flush here, while the override is
-        // still reachable and the segment key still exists, and only if the caller wants it: turning
-        // the destructor flush off is how a recovery test leaves data behind in the cache, and it
-        // has to keep working.
+        // The base destructor would flush through its own empty transform and write plaintext.
         if (get_flush_when_destruct() && get_pendding_flush_written_size() > 0) {
             flush_write_cache();
         }
@@ -327,9 +308,6 @@ namespace bq {
     bool appender_file_binary::on_flush_before_transform(size_t pending_size, uint64_t file_pos)
     {
         if (file_pos < cur_seg_payload_base_) {
-            // The file position precedes the segment's payload, so the keystream offset would wrap.
-            // Nothing writes before the payload base, so this is a corrupted-state assertion rather
-            // than an expected outcome.
             assert(false && "flush position precedes the payload base of the current segment");
             return false;
         }
@@ -337,10 +315,7 @@ namespace bq {
         if (payload_offset + static_cast<uint64_t>(pending_size) <= max_segment_payload_size()) {
             return true;
         }
-        // The ChaCha counter is 32 bits of 64-byte blocks, so one (key, nonce) pair covers 2^38
-        // bytes of payload and no more. Crossing it would reuse keystream, which is worse than
-        // losing a window: refuse the flush and drop the file handle, so the next entry opens a
-        // fresh file with a fresh segment and a fresh key.
+        // Past this the keystream would repeat: drop the handle so the next entry starts a new file.
         bq::util::log_device_console(bq::log_level::error,
             "segment payload of %s would pass the 2^38 byte keystream range, starting a new file",
             get_file_handle().abs_file_path().c_str());
@@ -555,8 +530,6 @@ namespace bq {
                     return false;
                 }
                 memcpy(&enc_head, read_handle.data(), sizeof(enc_head));
-                // A round count outside the set the kernel implements would silently decode to
-                // noise, so it is a corrupt file rather than an unsupported one.
                 if (!is_supported_chacha_rounds(enc_head.chacha_rounds)) {
                     return false;
                 }
@@ -601,13 +574,9 @@ namespace bq {
             return false;
         }
 
-        // The key of the segment being replaced is about to become unusable; wipe it before the new
-        // one lands on top of it.
         bq::encryption::secure_zero(&cur_seg_key_, sizeof(cur_seg_key_));
         appender_segment_encryption_head enc_head {};
         if (enc_type_ != appender_encryption_type::plaintext) {
-            // Checked again here, not only at init: the application can remove its injected source
-            // at any time, and the keys derived after that are weaker. Said once, not per segment.
             if (!bq::encryption::has_secure_random_source() && !warned_weak_key_source_) {
                 bq::util::log_device_console(bq::log_level::warning,
                     "no secure random source left for segment key material; segment keys are derived from a software mix: %s", get_file_handle().abs_file_path().c_str());
@@ -616,10 +585,6 @@ namespace bq {
             enc_head.rsa_key_fingerprint = rsa_key_fingerprint_;
             enc_head.chacha_rounds = default_chacha_rounds;
             memset(enc_head.reserved, 0, sizeof(enc_head.reserved));
-            // Fixed width on both halves: kem_ciphertext_ is I2OSP(c, 256) and the shared secret is
-            // I2OSP(r, 256). The seed is never encoded at its minimal length, because a seed with a
-            // leading zero byte would then derive a different key than the decoder does for the same
-            // c - one segment in 256, silently.
             bq::array<uint8_t> kem_ciphertext;
             bq::array<uint8_t> shared_secret;
             if (!bq::rsa::kem_encapsulate(rsa_pub_key_, kem_ciphertext, shared_secret)
@@ -630,7 +595,6 @@ namespace bq {
             }
             memcpy(enc_head.kem_ciphertext, kem_ciphertext.begin(), kem_ciphertext_size);
             const bool derived = derive_segment_key(enc_head, shared_secret.begin(), shared_secret.size(), cur_seg_key_);
-            // The shared secret is the seed the whole segment rests on; nothing else needs it.
             bq::encryption::secure_zero(shared_secret.begin(), shared_secret.size());
             if (!derived) {
                 bq::util::log_device_console(bq::log_level::error, "segment key derivation failed while appending binary segment");

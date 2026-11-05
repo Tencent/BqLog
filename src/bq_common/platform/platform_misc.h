@@ -119,21 +119,17 @@ namespace bq {
 
         bool try_get_base_dir(int32_t base_dir_type, bq::string& out_dir);
 
-        // A file is not a buffer: its size and its positions are 64 bits even where size_t is not.
         int32_t get_file_size(const char* file_path, uint64_t& size_ref);
 
         int32_t get_file_size(const platform_file_handle& file_handle, uint64_t& size_ref);
 
         /// <summary>
-        /// The largest file this build can address, or 0 when that is the whole 64-bit range.
-        /// Where off_t is 32 bits wide, a position beyond 2 GiB fails at the seek instead of
-        /// reaching the data, so an appender has to stop before it.
+        /// The largest file this build can address (below 2 GiB where off_t is 32 bits), or 0 for no limit.
         /// </summary>
         int64_t get_max_supported_file_size();
 
         /// <summary>
-        /// The configured max_file_size, capped to what the build can address. 0 still means
-        /// "unbounded" wherever the platform has no limit.
+        /// The configured max_file_size capped to platform_limit; 0 means unbounded.
         /// </summary>
         bq_forceinline int64_t cap_max_file_size(int64_t configured, int64_t platform_limit)
         {
@@ -205,9 +201,7 @@ namespace bq {
         void prefault_pages(void* addr, size_t size);
 
         /// <summary>
-        /// Fills [buf, buf + size) from the operating system's cryptographic random source.
-        /// Returns false when the platform exposes none (consoles), in which case the caller has to
-        /// supply its own fallback. Never returns true with partially filled buffer.
+        /// Fills [buf, buf + size) from the system CSPRNG. False when there is none (consoles) or it failed.
         /// </summary>
         bool secure_random_bytes(void* buf, size_t size);
 
@@ -235,14 +229,11 @@ namespace bq {
             void set_normal_buffer_alloc_fail(bool fail);
             bool get_normal_buffer_alloc_fail();
 
-            // Short-write hook: write_file() succeeds for at most `bytes` bytes of every call, then
-            // reports ENOSPC. Reproduces the partial-write path (left-align, retry, XOR back) without
-            // filling a real disk. (size_t)-1 disarms it.
+            // write_file() writes at most `bytes` per call, then reports ENOSPC. (size_t)-1 disarms it.
             void set_short_write_limit(size_t bytes);
             bool get_short_write_limit(size_t& out_bytes);
 
-            // Makes secure_random_bytes() report failure on a platform that really has a CSPRNG, so
-            // the "no secure source" path can be exercised where consoles are not available.
+            // Makes secure_random_bytes() fail, to exercise the console path on a desktop.
             void set_disable_secure_random(bool disable);
             bool get_disable_secure_random();
 

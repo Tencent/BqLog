@@ -22,10 +22,7 @@
 namespace bq {
     namespace test {
 
-        // Copies one file byte for byte. Returns false when the source cannot be read, which for a
-        // snapshot means "this file was not there at that instant" and is reported separately.
-        // open_file leaves the cursor at end of file, so the read has to ask for begin explicitly -
-        // reading from the current position returns zero bytes and looks like a missing file.
+        // Copies one file byte for byte; false when the source cannot be read.
         inline bool copy_file_bytes(const bq::string& from, const bq::string& to)
         {
             auto src = bq::file_manager::instance().open_file(from, bq::file_open_mode_enum::read);
@@ -67,10 +64,7 @@ namespace bq {
             return inst->logs_dir() + "/" + bq::log_storage::escape_name(log_name);
         }
 
-        // Crash-recovery tests need the exact on-disk state that exists at one instant of a flush.
-        // A real kill -9 cannot hit that instant twice, so the flush hook copies a fixed file list at
-        // the hook point and the test restarts the logger on the copy instead. The list is explicit
-        // because the appender's file set is known: write cache mmap, log buffer mmap, log output.
+        // Copies the appender's files at one instant of a flush, so a crash can be replayed exactly.
         // Only flushes of appender_name are captured; an empty name captures any appender.
         class scoped_flush_snapshot {
         public:
@@ -169,10 +163,7 @@ namespace bq {
             }
         };
 
-        // A producer can reach the write cache while a flush is in flight; what it leaves past the
-        // finished cursor is the tail that flush has to carry along with the bytes it could not
-        // write. A single-threaded test never produces that overlap on its own, so the bytes are
-        // appended from the flush hook instead - the one instant where the mix really exists.
+        // Appends a tail from the flush hook, as a producer would while a flush is in flight.
         class scoped_cache_tail_writer {
         public:
             scoped_cache_tail_writer(const bq::string& appender_name, const void* tail, size_t size)
@@ -220,9 +211,7 @@ namespace bq {
 
             static const char* appender_name() { return "sec"; }
 
-            // Stands in for the CSPRNG a console application would inject. It only has to be used,
-            // not to be unpredictable - the test checks that the library takes it, not that it is
-            // good.
+            // Stands in for a console's injected CSPRNG; it only has to be used, not unpredictable.
             static bool injected_random_source(void* buf, size_t size)
             {
                 uint8_t* out = static_cast<uint8_t*>(buf);
@@ -301,9 +290,7 @@ namespace bq {
                 return files;
             }
 
-            // logs_dir() only exists once something asked for the instance. Without this, a standalone
-            // run resolves an empty path and silently cleans nothing, leaving a stale mmap behind that
-            // the next run would mistake for recoverable data.
+            // Forces the instance into existence, or logs_dir() is empty and nothing is cleaned.
             static void ensure_instance_storage()
             {
                 if (!bq::instance_storage::get()) {
@@ -322,19 +309,13 @@ namespace bq {
                 }
             }
 
-            // One log name per hook point. Re-creating a log under the same name right after its
-            // internal directory was removed leaves the new log without any of the files the snapshot
-            // needs - the meta registry still knows the old one - so the two runs must not share a name.
+            // One log name per hook point: a reused name keeps the old log's meta registry entry.
             static const char* snapshot_log_name(int32_t point)
             {
                 return point == 0 ? "security_flush_snapshot_transform" : "security_flush_snapshot_write";
             }
 
-            // The output file needs its own base for the same reason, and on Windows for one more:
-            // removing the directory can come back with EACCES while the previous appender's file is
-            // still held, and a second run that finds that file treats the log as one to recover
-            // instead of one to write. It then flushes through the recovery path, so the after-write
-            // hook never fires and the case would fail for a reason that has nothing to do with it.
+            // A separate output base too: a leftover file would be recovered instead of written to.
             static const char* snapshot_file_base(int32_t point)
             {
                 return point == 0 ? "security_flush_out/snapshot_transform" : "security_flush_out/snapshot_write";
@@ -367,16 +348,10 @@ namespace bq {
                 bq::file_manager::remove_file_or_dir(path);
             }
 
-            // Both hook points have to fire during one flush, and the snapshot has to contain the
-            // files the recovery path reads. A cold log has none of those files yet - the appender
-            // opens its write cache mmap and its output file lazily - so the log is warmed up with one
-            // flushed write before the hook is armed. Arming it earlier would fire on a flush whose
-            // source list is still absent, leaving nothing to snapshot.
+            // Warm the log up first so the files the snapshot copies exist.
             void case_flush_snapshot(test_result& result)
             {
-                // The snapshot exists to replicate a crash: it copies the two mappings recovery reads.
-                // A platform without a cross-process file lock keeps recovery off, so those mappings
-                // are never created and there is nothing to capture.
+                // Without a cross-process lock recovery is off and there is nothing to capture.
                 if (!recovery_available()) {
                     skip_recovery_tests("flush hook snapshot");
                     return;
@@ -387,10 +362,7 @@ namespace bq {
                     const bq::string log_name = snapshot_log_name(point);
                     const char* file_base = snapshot_file_base(point);
                     clean_all(log_name);
-                    // The case needs a cold appender: one that finds a file of its own name first
-                    // replays it as a recovery instead of writing to it, and the after-write hook
-                    // never runs. Saying so out loud beats watching the hook assertions fail for a
-                    // reason that belongs to the cleanup above.
+                    // An appender that finds its own file replays it as recovery and skips the hook.
                     const bq::string output_file = output_dir() + "/"
                         + bq::file_manager::get_file_name_from_path(file_base) + "_1.logcompr";
                     result.add_result(!bq::file_manager::is_file(output_file),
@@ -437,12 +409,8 @@ namespace bq {
             }
 
         public:
-            // A short write leaves the records it did not take pending, with whatever a producer
-            // appended meanwhile behind them, and the fixup has to slide both down in one move:
-            // copying the unwritten part forward first would put the tail where those records were
-            // and lose them, and with encryption on the revert would then run over the wrong bytes.
-            // A sync log has a pending window only when its flush comes up short, so this case makes
-            // it short and appends the tail from the flush hook, as a producer thread would.
+            // A short write leaves pending bytes with a tail appended behind them; both must slide down
+            // in one move, or the tail overwrites the pending records.
             void case_short_write_keeps_tail(test_result& result)
             {
                 scoped_fault_and_hook_guard guard;
@@ -518,13 +486,8 @@ namespace bq {
                 clean_all(log_name);
             }
 
-            // Encryption happens in place inside a flush window, so a crash between the transform
-            // and the accounting can leave the write cache holding ciphertext. Recovery cannot tell
-            // that apart from plaintext by looking at the buffer, and appending it to a fresh segment
-            // would transform it a second time. v11 records that a window is open and discards
-            // whatever the window still holds, so what this asserts is the invariant that survives
-            // either way: bytes that never reached the file, or that reached it only halfway, must
-            // never be written a second time.
+            // A crash inside a flush window: bytes that never reached the file, or reached it halfway,
+            // must never be written a second time.
             void case_recovery_does_not_replay_transform_window(test_result& result)
             {
                 scoped_fault_and_hook_guard guard;
@@ -614,10 +577,7 @@ namespace bq {
                 return result;
             }
 
-            // The segment encryption head is written with a struct copy and read back with one,
-            // so a round trip through a byte buffer only means something if the bytes really sit where
-            // the format table says. The static_asserts in the header cover the offsets; this covers
-            // the values, and the fact that the payload base follows the head exactly.
+            // Checks the encryption head values and that the payload follows it directly.
             void case_segment_encryption_head_layout(test_result& result)
             {
                 using head_type = bq::appender_file_binary::appender_segment_encryption_head;
@@ -648,10 +608,7 @@ namespace bq {
                     "segment head: payload starts at segment +0x118 when encrypted, +0x0C when not");
             }
 
-            // The state word sits in the recovery mapping, which is shared, so reading the file sees
-            // what the appender just stored without unmapping anything. Returns UINT32_MAX when the
-            // mapping is not a file at all, which is what turns a missing recovery mapping into a
-            // visible failure rather than a silent pass.
+            // UINT32_MAX when the recovery mapping is not a file, so a missing one fails visibly.
             static uint32_t read_flush_state_word(const bq::string& log_name)
             {
                 const bq::string path = log_internal_dir(log_name) + "/appenders/" + appender_name() + ".mmap";
@@ -667,9 +624,6 @@ namespace bq {
                 return read_size == sizeof(value) ? value : UINT32_MAX;
             }
 
-            // Reads the word at every point of one flush window. The window is the only interval in
-            // which the cache is not plaintext, so observing it from outside means observing it from
-            // inside a hook.
             struct flush_state_probe {
                 bq::string appender_name;
                 uint32_t at_transform = UINT32_MAX;
@@ -684,9 +638,7 @@ namespace bq {
                 if (!sender || sender->get_name() != self->appender_name) {
                     return;
                 }
-                // Asked through the sender, not through a second file handle on the mapping: read() of a
-                // live shared mapping only sees the page where the platform keeps the two coherent, and
-                // that is not every platform. This is the same word recovery reads out of its own mapping.
+                // Asked through the sender: read() of a live shared mapping is not coherent on every platform.
                 const uint32_t value = sender->test_read_flush_state();
                 ++self->hits;
                 if (point == bq::appender_file_base::flush_hook_point::after_transform) {
@@ -696,9 +648,7 @@ namespace bq {
                 }
             }
 
-            // The state word is what recovery reads instead of guessing, so its value at each
-            // instant is part of the contract, not an implementation detail. Inside the window it is
-            // transforming; outside it is idle, and a plaintext appender never moves it at all.
+            // Transforming inside the window, idle outside it; a plaintext appender never touches it.
             void case_flush_state_word(test_result& result)
             {
                 // The state word lives in the recovery mapping, which only exists where recovery does.
@@ -756,9 +706,7 @@ namespace bq {
                 clean_all(enc_log);
             }
 
-            // Without a CSPRNG the appender says so once and keeps writing - a log that stops is
-            // worse than one whose segment keys are weaker than they should be - so what has to hold
-            // is that the records really are encrypted, not that the appender is gone.
+            // Without a CSPRNG the appender warns once and keeps writing; the records must still be encrypted.
             void case_encryption_without_secure_random_still_encrypts(test_result& result)
             {
                 struct scoped_secure_random_guard {

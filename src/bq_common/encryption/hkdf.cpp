@@ -76,8 +76,6 @@ namespace bq {
             const size_t take = (out_size - produced < hash_size) ? (out_size - produced) : hash_size;
             memcpy(dst + produced, previous, take);
             produced += take;
-            // The counter is a single byte, so 255 blocks is the hard limit; out_size is already
-            // checked against that above.
             counter = static_cast<uint8_t>(counter + 1U);
         }
         memset(previous, 0, sizeof(previous));

@@ -36,9 +36,6 @@ namespace bq {
 #endif
 #include "bq_common/bq_common.h"
 
-// Where the C library declares getrandom(), one system call fills the buffer and no file is opened.
-// Whether it does is asked of the compiler instead of a version macro (see the probe further down);
-// all this line does is make the declaration visible where the header exists at all.
 #if defined(__has_include)
 #if __has_include(<sys/random.h>)
 #include <sys/random.h>
@@ -129,9 +126,7 @@ namespace bq {
 
         int64_t get_max_supported_file_size()
         {
-            // off_t is what lseek accepts and what struct stat reports, so its width is the whole
-            // addressable range. 32 bits cannot reach past 2 GiB, and leaving a margin keeps the
-            // last write cache flush below the ceiling.
+            // The margin keeps the last write cache flush below 2 GiB.
             if (sizeof(off_t) >= sizeof(int64_t)) {
                 return 0;
             }
@@ -625,8 +620,6 @@ namespace bq {
                 // tests should scope by clearing the fault before/after the targeted op.
                 return ENOSPC;
             }
-            // Short write: land `limit` bytes, then report the disk as full. The caller sees exactly
-            // what a real ENOSPC mid-write looks like, without needing a full disk.
             size_t short_write_limit = 0;
             bool is_short_write = test_inject::get_short_write_limit(short_write_limit);
             if (is_short_write && write_size > short_write_limit) {
@@ -862,23 +855,15 @@ namespace bq {
         }
 
         namespace {
-            // Whether the C library declares getrandom() is a question about declarations, not
-            // versions, and it can be asked without naming a platform. The argument type depends on a
-            // template parameter, so the call is looked up at instantiation time; a name that is not
-            // there is then a substitution failure rather than an error, which is what makes the probe
-            // legal on a target that does not have the function.
+            // SFINAE probe for a getrandom() declaration: the dependent call is looked up at instantiation.
             template <typename T>
             auto detects_getrandom(int) -> decltype(getrandom(static_cast<T*>(nullptr), static_cast<size_t>(0), 0U), bq::true_type());
             template <typename>
             auto detects_getrandom(...) -> bq::false_type;
 
-            // The body is a template as well: the call inside it only has to exist on a target whose
-            // probe said yes, because it is never instantiated otherwise.
             template <typename T>
             bool fill_from_getrandom(T* out, size_t size)
             {
-                // A short read and an interrupted call both mean "ask again for the rest", not "top
-                // the answer up from a different source".
                 size_t done = 0;
                 while (done < size) {
                     const ssize_t got = getrandom(out + done, size - done, 0U);
@@ -893,8 +878,6 @@ namespace bq {
                 return true;
             }
 
-            // Selected by the probe result, so the body above is instantiated only where the
-            // declaration exists.
             template <typename T>
             bool fill_from_system(T* out, size_t size, bq::true_type)
             {
@@ -908,12 +891,7 @@ namespace bq {
             }
         }
 
-        // One definition for every POSIX target, consoles included: a console SDK declares no
-        // getrandom() and has no /dev/urandom, so both tiers answer no, the caller falls back to the
-        // software mix and warns, and the title is expected to have called
-        // bq::log::set_secure_random_source() before that. Only these two tiers, because a declared
-        // name is not one that links: devkitA64 ships a getentropy() whose body calls a symbol libnx
-        // lacks, which no probe can see, while /dev/urandom either opens or reports an error.
+        // Consoles have neither tier and return false. No getentropy(): devkitA64 declares it but it does not link.
         bool secure_random_bytes(void* buf, size_t size)
         {
             if (!buf || size == 0) {
@@ -925,13 +903,10 @@ namespace bq {
             }
 #endif
             uint8_t* out = static_cast<uint8_t*>(buf);
-            // One system call fills the whole buffer where the C library has one.
             typedef decltype(detects_getrandom<uint8_t>(0)) has_getrandom_t;
             if (fill_from_system(out, size, has_getrandom_t())) {
                 return true;
             }
-            // Otherwise the device file is the way in: one open per call, and this runs once per log
-            // segment.
             const int fd = open("/dev/urandom", O_RDONLY
 #if defined(O_CLOEXEC)
                     | O_CLOEXEC

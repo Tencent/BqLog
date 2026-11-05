@@ -181,9 +181,7 @@ namespace bq {
         // While paused the worker leaves the buffer alone, so everything written stays for recovery.
         void test_pause_consumer(bool paused) { test_consumer_paused_.store_release(paused); }
 
-        // Mirrors what process teardown does: the appenders are destroyed while the write cache may
-        // still hold bytes, and nothing flushes them first. What that destructor writes is what the
-        // teardown cases watch.
+        // Destroys the appenders without flushing them first, as process teardown does.
         void test_teardown_appenders()
         {
             appenders_list_.clear();

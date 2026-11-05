@@ -836,8 +836,8 @@ Download `{os}_{arch}_tools_{version}` from Releases, or install it with a packa
 ./BqLog_LogDecoder FileToDecode [-o OutputFile] [-k PrivateKeyFile]
 ```
 
-> **Note:** This tool reads v9, v10 and v11 alike (`--version` lists them), so a file written by an
-> older release does not need the older tool. The in-library decoder above reads v11 only.
+> **Note:** This tool decodes the compressed files of every 2.x release, so a file written by an
+> older release does not need the older tool. The in-library decoder above reads only files the current release writes.
 > See also: [Advanced Usage — Log encryption and decryption](./ADVANCED_USAGE.md#6-log-encryption-and-decryption)
 
 ---
@@ -851,9 +851,9 @@ segment keys then come from a software mix of clocks, thread ids and addresses, 
 so when the appender is created. Inject a source there: key material that does not come from a
 CSPRNG can be searched offline by anyone who reads the log file. Plaintext loggers are unaffected.
 
-Hosts with an OS CSPRNG (Windows, macOS, iOS, Linux, Android, HarmonyOS) need no call.
+Hosts with an OS CSPRNG (Windows, macOS, iOS, Linux, Android, HarmonyOS) use the system one and ignore an injected source.
 
-The same source supplies the per-segment KEM seed of format v11 (256 bytes per segment), so an
+The same source supplies the per-segment KEM seed (256 bytes per segment), so an
 injected callback must be a real CSPRNG and not a seeded PRNG — see
 [Advanced Usage — Log encryption and decryption](./ADVANCED_USAGE.md#6-log-encryption-and-decryption).
 

@@ -28,11 +28,8 @@ namespace bq {
         }
         read_from_file_directly(&file_head_, sizeof(file_head_));
         if (file_head_.version != format_version) {
-            // Not "corrupt", not "unsupported by this tool version": the runtime deliberately carries
-            // one format version only, so the advice is where to find the other one.
             util::log_device_console(log_level::error,
-                "decode failed: log file format version %" PRIu32 " is not supported by this runtime (supports %" PRIu32 ").\n"
-                "Use the standalone BqLog_LogDecoder tool, which supports format versions 9, 10 and 11.",
+                "decode failed: log file format version %" PRIu32 " is not supported by this runtime (supports %" PRIu32 "), use the standalone BqLog_LogDecoder tool",
                 file_head_.version, format_version);
             return appender_decode_result::failed_decode_error;
         }
@@ -132,9 +129,6 @@ namespace bq {
         if (current_file_cursor_ == pos) {
             return true;
         }
-        // A segment start above 2 GiB is a normal position, so the offset keeps its width all the
-        // way down to lseek: narrowing it here made the seek fail - or land somewhere else - and
-        // the failure reads as the end of the file, which silently drops every later segment.
         bool result = file_manager::instance().seek(file_, file_manager::seek_option::begin, static_cast<int64_t>(pos));
         if (result) {
             clear_read_cache();
@@ -207,12 +201,7 @@ namespace bq {
                 cache_read_.erase(cache_read_.begin() + static_cast<ptrdiff_t>(read_offset + read_size), total_size - read_offset - read_size);
             }
 
-            // The chunk is decoded on its own, from its file position: no state carries over from the
-            // previous chunk, which is what makes a seek land on the same bytes as a sequential read.
             if (read_size > 0) {
-                // A chunk that cannot be decoded is reported like any other failed read: the caller
-                // ends up at "the segment chain is broken" instead of decoding bytes against a
-                // keystream offset that does not exist.
                 if (!decrypt_segment_chunk(cache_read_.begin() + static_cast<ptrdiff_t>(read_offset), read_size, chunk_file_pos)) {
                     clear_read_cache();
                     read_of_file_eof_ = false;
@@ -263,9 +252,7 @@ namespace bq {
     appender_decode_result appender_decoder_base::read_to_next_segment()
     {
         auto new_seg_start_pos = cur_read_seg_.end_pos;
-        // The cached bytes belong to the segment being left, so they cannot outlive the switch: a
-        // fill that still held them would rewind the file cursor into the new segment's head, before
-        // its payload base, and address the keystream from a position that segment does not have.
+        // Stale bytes from the previous segment would rewind the cursor into this segment's head.
         clear_read_cache();
         current_file_size_ = file_manager::instance().get_file_size(file_);
         if (!seek_read_file_absolute(new_seg_start_pos)) {
@@ -283,8 +270,6 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::error, "decode log file failed, invalid segment header");
             return appender_decode_result::failed_decode_error;
         }
-        // Reads whatever encryption metadata follows the header and builds the key for this
-        // segment. Everything version-specific lives behind this call.
         if (!setup_segment(seg_head, new_seg_start_pos)) {
             return appender_decode_result::failed_decode_error;
         }

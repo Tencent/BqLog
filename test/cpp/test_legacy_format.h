@@ -21,13 +21,8 @@
 namespace bq {
     namespace test {
 
-        // The runtime writes one format version and reads one; old files are the standalone tool's
-        // job, and "the runtime declines them with a message that says where to go" is worth pinning
-        // - it is the difference between a user upgrading and a user staring at a decode failure.
-        // The samples under test/data/legacy were written by Release_2.3.1 (format 9) and
-        // Release_2.7.3 (format 10), each with the text its own decoder produced: the runtime has to
-        // decline them, and the tool's segment layers, registered here as the tool registers them and
-        // nowhere else in the runtime, have to reproduce that text byte for byte.
+        // Samples written by Release_2.3.1 (format 9) and Release_2.7.3 (format 10) with their own decoders'
+        // output: the runtime must decline them, and the tool's decoders must reproduce that text byte for byte.
         class test_legacy_format : public test_base {
         private:
             // The samples are source-tree data, not generated output: <repo>/test/data/legacy, as seen
@@ -37,9 +32,7 @@ namespace bq {
                 return bq::test::test_data_dir(__FILE__, "legacy");
             }
 
-            // What the standalone decoder does at startup, and what the runtime deliberately does
-            // not do. Compiling the two segment layers into the test (see test/cpp/CMakeLists.txt) is
-            // what lets the golden comparison below run at all.
+            // Registers what the standalone tool registers at startup.
             static void register_legacy_decoders()
             {
                 bq::appender_decoder_manager::instance().register_decoder_factory(9, []() -> bq::unique_ptr<bq::appender_decoder_base> {
@@ -50,14 +43,8 @@ namespace bq {
                 });
             }
 
-            // The samples were written by processes running in UTC+8, with a log configured for
-            // local time, so their golden text carries that zone's rendering of every timestamp. A
-            // timestamp is the same instant everywhere but not the same three digits, and these
-            // formats record no zone the decoder could fall back on - so the comparison has to be
-            // made in the zone the text was produced in. POSIX spells UTC+8 as "CST-8"; the Windows
-            // CRT reads the same string, and needs _tzset() rather than tzset() to apply it.
-            // setenv() races with localtime_r(), but nothing else is running here: this case creates
-            // no log, and every log the suite creates is a local object destroyed with its case.
+            // The goldens were rendered in UTC+8 and these formats record no zone, so decode in that zone.
+            // POSIX and the Windows CRT both read "CST-8". No log runs here, so setenv() cannot race localtime_r().
             class scoped_sample_time_zone {
             public:
                 scoped_sample_time_zone()
@@ -135,9 +122,6 @@ namespace bq {
                 }
             }
 
-            // Byte for byte, against the text the release that wrote the sample produced. A format
-            // this old is a promise to files that already exist, and the only way to keep it honest
-            // is to decode the files.
             void case_samples_decode_byte_for_byte(test_result& result)
             {
                 struct sample_case {

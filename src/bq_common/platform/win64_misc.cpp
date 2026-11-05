@@ -136,7 +136,6 @@ namespace bq {
 
         int64_t get_max_supported_file_size()
         {
-            // SetFilePointer takes the offset as two 32-bit halves, so the whole 64-bit range is there.
             return 0;
         }
 
@@ -493,7 +492,6 @@ namespace bq {
             if (test_inject::get_fault() == test_inject::fault_kind::enospc_on_write) {
                 return static_cast<int32_t>(ERROR_DISK_FULL);
             }
-            // Short write: land `limit` bytes, then report the disk as full.
             size_t short_write_limit = 0;
             bool is_short_write = test_inject::get_short_write_limit(short_write_limit);
             if (is_short_write && write_size > short_write_limit) {
@@ -862,8 +860,6 @@ namespace bq {
                 return false;
             }
 #endif
-            // The system-preferred RNG needs no CRT feature macro ahead of the includes, and it
-            // fills the whole buffer in one call instead of four bytes at a time.
             uint8_t* out = static_cast<uint8_t*>(buf);
             const ULONG max_chunk = static_cast<ULONG>(-1);
             size_t done = 0;

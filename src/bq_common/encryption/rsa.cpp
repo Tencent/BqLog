@@ -245,11 +245,7 @@ namespace bq {
         memset(x, 0, l * sizeof(uint32_t));
     }
 
-    // Zero every limb, then put v in the lowest one.
-    //
-    // The null test is for the compiler rather than for a caller: bq::array keeps its pointer null
-    // until it has allocated, so GCC cannot prove that fill_uninitialized(l) with l > 0 handed out a
-    // valid pointer and reports the write below as a null dereference when this is inlined.
+    // The null test silences a GCC null-dereference warning once this is inlined.
     static void bn_set_u32(uint32_t* x, size_t l, uint32_t v)
     {
         if (!x) {
@@ -384,8 +380,7 @@ namespace bq {
     }
 
 #if defined(BQ_UNIT_TEST)
-    // The schoolbook double-and-add modexp the Montgomery code replaced. Only the tests compile it:
-    // they compare the two on random inputs instead of trusting a hand-written vector.
+    // Reference modexp for the tests to compare the Montgomery path against.
     static void mod_add(uint32_t* r, const uint32_t* a, const uint32_t* b, const uint32_t* m, size_t l, uint32_t* tmp)
     {
         uint32_t carry = bn_add(tmp, a, b, l);
@@ -457,30 +452,21 @@ namespace bq {
         }
         out.clear();
         if (i == k) {
-            // Zero, whose minimal encoding is one zero byte. Copying from tmp.begin() + k would read
-            // one byte past the buffer: the count and the position both have to be handled here, not
-            // left to the general path below.
+            // Zero encodes as one zero byte.
             out.push_back(static_cast<uint8_t>(0));
             return;
         }
         out.insert_batch(out.end(), tmp.begin() + static_cast<ptrdiff_t>(i), k - i);
     }
 
-    // ---------------------------------------------------------------------------------------
-    // Montgomery arithmetic
-    //
-    // Limbs are little-endian: limb 0 is the least significant, and bit i of the value lives in
-    // limb i / 32. Everything uses 32-bit words with a 64-bit accumulator, so MSVC compiles the
-    // same code without __int128.
-    // ---------------------------------------------------------------------------------------
+    // Montgomery arithmetic on little-endian 32-bit limbs with a 64-bit accumulator (no __int128).
 
     static void bn_sub_from_zero(uint32_t* r, const uint32_t* n, size_t l)
     {
         // 0 - n == ~n + 1, which is 2^(32l) - n: the value R - n with R = 2^(32l).
         uint64_t borrow = 1U;
         for (size_t i = 0; i < l; ++i) {
-            // The complement is kept at 32 bits before it enters the accumulator. MSVC's C4319
-            // fires on the zero extension of a ~ result and reads like a sign-extension bug there.
+            // XOR rather than ~, which MSVC C4319 flags on zero extension.
             const uint64_t v = static_cast<uint64_t>(n[i] ^ 0xFFFFFFFFU) + borrow;
             r[i] = static_cast<uint32_t>(v);
             borrow = v >> 32;
@@ -490,7 +476,6 @@ namespace bq {
     static void bn_rshift1(uint32_t* x, size_t l)
     {
         for (size_t i = 0; i < l; ++i) {
-            // The high limb is read before it is overwritten, so walking upwards is safe.
             const uint32_t hi = (i + 1U < l) ? x[i + 1U] : 0U;
             x[i] = (x[i] >> 1) | (hi << 31);
         }
@@ -509,9 +494,7 @@ namespace bq {
         return true;
     }
 
-    // -n0^-1 mod 2^32, the constant CIOS reduction needs. Newton's iteration doubles the number of
-    // correct low bits every round, and x0 = n0 is already correct for three bits when n0 is odd, so
-    // five rounds cover all 32.
+    // -n0^-1 mod 2^32 by Newton's iteration: 3 correct bits to start, doubled five times.
     static uint32_t bn_n0_inverse(uint32_t n0)
     {
         uint32_t x = n0;
@@ -523,7 +506,7 @@ namespace bq {
 
     static void bn_mul_school(uint32_t* r, const uint32_t* a, size_t la, const uint32_t* b, size_t lb, size_t lr)
     {
-        // r must hold la + lb words; callers size it that way instead of truncating here.
+        // r must hold la + lb words.
         bn_zero(r, lr);
         for (size_t i = 0; i < la; ++i) {
             uint64_t carry = 0;
@@ -532,13 +515,11 @@ namespace bq {
                 r[i + j] = static_cast<uint32_t>(cur);
                 carry = cur >> 32;
             }
-            // Nothing has written r[i + lb] yet, so the carry lands on a zero word.
             r[i + lb] = static_cast<uint32_t>(carry);
         }
     }
 
-    // r = a mod m, scanning a from its top bit down. A decode-side operation that runs once per
-    // file, so the short auditable algorithm is worth more than the speed of a real division.
+    // r = a mod m, bit by bit. Decode side only, so simplicity beats speed.
     static void bn_mod_binary(uint32_t* r, const uint32_t* a, size_t a_limbs, const uint32_t* m, size_t l, uint32_t* work)
     {
         uint32_t* cur = work; // l + 1 words: the doubling can carry out of the top limb
@@ -567,11 +548,7 @@ namespace bq {
 
     static bool bn_mod_inverse(uint32_t* x, const uint32_t* a, const uint32_t* m, size_t l);
 
-    // Montgomery domain modulo an odd n, with R = 2^(32 * limbs).
-    //
-    // An instance owns the modulus, n0inv and R^2, so a whole modexp costs one allocation instead of
-    // one per multiplication. R^2 is not cached anywhere outside the instance on purpose: the keys
-    // are shared read-only across threads, and a lazily filled cache inside them would be a race.
+    // Montgomery domain modulo an odd n, R = 2^(32 * limbs). Per call, never cached in the shared key.
     class mont_ctx {
     public:
         mont_ctx()
@@ -601,8 +578,7 @@ namespace bq {
 
         size_t limbs() const { return l_; }
 
-        // r = a * b * R^-1 mod n. r may alias a or b: they are only read while the accumulator is
-        // built, and r is written once at the end.
+        // r = a * b * R^-1 mod n; r may alias a or b.
         void mul(uint32_t* r, const uint32_t* a, const uint32_t* b)
         {
             const size_t l = l_;
@@ -633,8 +609,7 @@ namespace bq {
                 t[l - 1U] = static_cast<uint32_t>(c);
                 t[l] = t[l + 1U] + static_cast<uint32_t>(c >> 32);
             }
-            // The result is below 2n, so at most one subtraction; a mask picks between the two
-            // candidates so the instruction trace does not depend on the values.
+            // Branch-free final subtraction.
             uint32_t* d = d_.begin();
             const uint32_t borrow = bn_sub(d, t, n, l);
             const uint32_t top = t[l] - borrow;
@@ -681,13 +656,8 @@ namespace bq {
             from_mont(r, acc);
         }
 
-        // r = c^d mod n with base blinding: the exponentiation runs on c * s^e and the result is
-        // multiplied by s^-1, so the values in the multiplication chain are unrelated to c. The
-        // pattern of squarings and multiplications still follows d's bits, and base blinding does
-        // nothing about that: it defends against an attacker who learns those values, not against
-        // one who counts them. Counting matters to a private-key operation an attacker can time, and
-        // this one runs in the offline decoder. Returns false when the random s turns out not to be
-        // invertible, which for a real RSA modulus means the call would have factored the key.
+        // r = c^d mod n on c * s^e, unblinded by s^-1. The square/multiply pattern still follows d,
+        // which is acceptable for the offline decoder. False when s is not invertible.
         bool pow_blinded(uint32_t* r, const uint32_t* c, const uint32_t* pub_e, size_t pub_e_bits,
             const uint32_t* d, size_t d_bits)
         {
@@ -704,8 +674,7 @@ namespace bq {
             uint32_t* blinded = blinded_buf.begin();
             uint32_t* inv = inv_buf.begin();
 
-            // 256 bits of blinding factor: far shorter than any modulus this code accepts, so the
-            // reduction below never actually removes anything, and it cannot overflow the limbs.
+            // A 256-bit blinding factor, always below the modulus.
             uint8_t seed[32];
             bool got_seed = false;
             for (int32_t attempt = 0; attempt < 4 && !got_seed; ++attempt) {
@@ -749,8 +718,7 @@ namespace bq {
             const uint32_t* n = n_.begin();
             uint32_t* r2 = r2_.begin();
             uint32_t* tmp = d_.begin();
-            // Start from R mod n. A normalized modulus (top bit set) satisfies R < 2n, so R mod n is
-            // the two's complement of n; otherwise double up to it from one.
+            // R mod n is -n when the top bit is set; otherwise double up from one.
             if ((n[l - 1U] & 0x80000000U) != 0U) {
                 bn_sub_from_zero(r2, n, l);
             } else {
@@ -782,8 +750,7 @@ namespace bq {
             bn_rshift1(x, l);
             return;
         }
-        // x and m are both odd, so (x + m)/2 == x/2 + m/2 + 1 and neither sum can overflow: each
-        // half term is at most 2^(32l - 1) - 1.
+        // Both odd: (x + m) / 2 == x/2 + m/2 + 1, which cannot overflow.
         uint32_t carry = 1U;
         for (size_t j = 0; j < l; ++j) {
             const uint32_t hi_x = (j + 1U < l) ? (x[j + 1U] << 31) : 0U;
@@ -806,13 +773,11 @@ namespace bq {
             (void)bn_sub(r, a, b, l);
             return;
         }
-        // b < m so m - b does not borrow, and a < b makes a + (m - b) < m so it does not carry.
         (void)bn_sub(tmp, m, b, l);
         (void)bn_add(r, a, tmp, l);
     }
 
-    // x = a^-1 mod m for odd m and a < m. Binary extended gcd: u and v lose a bit every round, so
-    // the loop count is bounded by the bit length of m.
+    // x = a^-1 mod m for odd m and a < m, by binary extended gcd.
     static bool bn_mod_inverse(uint32_t* x, const uint32_t* a, const uint32_t* m, size_t l)
     {
         if (bn_ucmp(a, m, l) >= 0) {
@@ -964,7 +929,7 @@ namespace bq {
 
     bool rsa::validate_public_key(const public_key& key)
     {
-        // 2048 bits, exactly: the segment head reserves a fixed 256-byte field for the wrapped key.
+        // The segment head has a fixed 256-byte field for the wrapped key.
         constexpr size_t required_modulus_size = 256;
         if (key.n_.size() != required_modulus_size) {
             bq::util::log_device_console(bq::log_level::error,
@@ -977,8 +942,6 @@ namespace bq {
                 "rsa::validate_public_key: modulus is shorter than 2048 bits");
             return false;
         }
-        // Montgomery arithmetic requires an odd modulus, and a real RSA modulus always is one. An
-        // even one here means the input is not an RSA key at all.
         if ((key.n_[key.n_.size() - 1] & 0x01) == 0) {
             bq::util::log_device_console(bq::log_level::error,
                 "rsa::validate_public_key: modulus is even");
@@ -994,8 +957,7 @@ namespace bq {
                 "rsa::validate_public_key: exponent must be odd");
             return false;
         }
-        // The exponent has to be at least 65537. Compared as big-endian minimal-length bytes: a
-        // longer value is larger, a shorter one is smaller, and equal lengths compare byte by byte.
+        // e >= 65537, compared as minimal big-endian bytes.
         static const uint8_t minimum_exponent[] = { 0x01, 0x00, 0x01 };
         const size_t minimum_size = sizeof(minimum_exponent);
         bool exponent_large_enough = key.e_.size() > minimum_size;
@@ -1255,8 +1217,7 @@ namespace bq {
         return true;
     }
 
-    // RSA-CRT: two exponentiations with a half-size modulus, recombined through qinv. Returns false
-    // when the CRT parameters are missing or inconsistent, and the caller then falls back to d.
+    // RSA-CRT. False when the CRT parameters are unusable; the caller then falls back to d.
     static bool rsa_decrypt_crt(uint32_t* out, size_t out_limbs, const rsa::private_key& pri,
         const uint32_t* c_l, size_t c_limbs, const uint32_t* e_l)
     {
@@ -1284,7 +1245,6 @@ namespace bq {
         m2_buf.fill_uninitialized(lh);
         h_buf.fill_uninitialized(lp);
         diff_buf.fill_uninitialized(lp);
-        // The reduction works one word above the modulus, see bn_mod_binary.
         work_buf.fill_uninitialized(lh + 2U);
         uint32_t* work = work_buf.begin();
         uint32_t* p = p_buf.begin();
@@ -1310,15 +1270,11 @@ namespace bq {
         if (!mont_p.init(p, lp) || !mont_q.init(q, lq)) {
             return false;
         }
-        // The blinding step below exponentiates s in the modulus it is given, so it needs e reduced
-        // into that modulus first: e does not have to fit in p's limbs, and a key with a large public
-        // exponent would otherwise index past the exponent array. Fermat is what makes a reduction
-        // legitimate here, and it is a reduction modulo p-1, not modulo p.
+        // Blinding needs e in p's limbs; by Fermat it reduces modulo p-1.
         uint32_t* pm1 = pm1_buf.begin();
         uint32_t* qm1 = qm1_buf.begin();
         memcpy(pm1, p, sizeof(uint32_t) * lp);
         memcpy(qm1, q, sizeof(uint32_t) * lq);
-        // Both are odd primes, so subtracting one borrows nothing.
         pm1[0] -= 1U;
         qm1[0] -= 1U;
         bn_mod_binary(ep, e_l, c_limbs, pm1, lp, work);
@@ -1326,9 +1282,7 @@ namespace bq {
         bn_mod_binary(cp_buf.begin(), c_l, c_limbs, p, lp, work);
         bn_mod_binary(cq_buf.begin(), c_l, c_limbs, q, lq, work);
 
-        // A zero here means e is a multiple of p-1 or q-1. No key with a working private exponent
-        // does that - d*e = 1 modulo p-1 is unsolvable then - so the key is inconsistent rather than
-        // unusual, and s^0 = 1 would quietly decode to the wrong plaintext.
+        // Zero would mean an inconsistent key, and s^0 = 1 would decode silently wrong.
         const size_t ep_bits = bn_bitlen(ep, lp);
         const size_t eq_bits = bn_bitlen(eq, lq);
         if (ep_bits == 0 || eq_bits == 0) {
@@ -1452,8 +1406,7 @@ namespace bq {
         upper_l.fill_uninitialized(l);
         be_to_fixed_limbs(n_l.begin(), l, pub.n_);
         be_to_fixed_limbs(e_l.begin(), l, pub.e_);
-        // The sampling range is [2, n - 2]: zero and one carry no entropy, and n - 1 is its own
-        // inverse of nothing useful, so a value that extreme is rejected rather than used.
+        // Sample r in [2, n - 2].
         bn_set_u32(two_l.begin(), l, 2U);
         bn_copy(upper_l.begin(), n_l.begin(), l);
         (void)bn_sub(upper_l.begin(), upper_l.begin(), two_l.begin(), l);
@@ -1467,10 +1420,7 @@ namespace bq {
         bq::array<uint8_t> random_bytes;
         random_bytes.fill_uninitialized(k_bytes);
         bool accepted = false;
-        // The policy on weak key material belongs to the caller: an appender with no CSPRNG warns
-        // once at creation and encrypts anyway, so refusing here would only contradict it.
-        // The modulus has its top bit set, so a uniform 256-byte value lands in range about half the
-        // time; 64 attempts failing means the random source is not random.
+        // About half of all draws land in range, so 64 misses means the source is broken.
         for (int32_t attempt = 0; attempt < 64 && !accepted; ++attempt) {
             bq::encryption::fill_random_bytes(random_bytes.begin(), k_bytes);
             be_to_fixed_limbs(r_l.begin(), l, random_bytes);
@@ -1484,8 +1434,6 @@ namespace bq {
 
         mont.pow(c_l.begin(), r_l.begin(), e_l.begin(), bn_bitlen(e_l.begin(), l));
 
-        // Both halves are fixed width by construction: the shared secret is the sampled integer in
-        // its 256-byte form, which is exactly the buffer it was sampled from.
         fixed_limbs_to_be_bytes(c_l.begin(), l, k_bytes, out_ciphertext);
         out_shared_secret.clear();
         out_shared_secret.insert_batch(out_shared_secret.end(), random_bytes.begin(), random_bytes.size());

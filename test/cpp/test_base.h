@@ -81,12 +81,8 @@ namespace bq {
         fflush(stdout);                                                     \
     }
 
-        // Files that ship with the sources - the legacy format samples, the fuzzer regression input -
-        // are addressed relative to the header that reads them: <repo>/test/cpp/<header> means
-        // <repo>/test/data/<sub>. That holds wherever the binary runs from a checkout. A binary that
-        // runs away from it, on a device or copied out of the build tree, is pointed at the directory
-        // with BQ_TEST_DATA_DIR instead. The source-tree answer is returned even when it does not
-        // exist, so a failure names the path that was expected rather than an empty string.
+        // Source-tree test data: <repo>/test/data/<sub>, located from this header, or BQ_TEST_DATA_DIR
+        // when the binary runs outside the checkout.
         inline bq::string test_data_dir(const char* header_file, const char* sub_dir)
         {
             // Two separators back from the file name: <...>/<test dir>/<header>.

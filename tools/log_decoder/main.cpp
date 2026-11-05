@@ -199,8 +199,7 @@ int32_t main(int32_t argc, char* argv[])
     }
 #endif
     Options opt;
-    // Registered before anything can be decoded or listed: the tool is the only build that carries
-    // the v9 and v10 segment layers, and the runtime deliberately registers none.
+    // Older formats are decoded only by this tool.
     bq::appender_decoder_manager::instance().register_decoder_factory(9, []() -> bq::unique_ptr<bq::appender_decoder_base> {
         return bq::make_unique<bq::appender_decoder_legacy_v9>();
     });

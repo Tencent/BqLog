@@ -320,9 +320,6 @@ namespace bq {
 
     void aes::fill_random(bq::array<uint8_t>& data)
     {
-        // Key and IV both come from here, so the strength of every segment rests on this call. It
-        // used to be a xorshift seeded with the wall clock, which made the key guessable within the
-        // time window an attacker cares about; keep it on the OS CSPRNG.
         bq::encryption::fill_random_bytes(data.begin(), data.size());
     }
 

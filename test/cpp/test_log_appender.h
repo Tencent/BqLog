@@ -246,8 +246,7 @@ namespace bq {
                 return 1;
             }
 
-            // The same v11 segment layer the runtime decoder uses, without the record layer on top:
-            // this decoder only walks the segment chain and hands back the payload bytes.
+            // The runtime segment layer without the record layer: walks segments, returns payload bytes.
             virtual bool is_supported_enc_type(appender_file_binary::appender_encryption_type type) const override
             {
                 return type == appender_file_binary::appender_encryption_type::plaintext
@@ -711,8 +710,7 @@ namespace bq {
                             break;
                         }
                         fingerprint = enc_head.rsa_key_fingerprint;
-                        // The per-segment key material of v11 is the KEM ciphertext: a fresh seed
-                        // per segment means these must all differ.
+                        // A fresh seed per segment, so these must all differ.
                         key_data_hash = bq::util::get_hash_64(enc_head.kem_ciphertext, sizeof(enc_head.kem_ciphertext));
                     } else if (segment_head.enc_type != appender_file_binary::appender_encryption_type::plaintext) {
                         success = false;
@@ -1456,9 +1454,7 @@ namespace bq {
                     "decoder malformed file: unknown argument type is rejected");
                 result.add_result(malformed_decode("short_double", malformed_file_with_entry({ double_type, 1, 2 }), text) != appender_decode_result::success,
                     "decoder malformed file: truncated double argument is rejected");
-                // The layout expands a thread name into a fixed size stack buffer, and the name arrives
-                // as the rest of the item, so its length has to be bounded by the format. A fuzzer found
-                // this: a name longer than the format allows asserted in insert_thread_info.
+                // A thread name longer than the format allows must be rejected (found by fuzzing).
                 const std::vector<uint8_t> valid_arg = { int32_type, 0x8A };
                 result.add_result(malformed_decode("max_thread_name", malformed_file_with_thread_name("0123456789abcdef", valid_arg), text) == appender_decode_result::success,
                     "decoder malformed file: a thread name of exactly the format limit decodes");
@@ -1493,12 +1489,8 @@ namespace bq {
                 return bq::string(content.c_str());
             }
 
-            // A corrupt item mid-segment makes decode() jump to the next segment. That jump used to
-            // leave the previous segment's read cache in place, so the next fill rewound the file
-            // cursor into the new segment's header - before its payload - and the keystream offset
-            // came from a position the segment does not have: an assertion in a debug build, header
-            // bytes decoded as log data with assertions compiled out. The sample under
-            // test/data/decode_fuzz is the fuzzer run that found it.
+            // After a corrupt item decode() jumps to the next segment; a stale read cache there rewound
+            // into the segment header (found by fuzzing, sample under test/data/decode_fuzz).
             void do_decoder_resync_test(test_result& result)
             {
                 bq::string case_path = bq::test::test_data_dir(__FILE__, "decode_fuzz");
@@ -1564,14 +1556,8 @@ namespace bq {
                 return text;
             }
 
-            // A segment start is an absolute file position, and it is a size_t everywhere it is
-            // produced, but it was narrowed to int32_t on its way into lseek. Above 2 GiB that turns
-            // the offset negative and the seek fails, which the reader reports as the end of the
-            // file, and above 4 GiB it wraps into a small positive offset that lands inside the
-            // previous segment's data. Either way every record from that segment on disappears
-            // without an error. Both sizes are covered because they fail differently. The files are
-            // sparse, so this costs a few KiB of disk - but not every file system keeps a hole a
-            // hole, so the test runs as its own step instead of in the default suite.
+            // Segment starts above 2 GiB and 4 GiB fail differently when narrowed to 32 bits. The files are
+            // sparse, but not every file system keeps holes, so this runs as its own step.
             void do_decoder_large_offset_test(test_result& result)
             {
                 if (sizeof(size_t) < 8) {

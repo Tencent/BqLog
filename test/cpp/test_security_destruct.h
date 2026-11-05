@@ -21,12 +21,8 @@
 namespace bq {
     namespace test {
 
-        // The write cache is flushed twice on the way out - by appender_file_binary, which can
-        // encrypt, and then by appender_file_base after the derived destructor has already
-        // completed, so the second virtual call lands on the base and the pending bytes reach the
-        // disk as they sit in memory. Those bytes are "not encrypted" rather than readable: the
-        // appender already compressed them, so the observable is the decoder's, and a correctly
-        // written tail decrypts and decompresses back into the record.
+        // The base destructor's flush lands on the base transform and would write the pending bytes
+        // unencrypted; a correctly written tail decodes back into the record.
         class test_security_destruct : public test_base {
         private:
             static const bq::string& appender_pub_key()
@@ -86,9 +82,7 @@ namespace bq {
                 return inst->logs_dir() + "/" + bq::log_storage::escape_name(log_name);
             }
 
-            // logs_dir() only exists once something asked for the instance. Without this, a standalone
-            // run resolves an empty path and silently cleans nothing, leaving a stale mmap behind that
-            // the next run would mistake for recoverable data.
+            // Forces the instance into existence, or logs_dir() is empty and nothing is cleaned.
             static void ensure_instance_storage()
             {
                 if (!bq::instance_storage::get()) {
@@ -126,9 +120,7 @@ namespace bq {
                 }
             };
 
-            // Decodes the whole file through the private key and returns the concatenated entries.
-            // first_error reports the first non-success result, which is how "the tail cannot be
-            // decrypted" shows up: the entries before it decode, the ones after it never arrive.
+            // first_error is the first non-success result: an undecryptable tail stops the entries there.
             static bq::string decode_all(bq::appender_decode_result& first_error, uint32_t& entry_count)
             {
                 bq::tools::log_decoder decoder(output_file(), appender_priv_key());
@@ -154,9 +146,6 @@ namespace bq {
             }
 
         public:
-            // The pending record must be written the same way every other record is: encrypted with
-            // the segment key at its file position. If the base destructor gets to flush it instead,
-            // the bytes land unencrypted and the decoder cannot read past them.
             void case_pending_cache_at_destruct(test_result& result)
             {
                 scoped_injection_guard guard;
@@ -185,9 +174,7 @@ namespace bq {
                 bq::platform::test_inject::set_fault(bq::platform::test_inject::fault_kind::none);
                 bq::platform::test_inject::set_path_filter(nullptr);
 
-                // A bq::log is only a handle; its appenders live until instance teardown. Destroy them
-                // the way teardown does - without flushing first - so the only thing left that can
-                // write the pending bytes is the appender's own destructor.
+                // Destroy the appenders as teardown does, without flushing first.
                 bq::log_manager::instance().test_teardown_appenders(log_obj.get_id());
 
                 bq::appender_decode_result first_error = bq::appender_decode_result::success;

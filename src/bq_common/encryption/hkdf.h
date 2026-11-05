@@ -25,15 +25,12 @@
 namespace bq {
     class hkdf_sha256 {
     public:
-        // 32, the SHA-256 digest size. Spelled out rather than taken from sha256::digest_size:
-        // bq_common.h pulls in both headers, so this one can be parsed before that class exists.
-        // hkdf.cpp asserts the two agree.
+        // sha256::digest_size, which may not be declared yet here; hkdf.cpp asserts they agree.
         static constexpr size_t hash_size = 32;
         static constexpr size_t max_output_size = 255 * hash_size;
 
         /// <summary>
-        /// Extract then expand. An empty salt is allowed and is treated as hash_size zero bytes, as
-        /// the RFC requires. Returns false only when the requested output length is out of range.
+        /// Extract then expand; an empty salt means hash_size zero bytes. False when out_size is out of range.
         /// </summary>
         static bool derive(const void* salt, size_t salt_size,
             const void* ikm, size_t ikm_size,

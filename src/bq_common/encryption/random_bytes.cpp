@@ -16,13 +16,9 @@
 namespace bq {
     namespace encryption {
         namespace {
-            // Installed by the application on platforms that have no CSPRNG of their own. Read on the
-            // segment-creation path, which is not hot, but still has to be race free against a late
-            // injection.
             bq::platform::atomic_trivially_constructible<secure_random_fn> s_secure_random_fn;
 
-            // MurmurHash3 finalizer. Only used to spread each weak signal over all 64 bits before
-            // they are packed into a ChaCha20 key; it adds no entropy of its own.
+            // MurmurHash3 finalizer: spreads each weak signal over 64 bits, adds no entropy.
             bq_forceinline uint64_t mix64(uint64_t x)
             {
                 x ^= x >> 33;
@@ -57,12 +53,13 @@ namespace bq {
             if (!buf || size == 0) {
                 return entropy_source::platform_csprng;
             }
+            // The system source wins where there is one, so a weak injected callback cannot replace it.
+            if (bq::platform::secure_random_bytes(buf, size)) {
+                return entropy_source::platform_csprng;
+            }
             const secure_random_fn injected_fn = s_secure_random_fn.load(bq::platform::memory_order::acquire);
             if (injected_fn && injected_fn(buf, size)) {
                 return entropy_source::injected;
-            }
-            if (bq::platform::secure_random_bytes(buf, size)) {
-                return entropy_source::platform_csprng;
             }
 
             static bq::platform::atomic_trivially_constructible<uint64_t> call_counter;
@@ -78,15 +75,12 @@ namespace bq {
             };
 
             uint8_t key[chacha20::key_size];
-            // Fold every weak signal into one 64-bit digest, then expand it into four key lanes.
-            // chained so that no single signal alone determines the key.
+            // Chain every signal into one digest, then expand it into four key lanes.
             uint64_t digest = mix64(counter ^ signals[0]);
             for (size_t i = 1; i < sizeof(signals) / sizeof(signals[0]); ++i) {
                 digest = mix64(digest ^ signals[i]);
             }
-            // The step is named so that both factors already have the accumulator's type. A ULL
-            // literal would widen the product to unsigned long long where uint64_t is unsigned
-            // long, and -Wsign-conversion reports that widening even though no value changes.
+            // Named so the product stays uint64_t; a bare ULL literal trips -Wsign-conversion.
             const uint64_t lane_step = 0x9E3779B97F4A7C15ULL;
             for (int32_t lane = 0; lane < 4; ++lane) {
                 store_le64(key + lane * 8, mix64(digest + static_cast<uint64_t>(lane) * lane_step));
@@ -107,8 +101,7 @@ namespace bq {
 
         void secure_zero(void* buf, size_t size)
         {
-            // volatile is the portable way to say "this write has an effect the compiler cannot see".
-            // The loop is not hot: it runs once per segment, or once per key teardown.
+            // volatile keeps the compiler from dropping the stores as dead.
             volatile uint8_t* p = static_cast<volatile uint8_t*>(buf);
             while (size-- > 0) {
                 *p++ = 0U;

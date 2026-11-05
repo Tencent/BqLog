@@ -13,15 +13,8 @@
 #include "bq_log/log/decoder/appender_decoder_compressed.h"
 
 namespace bq {
-    // The v9/v10 segment layer. Both versions wrap an AES-256 key with RSA, use that key to decrypt
-    // a 32 KiB XOR blob, and mask the payload with the blob addressed by absolute file position.
-    // They differ in two places, and both are handled by the two pure virtuals below:
-    //   - v10 puts an 8-byte public-key fingerprint in front of the wrapped key, v9 does not;
-    //   - v9 signals key presence with a byte in the segment header and lets later segments of the
-    //     same file reuse the blob, while v10 either has the blob or is not encrypted at all.
-    //
-    // Nothing here is part of the runtime: it exists so the standalone tool can read files written
-    // before format 11, and it is compiled into that tool only.
+    // Format 9/10 segment layer (RSA-wrapped AES key, 32 KiB XOR mask by absolute file position).
+    // v10 adds a key fingerprint; v9 flags key presence in the segment header and reuses the mask.
     class appender_decoder_legacy : public appender_decoder_compressed {
     protected:
         virtual bool is_supported_enc_type(appender_file_binary::appender_encryption_type type) const override;
@@ -30,8 +23,6 @@ namespace bq {
 
         virtual bool decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos) override;
 
-        // The XOR routine needs the buffer and the file offset to agree modulo the vector width, so
-        // the record layer reserves that many bytes in front of the chunk (see the base class).
         virtual size_t get_read_front_padding(uint64_t file_pos) const override;
 
         virtual bool segment_carries_key(const appender_file_binary::appender_file_segment_head& head) const = 0;
@@ -67,8 +58,6 @@ namespace bq {
 
         virtual bool segment_carries_key(const appender_file_binary::appender_file_segment_head& head) const override
         {
-            // Every encrypted segment of a v10 file carries its own wrapped key; the flag that used
-            // to say so was removed from the header in v10 and its byte became padding.
             return head.enc_type == appender_file_binary::appender_encryption_type::rsa_aes_xor;
         }
 

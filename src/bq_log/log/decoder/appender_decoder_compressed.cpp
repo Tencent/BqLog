@@ -108,9 +108,6 @@ bool bq::appender_decoder_compressed::decrypt_segment_chunk(uint8_t* data, size_
         return true;
     }
     if (file_pos < seg_payload_base_) {
-        // The chunk would start before the segment's payload, so its keystream offset would wrap. The
-        // read cache never asks for one - a segment switch drops the previous segment's cache - but a
-        // decoder fed a corrupt file must fail cleanly instead of computing that offset.
         return false;
     }
     appender_file_binary::transform_segment_payload(data, size, file_pos - seg_payload_base_, seg_key_, seg_chacha_rounds_);
@@ -222,9 +219,6 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_thread_info_te
         return appender_decode_result::failed_decode_error;
     }
     const size_t thread_name_len = read_handle.len() - read_cursor;
-    // The writer never exceeds MAX_THREAD_NAME_LEN, and the ext head carries the length in a single
-    // byte that the layout turns into a stack buffer, so a longer name is a corrupt item, not a
-    // thread with an unusual name.
     if (thread_name_len > bq::MAX_THREAD_NAME_LEN) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, thread name length %" PRIu64 " exceeds %u",
             static_cast<uint64_t>(thread_name_len), static_cast<unsigned>(bq::MAX_THREAD_NAME_LEN));

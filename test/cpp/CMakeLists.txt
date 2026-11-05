@@ -94,9 +94,7 @@ set(SRC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../src ${CMAKE_CURRENT_SOURCE_DIR}/..
 set(TEST_DIR ${CMAKE_CURRENT_SOURCE_DIR})
 set(PUB_INC_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../include ${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/include)
 set(THIRD_PARTY_DIR ${CMAKE_CURRENT_SOURCE_DIR}/../../thirdparty ${CMAKE_CURRENT_SOURCE_DIR}/../../../../submodules/BqCommon/thirdparty)
-# The v9/v10 segment layer belongs to the standalone decoder now. Its golden tests still run here,
-# so this target compiles it straight out of the tool's tree - the decoders and the ciphers they
-# use - and the runtime library carries neither.
+# The older formats' decoders live with the standalone tool; the tests compile them from there.
 set(LEGACY_DECODER_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/../../tools/log_decoder)
 
 ############################################################

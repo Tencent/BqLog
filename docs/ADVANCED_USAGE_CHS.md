@@ -443,7 +443,7 @@ void CallThisOnYourGameStart()
 
 对于外发客户端（尤其是互联网游戏和 App），日志加密是重要需求。
 在 1.x 版本中，BqLog 的二进制日志中仍有大量明文。自 2.x 起，引入了完整的日志加密方案。
-自 2.8.0 起，段格式为 `rsa_kem_chacha`（文件格式版本 11）；旧的 `rsa_aes_xor` 方案不再使用。
+自 2.8.0 起，段格式为 `rsa_kem_chacha`；旧的 `rsa_aes_xor` 方案不再使用。
 
 ### 1）加密算法说明
 
@@ -454,7 +454,7 @@ void CallThisOnYourGameStart()
 
 ### 2）这套方案提供什么、不提供什么
 
-- **更强的安全性** 从V11开始，可以抵抗已知明文攻击。
+- **更强的安全性。** 从 2.8.0 开始，可以抵抗已知明文攻击。
 - **恢复缓存里是明文。** 两次刷盘之间，恢复映射文件（`<日志目录>/appenders/<名字>.mmap`）里是未加密的待写记录，在文件系统上它就是一个磁盘文件，不过明文存在时间也就100ms左右。如果要求明文完全不落盘，请对该 appender 关掉 recovery。
 - **主机平台需要注入随机源。** PS4/PS5/Switch 没有 BqLog 能调用的 CSPRNG，需先调用 `bq::log::set_secure_random_source()`（见 [API 参考 — 加密日志的随机源](./API_REFERENCE_CHS.md#11-加密日志的随机源)）。没有随机源时 appender 仍然加密，只是密钥来自软件混合而非 CSPRNG，安全性较低，创建时会打一条 warning。
 
@@ -498,7 +498,8 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 - `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
 
 ### 5）从老版本迁移
-运行时库只保留 v11 解码路径。`BqLog_LogDecoder` 三条都在：`--version` 会打印 `Supported log format versions: 9, 10, 11`，并按文件头里的版本分派，所以 2.8.0 的工具不需要再装一份 2.7.x 就能读 v9 和 v10 文件。
+
+库本身只解自己写出的文件。`BqLog_LogDecoder` 能解 2.x 以来所有版本的压缩日志，2.8.0 之前写的文件不需要再装一份旧工具。
 
 ## 7. 多进程与 fork
 

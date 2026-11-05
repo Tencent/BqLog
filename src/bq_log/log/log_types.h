@@ -205,10 +205,7 @@ namespace bq {
         bool validate() const;
     };
 
-    // The writer never stores a longer name, but the field that carries the length is a single byte,
-    // so a record read back out of a damaged file can claim up to 255. Every reader bounds the field
-    // by this before using it: a length that is merely "inside the record" is not a length that fits
-    // the buffers the formatters keep names in.
+    // The length byte of a damaged record can claim up to 255; readers bound it by this.
     static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
 
     BQ_PACK_BEGIN

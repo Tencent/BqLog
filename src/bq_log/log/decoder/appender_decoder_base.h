@@ -62,30 +62,17 @@ namespace bq {
 
         virtual uint32_t get_binary_format_version() const = 0;
 
-        // The segment layer, and the only part of the decoder that knows an encryption scheme.
-        // Everything below it - header parsing, the record stream, the read cache - is
-        // version-agnostic, so a decoder for another format version overrides these three and
-        // nothing else. The runtime implements exactly one version (v11); the standalone decoder
-        // implements the older ones on top of the same base.
-        //
-        // Positions passed in are absolute file positions, not offsets inside a segment: some
-        // schemes address their keystream by file position and some do not, so the base class
-        // refuses to guess and hands over the raw position.
+        // Segment layer: the only part of the decoder that knows an encryption scheme.
+        // All positions are absolute file positions.
         virtual bool is_supported_enc_type(appender_file_binary::appender_encryption_type type) const = 0;
 
-        // Called once per segment, right after its 12-byte header has been read and before any
-        // payload byte. Reading the encryption metadata and building the key happen here.
+        // Called after a segment header is read, before any payload. Returns false if the segment's key cannot be built.
         virtual bool setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start) = 0;
 
-        // Decrypts [data, data + size) in place; file_pos is where its first byte sits in the file.
-        // Returns false when the chunk cannot be decoded, which only a corrupt file can ask for: the
-        // read is then reported as a broken chain rather than decoded into garbage.
+        // Decrypts in place the chunk that starts at file_pos. Returns false if the file is corrupt.
         virtual bool decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos) = 0;
 
-        // How many bytes of padding the segment layer wants in front of a chunk, given where the
-        // chunk starts in the file. A scheme whose SIMD routine needs the buffer and the file offset
-        // to agree modulo the alignment vector width asks for `file_pos % alignment` here; the record
-        // layer reserves that much and hands over an aligned pointer, so it stays version-agnostic.
+        // Bytes to reserve in front of a chunk that starts at file_pos, for schemes that need the buffer aligned to it.
         virtual size_t get_read_front_padding(uint64_t file_pos) const
         {
             (void)file_pos;

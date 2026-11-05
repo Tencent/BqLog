@@ -77,8 +77,7 @@ namespace bq {
             state[15] = nonce[2];
         }
 
-        // One double round (column round then diagonal round) on a scalar state. Kept separate so the
-        // NEON kernel can interleave a scalar block into its own round loop.
+        // Column then diagonal round; the NEON kernel interleaves it with its own.
         bq_forceinline void run_double_round_scalar(uint32_t x[16])
         {
             quarter_round(x[0], x[4], x[8], x[12]);
@@ -99,7 +98,6 @@ namespace bq {
             }
         }
 
-        // One block into out64, no XOR: the unit used by per-block derivation.
         template <uint32_t ROUNDS>
         void keystream_block_raw(uint8_t* out64, const uint32_t* key, const uint32_t* nonce, uint32_t counter)
         {
@@ -134,18 +132,13 @@ namespace bq {
 
 #if defined(BQ_X86)
 
-        // Every helper carries the kernel's target attribute, not just the kernel. A 32-bit x86
-        // build has no SSE in its baseline, and a function whose signature mentions __m128i without
-        // the attribute changes the ABI of its callers (-Wpsabi) and cannot inline the intrinsics
-        // at all, because they are always_inline for a target the helper was not compiled for.
+        // Every helper needs the target attribute too, or 32-bit x86 cannot inline the intrinsics.
         BQ_HW_SIMD_SSE2_TARGET bq_forceinline __m128i rotl_epi32_16(__m128i v)
         {
             return _mm_shufflehi_epi16(_mm_shufflelo_epi16(v, _MM_SHUFFLE(2, 3, 0, 1)), _MM_SHUFFLE(2, 3, 0, 1));
         }
 
-        // Shifts rather than pshufb, and the kernel is compiled for SSE2 alone: this path runs
-        // whenever AVX2 is absent, with no check in between, so an instruction the 64-bit baseline
-        // does not have would be a crash on a machine that is merely old.
+        // Shifts, not pshufb: this path runs on any x86 without AVX2 and may use SSE2 only.
         BQ_HW_SIMD_SSE2_TARGET bq_forceinline __m128i rotl_epi32_8(__m128i v)
         {
             return _mm_or_si128(_mm_slli_epi32(v, 8), _mm_srli_epi32(v, 24));
@@ -223,8 +216,7 @@ namespace bq {
                     w[i] = _mm_add_epi32(w[i], x[i]);
                 }
 
-                // Word i of the state sits in lane j of w[i]; transposing a group of four words
-                // yields one block's four consecutive words per lane.
+                // Transpose so each lane holds four consecutive words of one block.
                 for (size_t k = 0; k < 16; k += 4) {
                     __m128i a = w[k];
                     __m128i b = w[k + 1];
@@ -383,9 +375,6 @@ namespace bq {
         bq_forceinline uint32x4_t rotl_neon_8(uint32x4_t v)
         {
 #if defined(BQ_ARM_64)
-            // One table lookup instead of two shifts and an or: byte 0 of the result is byte 3 of
-            // the input, which is a rotate right by 24, i.e. a rotate left by 8 on a little-endian
-            // word.
             static const uint8_t rotate8_table[16] = { 3, 0, 1, 2, 7, 4, 5, 6, 11, 8, 9, 10, 15, 12, 13, 14 };
             const uint8x16_t table = vld1q_u8(rotate8_table);
             return vreinterpretq_u32_u8(vqtbl1q_u8(vreinterpretq_u8_u32(v), table));
@@ -394,8 +383,6 @@ namespace bq {
 #endif
         }
 
-        // vsri shifts the second operand in, so these two are a shift plus an insert rather than a
-        // shift, a shift and an or.
         bq_forceinline uint32x4_t rotl_neon_12(uint32x4_t v)
         {
             return vsriq_n_u32(vshlq_n_u32(v, 12), v, 20);
@@ -428,8 +415,7 @@ namespace bq {
             r3 = vcombine_u32(vget_high_u32(t0.val[1]), vget_high_u32(t1.val[1]));
         }
 
-        // Word i of the state, broadcast across the four blocks; the counter is the one word that
-        // differs between them.
+        // State word i for four blocks; only the counter differs.
         bq_forceinline uint32x4_t neon_initial_word(size_t word_index, uint32_t block_index,
             const uint32_t* key, const uint32_t* nonce)
         {
@@ -443,9 +429,7 @@ namespace bq {
                 const uint32_t lanes[4] = { 0, 1, 2, 3 };
                 return vaddq_u32(vdupq_n_u32(block_index), vld1q_u32(lanes));
             }
-            // Words 13 to 15 are the three nonce words. The bound is spelled out because the
-            // analyser only knows that word_index reached this line, not that callers stop at 15,
-            // and it evaluates the subscript over the whole range it can see.
+            // The explicit bound is for the static analyser.
             const size_t nonce_word = word_index - 13;
             if (nonce_word >= 3) {
                 return vdupq_n_u32(0);
@@ -473,9 +457,7 @@ namespace bq {
             quarter_round_neon(w[3], w[4], w[9], w[14]);
         }
 
-        // The feed-forward addition and the XOR store, four words at a time. The initial state is
-        // rebuilt per group instead of being held live: sixteen more vectors on top of the two
-        // states the eight-way loop already keeps would spill the register file.
+        // The initial state is rebuilt here rather than kept live, which would spill registers.
         bq_forceinline void neon_add_and_store4(uint8_t* p, uint32x4_t w[16], size_t word_base,
             uint32_t block_index, const uint32_t* key, const uint32_t* nonce)
         {
@@ -499,12 +481,8 @@ namespace bq {
             }
         }
 
-        // Eight NEON blocks and one scalar block per iteration.
-        //
-        // The vector side alone tops out around 7.3 GB/s on an M4 Pro; the extra scalar block costs
-        // nothing on the vector unit and fills the pipeline gaps of the NEON quarter-round chain,
-        // which is worth about another 10%. A second scalar block spills the register file and loses
-        // a third of the throughput, so one is where this stops.
+        // Eight NEON blocks plus one scalar block per iteration: the scalar block fills pipeline
+        // gaps for about 10% (M4); a second one spills registers.
         template <uint32_t ROUNDS>
         size_t xor_blocks_neon(uint8_t* buf, size_t len, uint64_t block_index, const uint32_t* key, const uint32_t* nonce)
         {
@@ -533,8 +511,6 @@ namespace bq {
                 build_initial_state(initial, key, nonce, block32 + 8U);
                 uint8_t* tail = buf + done + vector_chunk;
                 for (size_t i = 0; i < 16; ++i) {
-                    // One 32-bit load/xor/store per word. Doing it byte by byte costs more than the
-                    // whole interleave is worth: this block is an eighth of the bytes processed.
                     uint32_t word;
                     memcpy(&word, tail + i * 4, sizeof(word));
                     word ^= sx[i] + initial[i];
@@ -552,8 +528,6 @@ namespace bq {
         void xor_keystream(uint8_t* buf, size_t len, uint64_t block_index, const uint32_t* key, const uint32_t* nonce)
         {
 #if defined(BQ_X86) || defined(BQ_ARM_NEON)
-            // Only a vector kernel leaves a tail for the scalar path. Where there is no kernel the
-            // whole buffer is consumed below, so this counter would have no reader.
             size_t done = 0;
 #endif
 #if defined(BQ_X86)

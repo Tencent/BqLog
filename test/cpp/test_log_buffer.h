@@ -616,13 +616,8 @@ namespace bq {
                 result.add_result(test_buffer.get_groups_count() == 0, "group recycle test, expected left group:0, but: %" PRIu32, test_buffer.get_groups_count());
 #endif
                 test_output_dynamic(bq::log_level::info, "[log buffer] GC...\n");
-                // A pooled group is only freed once it has been idle for GROUP_NODE_GC_LIFE_TIME_MS,
-                // the collector refuses to run twice inside that same window (group_list::
-                // garbage_collect_pending), and a read that hands a group back restarts its idle
-                // timer. So one read per window is what converges: read, wait out a whole window, read
-                // again. Reading in a tight loop only kept restarting the clock - on the emulated BSD
-                // runners that left six groups waiting, and then two. A group that never goes away
-                // still fails, at the deadline.
+                // The collector runs once per GROUP_NODE_GC_LIFE_TIME_MS and a read restarts a group's idle
+                // timer, so read once per full window until the pool drains or the deadline passes.
                 {
                     const uint64_t gc_deadline = bq::platform::high_performance_epoch_ms()
                         + (group_list::GROUP_NODE_GC_LIFE_TIME_MS * 10);

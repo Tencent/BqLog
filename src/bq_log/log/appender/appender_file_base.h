@@ -20,19 +20,14 @@ namespace bq {
         friend class appender_decoder_base;
 
     protected:
-        // The alignment of the write/read caches and of the recovery mmap header. The value is part
-        // of the on-disk recovery layout through the header's size, so it cannot change without
-        // changing that layout as well.
+        // Part of the recovery mmap layout through sizeof(mmap_head).
         static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32;
         static_assert((DEFAULT_BUFFER_ALIGNMENT & (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == 0, "DEFAULT_BUFFER_ALIGNMENT must be power of two");
 
-        // The only question the flush state word answers: is the write cache plaintext right now?
-        // It records no position and no written length on purpose - recovery neither replays into the
-        // old place nor repairs the file, so there is nothing to record.
+        // Whether the write cache is plaintext. Any value other than flush_idle reads as transforming.
         enum flush_state : uint32_t {
-            flush_idle = 0, // plaintext, no flush window in progress
-            flush_transforming = 1, // a window is open; the contents are not interpretable
-            // 2 and 3 are never produced by this version and are read as transforming.
+            flush_idle = 0,
+            flush_transforming = 1,
         };
 
         struct parse_file_context {
@@ -88,34 +83,20 @@ namespace bq {
         void flush_write_io();
 
 #if defined(BQ_UNIT_TEST)
-        // Test-only. The crash-recovery tests need the exact on-disk state that exists at a given
-        // instant of a flush, which a real kill -9 cannot reproduce repeatably. A hook that fires at
-        // that instant and copies the appender files gives a deterministic snapshot instead.
+        // Test-only: lets crash tests snapshot the files at a fixed instant of a flush.
         enum class flush_hook_point : int32_t {
             after_transform = 0, // buffer encrypted in place, write() not issued yet
             after_write = 1, // write() returned, cursors and file size not updated yet
         };
-        // The sender identifies which appender is flushing. The hook is process-global, so without it
-        // a test that snapshots one appender would also fire on an unrelated appender's flush and
-        // capture its files at an arbitrary instant.
         typedef void (*flush_hook_fn)(const appender_file_base* sender, flush_hook_point point, void* user);
 
         static void set_flush_hook(flush_hook_fn fn, void* user);
 
-        // Test-only. The flush state word is only reachable through the recovery mapping, so a test
-        // that wants to look at it needs to know where it sits. mmap_head is private and stays that
-        // way; the offset is all a test can meaningfully use.
         static size_t test_flush_state_offset();
 
-        // Test-only. A producer that appends while a flush is in flight leaves bytes past the
-        // finished cursor, and the flush has to carry them along with the bytes it could not write.
-        // Writing that tail from a flush hook is the only way to reproduce the mix repeatably.
+        // Appends bytes past the finished cursor, as a producer does while a flush is in flight.
         void test_append_write_cache_tail(const void* data, size_t size);
 
-        // Test-only. The flush state word as this appender sees it, for a test that holds a pointer to
-        // it - a flush hook does - but cannot call the protected reader. Opening the mapping file from
-        // outside is not a substitute: read() of a live shared mapping only sees what the platform
-        // keeps coherent with it, and that differs between systems.
         uint32_t test_read_flush_state() const;
 #endif
 
@@ -147,15 +128,10 @@ namespace bq {
 
         virtual void on_file_open(bool is_new_created);
 
-        // In-place XOR of [data, data + size) as it would sit at absolute file position file_pos.
-        // The base class owns the window; a derived class only says whether it wants one at all
-        // (transform_enabled_) and what the XOR is. Both directions are the same call, which is what
-        // lets the flush revert the part that write() did not take.
+        // In-place, self-inverse transform of bytes that will sit at file_pos. Only called when transform_enabled_.
         virtual void on_flush_transform(uint8_t* data, size_t size, uint64_t file_pos);
 
-        // Last chance to refuse a window while the buffer is still plaintext. Returning false
-        // abandons this flush and leaves the pending bytes in memory; the implementer is expected to
-        // have invalidated the file handle so the next entry starts a new one.
+        // Returning false skips this flush and keeps the bytes pending.
         virtual bool on_flush_before_transform(size_t pending_size, uint64_t file_pos);
 
         virtual bool seek_read_file_absolute(uint64_t pos);
@@ -221,8 +197,6 @@ namespace bq {
 
         void set_flush_when_destruct(bool flush);
 
-        // Derived classes flush from their own destructor, where the override is still reachable,
-        // and must ask whether the caller wanted that at all (recovery tests turn it off on purpose).
         bool get_flush_when_destruct() const;
 
         void open_new_indexed_file_by_name();
@@ -235,24 +209,17 @@ namespace bq {
 
         void refresh_cache_write_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
 
-        // The flush window: set_flush_state_transforming() opens it and set_flush_state_idle()
-        // closes it; both are no-ops for a plaintext appender, which never touches the word. The
-        // barrier in the first and the release in the second are what make the ordering against the
-        // transform and the accounting hold.
         void set_flush_state_transforming();
 
         void set_flush_state_idle();
 
-        // True when the buffer was left mid-window by a previous process. Values this version never
-        // writes are treated as transforming: an unknown state is not evidence of plaintext.
         bool read_flush_state_is_transforming() const;
 
         void clear_flush_state();
 
         bool try_recover();
 
-        // Every failed recovery exits through this, so the appender is left exactly as it was before
-        // the attempt. Callers of try_recover() must not have to reason about which failure happened.
+        // Every failed recovery exits through this and leaves the appender as before the attempt.
         bool discard_recovery_cache();
 
         bq_forceinline bool is_file_oversize() const
@@ -315,17 +282,12 @@ namespace bq {
         struct mmap_head {
             uint64_t write_cache_size_;
             uint64_t cache_write_finished_cursor_;
-            // Whether the buffer is in the middle of a flush window. Recovery only needs to know
-            // whether the buffer is plaintext or not interpretable; it records no position and no
-            // written length, because a crash inside the window is handled by discarding it.
             uint32_t flush_state_;
             uint32_t file_path_size_;
             char file_path_[1];
             char padding1_[DEFAULT_BUFFER_ALIGNMENT - sizeof(uint64_t) * 3 - sizeof(file_path_)];
         } BQ_PACK_END
         static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
-        // The state word sits in the four reserved bytes after the two 64-bit fields, so the head
-        // keeps its size and the offsets of the fields after it stay where a reader expects them.
         static_assert(offsetof(mmap_head, flush_state_) == sizeof(uint64_t) * 2, "flush state moved out of the reserved slot");
         static_assert(offsetof(mmap_head, file_path_size_) == sizeof(uint64_t) * 2 + sizeof(uint32_t), "file path size moved");
         bq::unique_ptr<bq::normal_buffer> cache_write_entity_;
@@ -348,8 +310,7 @@ namespace bq {
         uint64_t read_file_pos_ = 0;
         bool cache_read_eof_ = false;
 
-        // Non-virtual on purpose: the plaintext path costs one load and one branch per flush, not an
-        // indirect call, and that path is the one that must not regress.
+        // A flag rather than a virtual call, so a plaintext flush pays one branch.
         bool transform_enabled_ = false;
 
         bq_forceinline size_t get_pendding_flush_written_size() const

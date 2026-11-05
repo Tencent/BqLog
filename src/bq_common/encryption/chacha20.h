@@ -13,8 +13,7 @@
 #include "bq_common/bq_common.h"
 
 namespace bq {
-    // ChaCha20 as a seekable keystream (RFC 8439 layout: 32-bit block counter, 96-bit nonce).
-    // The counter is 32 bits, so one (key, nonce) pair covers 256 GiB; a log segment is far below that.
+    // Seekable ChaCha keystream, RFC 8439 layout: 32-bit block counter (256 GiB per key), 96-bit nonce.
     class chacha20 {
     public:
         enum class round_count : uint32_t {
@@ -35,15 +34,12 @@ namespace bq {
             uint64_t byte_offset, round_count rounds = round_count::rounds_20);
 
         /// <summary>
-        /// One 64-byte block at block_index. The runtime derives everything from keystream_xor; this
-        /// exists so a test can compare one block, and its position, against the RFC.
+        /// One 64-byte block at block_index.
         /// </summary>
         static void keystream_block(uint8_t* out64, const uint8_t* key, const uint8_t* nonce,
             uint64_t block_index, round_count rounds = round_count::rounds_20);
 
 #ifdef BQ_UNIT_TEST
-        // The paths a test can ask for. ARM has one vector path and it is the only one it can take,
-        // so there is nothing to name: auto_detect and scalar are the whole choice there.
         enum class mode : int32_t {
             auto_detect = 0,
             scalar = 1,

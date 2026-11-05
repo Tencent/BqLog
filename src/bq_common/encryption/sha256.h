@@ -50,8 +50,7 @@ namespace bq {
     };
 
     /// <summary>
-    /// HMAC-SHA256. Incremental for the same reason HKDF needs it to be: the expand step hashes a
-    /// concatenation that is easier to feed in pieces than to assemble.
+    /// Incremental HMAC-SHA256.
     /// </summary>
     class hmac_sha256 {
     public:
