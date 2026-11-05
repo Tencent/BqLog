@@ -22,6 +22,10 @@ endif()
 
 add_subdirectory(../../src bqlog)
 
+# The sources compiled directly below (the legacy worker, the two dual-runtime plugins) are targets of
+# this directory, so the definition src/CMakeLists.txt sets for its own targets does not reach them.
+bq_require_large_file_support()
+
 add_executable(bq_multi_instance_worker worker.cpp)
 target_compile_features(bq_multi_instance_worker PRIVATE cxx_std_17)
 target_include_directories(bq_multi_instance_worker PRIVATE ../../include)
