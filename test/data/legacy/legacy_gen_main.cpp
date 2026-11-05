@@ -136,7 +136,8 @@ int main(int argc, char** argv)
         std::thread([](int32_t delay_us) {
             std::this_thread::sleep_for(std::chrono::microseconds(delay_us));
             raise(SIGKILL);
-        }, opt.crash_delay_us)
+        },
+            opt.crash_delay_us)
             .detach();
         write_records(log_obj, start, 0x7FFFFFFF, opt.throttle_us);
         return 3;
