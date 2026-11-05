@@ -56,6 +56,8 @@ namespace bq {
             // formats record no zone the decoder could fall back on - so the comparison has to be
             // made in the zone the text was produced in. POSIX spells UTC+8 as "CST-8"; the Windows
             // CRT reads the same string, and needs _tzset() rather than tzset() to apply it.
+            // setenv() races with localtime_r(), but nothing else is running here: this case creates
+            // no log, and every log the suite creates is a local object destroyed with its case.
             class scoped_sample_time_zone {
             public:
                 scoped_sample_time_zone()
