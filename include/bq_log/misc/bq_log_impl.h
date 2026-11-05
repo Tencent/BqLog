@@ -109,6 +109,16 @@ namespace bq {
         api::__api_force_flush(log_id_);
     }
 
+    inline void log::set_secure_random_source(bq::type_func_ptr_secure_random_source fn)
+    {
+        api::__api_set_secure_random_source(fn);
+    }
+
+    inline bool log::has_secure_random_source()
+    {
+        return api::__api_has_secure_random_source();
+    }
+
     inline bq::string log::get_file_base_dir(int32_t base_dir_type)
     {
         return api::__api_get_file_base_dir(base_dir_type);

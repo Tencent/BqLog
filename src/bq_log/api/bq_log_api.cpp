@@ -11,7 +11,6 @@
 
 #include "bq_log/api/bq_log_api.h"
 #include "bq_common/bq_common.h"
-#include "bq_common/encryption/random_bytes.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/log_types.h"
 #include "bq_log/log/log_manager.h"
@@ -770,15 +769,12 @@ namespace bq {
 #endif
     }
 
-    // Kept out of the C API on purpose: consoles have no language wrapper, and the callback is a C++
-    // function pointer. These live here rather than inline in bq_log_impl.h because the entropy code
-    // is not part of the installed public headers.
-    void log::set_secure_random_source(bq::type_func_ptr_secure_random_source fn)
+    BQ_API void __api_set_secure_random_source(bq::type_func_ptr_secure_random_source fn)
     {
         bq::encryption::set_secure_random_source(fn);
     }
 
-    bool log::has_secure_random_source()
+    BQ_API bool __api_has_secure_random_source()
     {
         return bq::encryption::has_secure_random_source();
     }
