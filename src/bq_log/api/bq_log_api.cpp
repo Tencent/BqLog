@@ -645,7 +645,6 @@ namespace bq {
             }
         }
 
-
         BQ_API const char* __api_get_file_base_dir(int32_t base_dir_type)
         {
             bq::string& cache = (base_dir_type == 0) ? tls_base_dir_cache_0_.get() : tls_base_dir_cache_1_.get();

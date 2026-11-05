@@ -78,31 +78,31 @@ bool bq::appender_decoder_compressed::is_supported_enc_type(appender_file_binary
         || type == appender_file_binary::appender_encryption_type::rsa_kem_chacha;
 }
 
-    bool bq::appender_decoder_compressed::setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start)
-    {
-        bq::encryption::secure_zero(&seg_key_, sizeof(seg_key_));
-        seg_chacha_rounds_ = 0;
-        seg_enc_type_ = head.enc_type;
-        seg_payload_base_ = seg_start + appender_file_binary::plaintext_payload_base_offset;
-        if (head.enc_type == appender_file_binary::appender_encryption_type::plaintext) {
-            return true;
-        }
-        if (private_key_.n_.size() != 256) {
-            bq::util::log_device_console(bq::log_level::error, "It's an encrypted log file, private key is not specified");
-            return false;
-        }
-        appender_file_binary::appender_segment_encryption_head enc_head;
-        const size_t read_size = read_from_file_directly(&enc_head, sizeof(enc_head));
-        if (read_size < sizeof(enc_head)) {
-            bq::util::log_device_console(bq::log_level::error, "decode log file failed, read segment encryption head failed");
-            return false;
-        }
-        if (!appender_file_binary::derive_segment_key_from_head(enc_head, private_key_, seg_key_, seg_chacha_rounds_)) {
-            return false;
-        }
-        seg_payload_base_ = seg_start + appender_file_binary::encrypted_payload_base_offset;
+bool bq::appender_decoder_compressed::setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start)
+{
+    bq::encryption::secure_zero(&seg_key_, sizeof(seg_key_));
+    seg_chacha_rounds_ = 0;
+    seg_enc_type_ = head.enc_type;
+    seg_payload_base_ = seg_start + appender_file_binary::plaintext_payload_base_offset;
+    if (head.enc_type == appender_file_binary::appender_encryption_type::plaintext) {
         return true;
     }
+    if (private_key_.n_.size() != 256) {
+        bq::util::log_device_console(bq::log_level::error, "It's an encrypted log file, private key is not specified");
+        return false;
+    }
+    appender_file_binary::appender_segment_encryption_head enc_head;
+    const size_t read_size = read_from_file_directly(&enc_head, sizeof(enc_head));
+    if (read_size < sizeof(enc_head)) {
+        bq::util::log_device_console(bq::log_level::error, "decode log file failed, read segment encryption head failed");
+        return false;
+    }
+    if (!appender_file_binary::derive_segment_key_from_head(enc_head, private_key_, seg_key_, seg_chacha_rounds_)) {
+        return false;
+    }
+    seg_payload_base_ = seg_start + appender_file_binary::encrypted_payload_base_offset;
+    return true;
+}
 
 bool bq::appender_decoder_compressed::decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos)
 {
