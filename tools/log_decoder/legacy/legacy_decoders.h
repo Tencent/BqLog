@@ -40,7 +40,6 @@ namespace bq {
 
     private:
         bq::array<uint8_t> xor_key_blob_;
-        uint64_t payload_base_ = 0;
         bool masked_ = false;
     };
 

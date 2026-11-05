@@ -716,7 +716,7 @@ namespace bq {
                 // No usable randomness: a partially blinded result is worse than a clear failure.
                 return false;
             }
-            clear_bytes(seed, sizeof(seed));
+            bq::encryption::secure_zero(seed, sizeof(seed));
 
             pow(se, s, pub_e, pub_e_bits);
             mod_mul(blinded, c, se);
@@ -737,14 +737,6 @@ namespace bq {
                 }
             }
             return true;
-        }
-
-        static void clear_bytes(void* p, size_t n)
-        {
-            volatile uint8_t* v = static_cast<volatile uint8_t*>(p);
-            for (size_t i = 0; i < n; ++i) {
-                v[i] = 0U;
-            }
         }
 
         void compute_r2()

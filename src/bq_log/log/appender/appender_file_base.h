@@ -237,12 +237,10 @@ namespace bq {
 
         void refresh_cache_write_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
 
-        // Drives the flush window. set_flush_state_transforming() opens it and
-        // set_flush_state_idle() closes it; both are no-ops for a plaintext appender, which never
-        // touches the word. The barrier in the first and the release in the second are what make the
-        // ordering against the transform and the accounting hold.
-        bq_forceinline bool is_flush_window_needed() const { return transform_enabled_; }
-
+        // The flush window: set_flush_state_transforming() opens it and set_flush_state_idle()
+        // closes it; both are no-ops for a plaintext appender, which never touches the word. The
+        // barrier in the first and the release in the second are what make the ordering against the
+        // transform and the accounting hold.
         void set_flush_state_transforming();
 
         void set_flush_state_idle();

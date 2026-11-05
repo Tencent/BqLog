@@ -35,7 +35,8 @@ namespace bq {
             uint64_t byte_offset, round_count rounds = round_count::rounds_20);
 
         /// <summary>
-        /// One 64-byte block at block_index, for per-block derivation (mask rotation, pool conditioning).
+        /// One 64-byte block at block_index. The runtime derives everything from keystream_xor; this
+        /// exists so a test can compare one block, and its position, against the RFC.
         /// </summary>
         static void keystream_block(uint8_t* out64, const uint8_t* key, const uint8_t* nonce,
             uint64_t block_index, round_count rounds = round_count::rounds_20);

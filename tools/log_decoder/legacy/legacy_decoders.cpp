@@ -33,10 +33,11 @@ namespace bq {
             || type == appender_file_binary::appender_encryption_type::rsa_aes_xor;
     }
 
-    bool appender_decoder_legacy::setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start)
+    // The segment start is not needed here: unlike the v11 layer, these formats address the mask by
+    // absolute file position, which decrypt_segment_chunk receives with every chunk.
+    bool appender_decoder_legacy::setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t)
     {
         masked_ = false;
-        payload_base_ = seg_start + sizeof(appender_file_binary::appender_file_segment_head);
         if (head.enc_type == appender_file_binary::appender_encryption_type::plaintext) {
             return true;
         }
@@ -84,7 +85,6 @@ namespace bq {
             return false;
         }
         bq::encryption::secure_zero(aes_key.begin(), aes_key.size());
-        payload_base_ = seg_start + sizeof(appender_file_binary::appender_file_segment_head) + head_size;
         masked_ = true;
         return true;
     }
