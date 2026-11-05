@@ -574,7 +574,11 @@ namespace bq {
     // are shared read-only across threads, and a lazily filled cache inside them would be a race.
     class mont_ctx {
     public:
-        mont_ctx() : l_(0), n0inv_(0) {}
+        mont_ctx()
+            : l_(0)
+            , n0inv_(0)
+        {
+        }
 
         bool init(const uint32_t* n, size_t l)
         {

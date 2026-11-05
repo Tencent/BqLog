@@ -100,7 +100,6 @@ namespace bq {
                 bool had_previous_ = false;
             };
 
-
         public:
             void case_runtime_supports_one_version(test_result& result)
             {
