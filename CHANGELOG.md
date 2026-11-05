@@ -2,7 +2,7 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
-## [v2.8.0] - 2026-11-03
+## [v2.8.0] - 2026-11-05
 - **Encrypted log format v11.** The encryption layer of `binary_file` appenders was rebuilt:
   - a segment key is wrapped with RSA-KEM instead of RSA-encrypting an AES key, and derived with HKDF-SHA256 from the shared secret, the format version, the encryption type, the round count, the public-key fingerprint and the KEM ciphertext;
   - the payload is encrypted with ChaCha8 as a keystream addressed by the offset inside the segment, so decoding can start anywhere in a segment and a damaged region stays local;
