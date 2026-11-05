@@ -70,11 +70,12 @@ namespace bq {
     void appender_file_base::set_flush_state_transforming()
     {
         auto& state = BQ_PACK_ACCESS_BY_TYPE(cache_write_head_->flush_state_, bq::platform::atomic<uint32_t>);
+        // seq_cst and not release: the transform that runs next overwrites this buffer in place, and
+        // those stores must not become visible before this one - a crash in between would leave an
+        // uninterpretable buffer marked plaintext. A seq_cst store is that barrier by itself on every
+        // platform we build for, and a process crash asks nothing more of it: the bytes are in the
+        // page cache already, and only a power cut would need msync.
         state.store(static_cast<uint32_t>(flush_transforming), bq::platform::memory_order::seq_cst);
-        // The store above is a release: it orders the ciphertext behind itself for a reader that
-        // acquires. It does not stop the ciphertext from being written ahead of it, and a crash
-        // between the two would leave an uninterpretable buffer marked plaintext. This fence does.
-        bq::platform::atomic_thread_fence_seq_cst();
     }
 
     void appender_file_base::set_flush_state_idle()

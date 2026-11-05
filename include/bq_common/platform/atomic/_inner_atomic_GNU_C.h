@@ -95,13 +95,6 @@ namespace bq {
             __atomic_thread_fence(__ATOMIC_RELEASE);
         }
 
-        // Both directions at once. Needed where the point is to stop a *later* write from moving
-        // ahead of an earlier one, which neither fence above does on its own.
-        bq_forceinline void atomic_thread_fence_seq_cst() noexcept
-        {
-            __atomic_thread_fence(__ATOMIC_SEQ_CST);
-        }
-
         template <typename T, size_t N>
         class alignas(8) _atomic_base {
         public:
