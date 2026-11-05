@@ -6,6 +6,12 @@ standalone decoder's v9/v10 segment layers into the test binary, registers them 
 does at startup, and decodes every sample below against its `.expected.txt` byte for byte, so "the
 standalone tool still decodes the old formats" is a test result rather than a claim.
 
+The text is byte for byte only in the zone it was produced in. These formats record no time zone the
+decoder could use, and the samples were written with a log configured for local time, so the
+timestamps in every `.expected.txt` are UTC+8 renderings of the instants in the file. The test sets
+`TZ=CST-8` for the length of the comparison; decoding a sample by hand on a machine in another zone
+gives the same instants written differently, and the files will not match.
+
 | | written by | format | encryption |
 |---|---|---|---|
 | `v9/` | Release_2.3.1 (`eafdb24b`) | 9 | plaintext and `rsa_aes_xor` |

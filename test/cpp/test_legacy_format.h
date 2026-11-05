@@ -15,6 +15,8 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
 #include "legacy/legacy_decoders.h"
+#include <stdlib.h>
+#include <time.h>
 
 namespace bq {
     namespace test {
@@ -50,6 +52,54 @@ namespace bq {
                     return bq::make_unique<bq::appender_decoder_legacy_v10>();
                 });
             }
+
+            // The samples were written by processes running in UTC+8, with a log configured for
+            // local time, so their golden text carries that zone's rendering of every timestamp. A
+            // timestamp is the same instant everywhere but not the same three digits, and these
+            // formats record no zone the decoder could fall back on - so the comparison has to be
+            // made in the zone the text was produced in. POSIX spells UTC+8 as "CST-8"; the Windows
+            // CRT reads the same string, and needs _tzset() rather than tzset() to apply it.
+            class scoped_sample_time_zone {
+            public:
+                scoped_sample_time_zone()
+                {
+                    const char* current = getenv("TZ");
+                    had_previous_ = current != nullptr;
+                    if (had_previous_) {
+                        previous_ = current;
+                    }
+#if defined(BQ_WIN)
+                    _putenv_s("TZ", "CST-8");
+                    _tzset();
+#else
+                    setenv("TZ", "CST-8", 1);
+                    tzset();
+#endif
+                }
+
+                ~scoped_sample_time_zone()
+                {
+#if defined(BQ_WIN)
+                    _putenv_s("TZ", had_previous_ ? previous_.c_str() : "");
+                    _tzset();
+#else
+                    if (had_previous_) {
+                        setenv("TZ", previous_.c_str(), 1);
+                    } else {
+                        unsetenv("TZ");
+                    }
+                    tzset();
+#endif
+                }
+
+                scoped_sample_time_zone(const scoped_sample_time_zone&) = delete;
+                scoped_sample_time_zone& operator=(const scoped_sample_time_zone&) = delete;
+
+            private:
+                bq::string previous_;
+                bool had_previous_ = false;
+            };
+
 
         public:
             void case_runtime_supports_one_version(test_result& result)
@@ -116,6 +166,7 @@ namespace bq {
                 if (priv_key.is_empty()) {
                     return;
                 }
+                const scoped_sample_time_zone sample_zone;
 
                 for (const auto& sample : samples) {
                     const bq::string sample_path = base_dir + sample.dir + "/" + sample.name + ".logcompr";
