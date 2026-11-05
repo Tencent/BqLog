@@ -182,7 +182,8 @@ namespace bq {
         void test_pause_consumer(bool paused) { test_consumer_paused_.store_release(paused); }
 
         // Mirrors what process teardown does: the appenders are destroyed while the write cache may
-        // still hold bytes, and nothing flushes them first. D-1 is about what that destructor writes.
+        // still hold bytes, and nothing flushes them first. What that destructor writes is what the
+        // teardown cases watch.
         void test_teardown_appenders()
         {
             appenders_list_.clear();

@@ -21,7 +21,7 @@
 namespace bq {
     namespace test {
 
-        // D-1: the write cache is flushed twice on the way out of a log object - once by
+        // The write cache is flushed twice on the way out of a log object - once by
         // appender_file_binary, which knows how to encrypt, and once by appender_file_base, which does
         // not. The base one runs after the derived destructor has already completed, so its virtual
         // call lands on appender_file_base::flush_write_cache() and the pending bytes go to disk as
@@ -174,17 +174,17 @@ namespace bq {
                 }
 
                 bq::log log_obj = bq::log::create_log(log_name.c_str(), make_log_conf().c_str());
-                result.add_result(log_obj.is_valid(), "D-1: encrypted log created");
+                result.add_result(log_obj.is_valid(), "encrypted log created");
 
                 // Warm up so the appender has its output file open before the fault is armed.
-                log_obj.info("D-1 warm up line");
+                log_obj.info("warm up line");
                 bq::log::force_flush_all_logs();
-                result.add_result(bq::file_manager::is_file(output_file()), "D-1: output file created");
+                result.add_result(bq::file_manager::is_file(output_file()), "output file created");
 
                 // The write fails with ENOSPC, so the record stays in the write cache.
                 bq::platform::test_inject::set_path_filter("security_destruct_out");
                 bq::platform::test_inject::set_fault(bq::platform::test_inject::fault_kind::enospc_on_write);
-                log_obj.info("D-1 pending {}", marker());
+                log_obj.info("pending {}", marker());
                 bq::log::force_flush_all_logs();
                 bq::platform::test_inject::set_fault(bq::platform::test_inject::fault_kind::none);
                 bq::platform::test_inject::set_path_filter(nullptr);
@@ -199,12 +199,12 @@ namespace bq {
                 const bq::string decoded = decode_all(first_error, entry_count);
 
                 result.add_result(first_error == bq::appender_decode_result::success,
-                    "D-1: every record in the file decodes (result %d)",
+                    "every record in the file decodes (result %d)",
                     static_cast<int32_t>(first_error));
-                result.add_result(entry_count >= 2, "D-1: both records decoded (got %d)",
+                result.add_result(entry_count >= 2, "both records decoded (got %d)",
                     static_cast<int32_t>(entry_count));
                 result.add_result(decoded.find(marker()) != bq::string::npos,
-                    "D-1: the record pending at destruction decodes back to its text");
+                    "the record pending at destruction decodes back to its text");
 
                 bq::file_manager::remove_file_or_dir(output_dir());
                 if (!internal_dir.is_empty()) {

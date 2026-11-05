@@ -437,7 +437,7 @@ namespace bq {
             }
 
         public:
-            // D-6: when write() takes fewer bytes than the cache holds, everything it did not take
+            // When write() takes fewer bytes than the cache holds, everything it did not take
             // stays pending, and the bytes a producer appended meanwhile line up behind them. The
             // fixup has to slide both down by the number of bytes that landed, in one move. Copying
             // the unwritten part to the front and then moving the tail there as well puts the tail
@@ -541,7 +541,7 @@ namespace bq {
                 clean_all(log_name);
 
                 bq::log log_obj = bq::log::create_log(log_name, make_log_conf(file_base.c_str(), true, "async").c_str());
-                result.add_result(log_obj.is_valid(), "D-2: encrypted async recovery log created");
+                result.add_result(log_obj.is_valid(), "encrypted async recovery log created");
                 if (!log_obj.is_valid()) {
                     clean_all(log_name);
                     return;
@@ -558,7 +558,7 @@ namespace bq {
                     log_obj.info("mt record {}", i);
                 }
                 bq::log::force_flush_all_logs();
-                result.add_result(snapshot.captured(), "D-2: the transform window was captured before the write");
+                result.add_result(snapshot.captured(), "the transform window was captured before the write");
                 if (!snapshot.captured()) {
                     bq::log_manager::instance().test_crash_log(log_obj.get_id());
                     clean_all(log_name);
@@ -567,12 +567,12 @@ namespace bq {
                 // Everything from here is a crash: the cache holds ciphertext, the file does not.
                 bq::log_manager::instance().test_crash_log(log_obj.get_id());
 
-                result.add_result(snapshot.restore(), "D-2: the pre-write instant was put back");
+                result.add_result(snapshot.restore(), "the pre-write instant was put back");
                 if (auto* inst = bq::instance_storage::get()) {
                     inst->test_begin_new_run(); // the relaunch
                 }
                 bq::log recovered = bq::log::create_log(log_name, make_log_conf(file_base.c_str(), true, "async").c_str());
-                result.add_result(recovered.is_valid(), "D-2: the log reopens on the crash state");
+                result.add_result(recovered.is_valid(), "the log reopens on the crash state");
                 if (recovered.is_valid()) {
                     recovered.force_flush();
                 }
@@ -599,12 +599,12 @@ namespace bq {
                     garbage += entries[i].find("mt ") == bq::string::npos ? 1 : 0;
                 }
                 result.add_result(first_error == bq::appender_decode_result::success,
-                    "D-2: recovery leaves nothing unreadable in the file (decode stopped with %d, %d entries)",
+                    "recovery leaves nothing unreadable in the file (decode stopped with %d, %d entries)",
                     static_cast<int32_t>(first_error), static_cast<int32_t>(entries.size()));
                 result.add_result(garbage == 0,
-                    "D-2: every recovered record is one that was written (%d of %d are not)",
+                    "every recovered record is one that was written (%d of %d are not)",
                     garbage, static_cast<int32_t>(entries.size()));
-                result.add_result(entries.size() >= 1, "D-2: the record flushed before the crash survived");
+                result.add_result(entries.size() >= 1, "the record flushed before the crash survived");
 
                 if (recovered.is_valid()) {
                     bq::log_manager::instance().test_crash_log(recovered.get_id());
@@ -761,10 +761,9 @@ namespace bq {
                 clean_all(enc_log);
             }
 
-            // D-3, revised: without a CSPRNG the appender used to refuse to be created. It now says
-            // so once and keeps writing - a log that stops is worse than one whose segment keys are
-            // weaker than they should be - so what has to hold is that the records really are
-            // encrypted, not that the appender is gone.
+            // Without a CSPRNG the appender says so once and keeps writing - a log that stops is
+            // worse than one whose segment keys are weaker than they should be - so what has to hold
+            // is that the records really are encrypted, not that the appender is gone.
             void case_encryption_without_secure_random_still_encrypts(test_result& result)
             {
                 struct scoped_secure_random_guard {

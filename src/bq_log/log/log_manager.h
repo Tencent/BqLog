@@ -74,9 +74,9 @@ namespace bq {
         // Destroys the log's appenders without flushing them first, as instance teardown does.
         void test_teardown_appenders(uint64_t log_id);
 
-        // A sync log cannot be force flushed from outside - the API deliberately skips it, because
-        // everything it writes is already processed, and only a 100ms timer inside sync_process ever
-        // flushes its appenders. A test that needs a flush at a known instant asks for one here.
+        // A sync log cannot be force flushed from outside: the API skips it, because every record it
+        // writes is flushed by sync_process before the write call returns. A test that needs a flush
+        // at a known instant, or right after a deliberately short write, asks for one here.
         void test_force_flush(uint64_t log_id);
 #endif
 
