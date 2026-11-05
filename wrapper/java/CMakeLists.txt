@@ -15,11 +15,6 @@ bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/v
 
 project(${PROJ_NAME} VERSION ${BQ_VERSION})
 
-# File positions wider than 32 bits where the platform can offer them. This project compiles nothing
-# itself - the JNI library it packages comes from the top-level build, which sets this - but the call
-# stays here so a target added to this directory picks it up without anyone having to remember.
-bq_require_large_file_support()
-
 # Java compile flags: UTF-8, suppress warnings, include debug info for IDE symbol mapping
 set(CMAKE_JAVA_COMPILE_FLAGS "-encoding" "UTF-8" "-nowarn" "-g" "-parameters" "-source" "1.8" "-target" "1.8")
 
