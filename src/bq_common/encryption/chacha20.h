@@ -42,12 +42,13 @@ namespace bq {
             uint64_t block_index, round_count rounds = round_count::rounds_20);
 
 #ifdef BQ_UNIT_TEST
+        // The paths a test can ask for. ARM has one vector path and it is the only one it can take,
+        // so there is nothing to name: auto_detect and scalar are the whole choice there.
         enum class mode : int32_t {
             auto_detect = 0,
             scalar = 1,
             sse2 = 2,
-            avx2 = 3,
-            neon = 4
+            avx2 = 3
         };
         static mode hardware_acceleration_mode_;
         static void set_hardware_acceleration_mode(mode m);

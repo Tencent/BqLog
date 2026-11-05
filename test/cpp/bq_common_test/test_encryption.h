@@ -514,9 +514,6 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
 #if defined(BQ_X86)
                     chacha20::mode::sse2,
 #endif
-#if defined(BQ_ARM_NEON)
-                    chacha20::mode::neon,
-#endif
                 };
                 for (size_t i = 0; i < sizeof(paths) / sizeof(paths[0]); ++i) {
                     bq::array<uint8_t> candidate;
