@@ -386,10 +386,16 @@
 #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
 #define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
 #define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
+// For kernels reached on every x86 machine that lacks AVX2, with no runtime check in between. Such
+// a kernel may use what the baseline has and nothing else, or a binary built here runs an illegal
+// instruction on a CPU that is merely old. The macro above is for kernels that do use SSE4.1 and
+// are therefore only ever called behind a check for it.
+#define BQ_HW_SIMD_SSE2_TARGET __attribute__((target("sse2")))
 #else
 #define BQ_HW_CRC_TARGET
 #define BQ_HW_SIMD_TARGET
 #define BQ_HW_SIMD_SSE_TARGET
+#define BQ_HW_SIMD_SSE2_TARGET
 #endif
 #define BQ_CRC_HW_INLINE inline
 #define BQ_SIMD_HW_INLINE inline
@@ -397,6 +403,7 @@
 #define BQ_HW_CRC_TARGET
 #define BQ_HW_SIMD_TARGET
 #define BQ_HW_SIMD_SSE_TARGET
+#define BQ_HW_SIMD_SSE2_TARGET
 #define BQ_CRC_HW_INLINE bq_forceinline
 #define BQ_SIMD_HW_INLINE bq_forceinline
 #endif

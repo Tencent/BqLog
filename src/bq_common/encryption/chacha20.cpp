@@ -138,28 +138,30 @@ namespace bq {
         // build has no SSE in its baseline, and a function whose signature mentions __m128i without
         // the attribute changes the ABI of its callers (-Wpsabi) and cannot inline the intrinsics
         // at all, because they are always_inline for a target the helper was not compiled for.
-        BQ_HW_SIMD_SSE_TARGET bq_forceinline __m128i rotl_epi32_16(__m128i v)
+        BQ_HW_SIMD_SSE2_TARGET bq_forceinline __m128i rotl_epi32_16(__m128i v)
         {
             return _mm_shufflehi_epi16(_mm_shufflelo_epi16(v, _MM_SHUFFLE(2, 3, 0, 1)), _MM_SHUFFLE(2, 3, 0, 1));
         }
 
-        // Shifts instead of pshufb: the SSE2 path then needs no SSSE3 codegen switch.
-        BQ_HW_SIMD_SSE_TARGET bq_forceinline __m128i rotl_epi32_8(__m128i v)
+        // Shifts rather than pshufb, and the kernel is compiled for SSE2 alone: this path runs
+        // whenever AVX2 is absent, with no check in between, so an instruction the 64-bit baseline
+        // does not have would be a crash on a machine that is merely old.
+        BQ_HW_SIMD_SSE2_TARGET bq_forceinline __m128i rotl_epi32_8(__m128i v)
         {
             return _mm_or_si128(_mm_slli_epi32(v, 8), _mm_srli_epi32(v, 24));
         }
 
-        BQ_HW_SIMD_SSE_TARGET bq_forceinline __m128i rotl_epi32_12(__m128i v)
+        BQ_HW_SIMD_SSE2_TARGET bq_forceinline __m128i rotl_epi32_12(__m128i v)
         {
             return _mm_or_si128(_mm_slli_epi32(v, 12), _mm_srli_epi32(v, 20));
         }
 
-        BQ_HW_SIMD_SSE_TARGET bq_forceinline __m128i rotl_epi32_7(__m128i v)
+        BQ_HW_SIMD_SSE2_TARGET bq_forceinline __m128i rotl_epi32_7(__m128i v)
         {
             return _mm_or_si128(_mm_slli_epi32(v, 7), _mm_srli_epi32(v, 25));
         }
 
-        BQ_HW_SIMD_SSE_TARGET bq_forceinline void quarter_round_sse(__m128i& a, __m128i& b, __m128i& c, __m128i& d)
+        BQ_HW_SIMD_SSE2_TARGET bq_forceinline void quarter_round_sse(__m128i& a, __m128i& b, __m128i& c, __m128i& d)
         {
             a = _mm_add_epi32(a, b);
             d = rotl_epi32_16(_mm_xor_si128(d, a));
@@ -171,7 +173,7 @@ namespace bq {
             b = rotl_epi32_7(_mm_xor_si128(b, c));
         }
 
-        BQ_HW_SIMD_SSE_TARGET bq_forceinline void transpose4_epi32(__m128i& a, __m128i& b, __m128i& c, __m128i& d)
+        BQ_HW_SIMD_SSE2_TARGET bq_forceinline void transpose4_epi32(__m128i& a, __m128i& b, __m128i& c, __m128i& d)
         {
             const __m128i t0 = _mm_unpacklo_epi32(a, b);
             const __m128i t1 = _mm_unpackhi_epi32(a, b);
@@ -185,7 +187,7 @@ namespace bq {
 
         // Four blocks at a time; consumes whole 256-byte chunks and leaves the rest to the caller.
         template <uint32_t ROUNDS>
-        BQ_HW_SIMD_SSE_TARGET size_t xor_blocks_sse2(uint8_t* buf, size_t len, uint64_t block_index, const uint32_t* key, const uint32_t* nonce)
+        BQ_HW_SIMD_SSE2_TARGET size_t xor_blocks_sse2(uint8_t* buf, size_t len, uint64_t block_index, const uint32_t* key, const uint32_t* nonce)
         {
             constexpr size_t chunk = 4 * chacha20::block_size;
             size_t done = 0;
@@ -380,7 +382,7 @@ namespace bq {
 
         bq_forceinline uint32x4_t rotl_neon_8(uint32x4_t v)
         {
-#if defined(__aarch64__)
+#if defined(BQ_ARM_64)
             // One table lookup instead of two shifts and an or: byte 0 of the result is byte 3 of
             // the input, which is a rotate right by 24, i.e. a rotate left by 8 on a little-endian
             // word.
@@ -502,7 +504,7 @@ namespace bq {
         // The vector side alone tops out around 7.3 GB/s on an M4 Pro; the extra scalar block costs
         // nothing on the vector unit and fills the pipeline gaps of the NEON quarter-round chain,
         // which is worth about another 10%. A second scalar block spills the register file and loses
-        // a third of the throughput, so one is where this stops (RD §4.2).
+        // a third of the throughput, so one is where this stops.
         template <uint32_t ROUNDS>
         size_t xor_blocks_neon(uint8_t* buf, size_t len, uint64_t block_index, const uint32_t* key, const uint32_t* nonce)
         {
