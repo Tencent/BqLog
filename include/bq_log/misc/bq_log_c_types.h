@@ -51,8 +51,9 @@ namespace bq {
         constexpr uint32_t user_counter = 1u << 8;
     }
 
-    // Declared here rather than in bq_log_entry.h so the C ABI header can name it: that header is
-    // included before bq_log_entry.h, and a repeated typedef of the same type is legal.
+    // Fills buf with size bytes of cryptographically secure random data, or returns false when it
+    // cannot. Declared here rather than in bq_log_entry.h because the C ABI header names it, and
+    // that header is included before bq_log_entry.h.
     typedef bool (*type_func_ptr_secure_random_source)(void* buf, size_t size);
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t

@@ -30,12 +30,6 @@
 #endif
 
 namespace bq {
-    /// <summary>
-    /// Fills buf with size bytes of cryptographically secure random data and returns true, or
-    /// returns false when it cannot. The library treats a false return as "no source available".
-    /// </summary>
-    typedef bool (*type_func_ptr_secure_random_source)(void* buf, size_t size);
-
     BQ_MODULE_EXPORT_BEGIN
     class log {
     private:
