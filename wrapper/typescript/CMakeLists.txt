@@ -16,6 +16,11 @@ bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/v
 
 project(${PROJ_NAME} VERSION ${BQ_VERSION})
 
+# File positions wider than 32 bits where the platform can offer them. This project compiles nothing
+# itself - the addon it packages comes from the top-level build, which sets this - but the call stays
+# here so a target added to this directory picks it up without anyone having to remember.
+bq_require_large_file_support()
+
 # Paths (adjust as needed)
 set(ARTIFACTS_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../artifacts/wrapper/nodejs")
 set(INSTALL_DIR   "${CMAKE_CURRENT_SOURCE_DIR}/../../install/wrapper_nodejs")
