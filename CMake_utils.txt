@@ -151,15 +151,10 @@ endfunction()
 # A function, not a macro: a macro's return would leave the caller as well.
 # Call it after project(): before that the toolchain file has not set CMAKE_SYSTEM_NAME.
 function(bq_default_target_platform)
-    # A 32-bit target addresses 2 GiB of a file unless the whole program is compiled for a 64-bit
-    # off_t, and that switch is a preprocessor macro that has to be in place before any system header
-    # is included, so only the build can promise it. Asking for it everywhere costs nothing: where
-    # off_t is already 64 bits the object code is byte for byte the same, and the Windows and console
-    # SDK libc never reads the name. Guarding the line would only look like precision, because
-    # sizeof(off_t) is not a configure-time fact and the pointer size is a proxy for it. The library
-    # itself never looks at the macro: it asks the platform how wide off_t is and keeps a file below
-    # 2 GiB where the answer is four bytes. A project that compiles these sources into its own build
-    # has to add the same definition itself.
+    # A compile definition and not a configure-time check: it is a preprocessor macro that has to be
+    # in place before any system header. Where off_t is already 64 bits it changes nothing, and the
+    # runtime reads the width of off_t rather than this name. A project that compiles these sources
+    # into its own build has to add the same line itself.
     add_compile_definitions(_FILE_OFFSET_BITS=64)
 
     if(DEFINED TARGET_PLATFORM AND NOT "${TARGET_PLATFORM}" STREQUAL "")

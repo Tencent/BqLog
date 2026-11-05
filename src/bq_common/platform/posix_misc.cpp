@@ -891,12 +891,10 @@ namespace bq {
         // is needed to say so, and a separate console definition would only be a second answer to keep
         // in step.
         //
-        // getentropy() used to sit between the two. It is gone because a declaration is not a
-        // promise: devkitA64's newlib declares it and ships sysgetentropy.o, whose body calls
-        // _getentropy_r, which libnx does not provide - so a Switch build that merely mentioned the
-        // name failed to link, and a probe that only asks whether the name exists could not tell.
-        // /dev/urandom answers the same thing for one open() per segment key, which this path can
-        // afford, and it is a name that either resolves or returns an error, never a link failure.
+        // Only these two tiers, because a name that exists is not a promise that it links: devkitA64
+        // declares getentropy() and ships an object whose body calls a symbol libnx does not provide,
+        // which a probe cannot see. /dev/urandom costs one open() per segment key and either resolves
+        // or reports an error; it never fails at link time.
         bool secure_random_bytes(void* buf, size_t size)
         {
             if (!buf || size == 0) {

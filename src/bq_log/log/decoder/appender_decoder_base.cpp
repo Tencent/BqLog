@@ -263,11 +263,9 @@ namespace bq {
     appender_decode_result appender_decoder_base::read_to_next_segment()
     {
         auto new_seg_start_pos = cur_read_seg_.end_pos;
-        // The cached bytes belong to the segment being left, so they cannot outlive the switch. The
-        // reload path in read_with_cache clears the cache anyway, but decode() also comes here to
-        // resynchronise after a failed item, and it previously left the old segment's cache behind:
-        // the next fill then rewound the file cursor into the new segment's head, before its payload
-        // base, and the keystream offset was computed from a position that segment does not have.
+        // The cached bytes belong to the segment being left, so they cannot outlive the switch: a
+        // fill that still held them would rewind the file cursor into the new segment's head, before
+        // its payload base, and address the keystream from a position that segment does not have.
         clear_read_cache();
         current_file_size_ = file_manager::instance().get_file_size(file_);
         if (!seek_read_file_absolute(new_seg_start_pos)) {

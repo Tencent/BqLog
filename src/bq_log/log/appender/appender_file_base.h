@@ -20,9 +20,9 @@ namespace bq {
         friend class appender_decoder_base;
 
     protected:
-        // The alignment of the write/read caches and of the recovery mmap header. It was inherited
-        // from the XOR cipher's SIMD buffer, which has left the runtime; the value cannot change
-        // because the mmap header's size is part of the on-disk recovery file layout.
+        // The alignment of the write/read caches and of the recovery mmap header. The value is part
+        // of the on-disk recovery layout through the header's size, so it cannot change without
+        // changing that layout as well.
         static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32;
         static_assert((DEFAULT_BUFFER_ALIGNMENT & (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == 0, "DEFAULT_BUFFER_ALIGNMENT must be power of two");
 
