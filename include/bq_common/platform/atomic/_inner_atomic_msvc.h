@@ -49,8 +49,12 @@ namespace bq {
         {
 #if defined(BQ_ARM)
             __dmb(_ARM64_BARRIER_ISH);
-#else
+#elif defined(BQ_X86_64)
             __faststorefence();
+#else
+            // 32-bit x86: __faststorefence does not exist there, and the store fence it names is
+            // what sfence is. Available on every CPU this compiler targets.
+            _mm_sfence();
 #endif
         }
 
