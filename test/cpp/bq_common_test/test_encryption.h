@@ -688,10 +688,9 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 }
                 result.add_result(!all_zero, "random bytes are not all zero");
 
-                // rsa::encrypt rejects a leading 0x00 byte because unpadded RSA drops leading zeros on
-                // decrypt, so any key material that gets wrapped has to avoid that byte. The appender
-                // rerolls it; this shows the condition really does occur at the expected rate rather
-                // than being a theoretical worry.
+                // A uniform fill produces 0x00 as the first byte about once in 256 samples. A source
+                // that never does, or does far more often, is not uniform, and that is what this
+                // checks rather than anything specific to key wrapping.
                 int32_t zero_prefix = 0;
                 for (int32_t i = 0; i < 4096; ++i) {
                     uint8_t sample[32];
