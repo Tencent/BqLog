@@ -678,9 +678,12 @@ namespace bq {
         }
 
         // r = c^d mod n with base blinding: the exponentiation runs on c * s^e and the result is
-        // multiplied by s^-1, so neither the exponent loop nor the intermediate values correlate
-        // with c. Returns false when the random s turns out not to be invertible, which for a real
-        // RSA modulus means the call would have factored the key.
+        // multiplied by s^-1, so the values in the multiplication chain are unrelated to c. The
+        // pattern of squarings and multiplications still follows d's bits, and base blinding does
+        // nothing about that: it defends against an attacker who learns those values, not against
+        // one who counts them. Counting matters to a private-key operation an attacker can time, and
+        // this one runs in the offline decoder. Returns false when the random s turns out not to be
+        // invertible, which for a real RSA modulus means the call would have factored the key.
         bool pow_blinded(uint32_t* r, const uint32_t* c, const uint32_t* pub_e, size_t pub_e_bits,
             const uint32_t* d, size_t d_bits)
         {
@@ -1268,6 +1271,7 @@ namespace bq {
         }
         const size_t lh = (lp > lq) ? lp : lq;
         bq::array<uint32_t> p_buf, q_buf, dp_buf, dq_buf, qi_buf, ep_buf, eq_buf;
+        bq::array<uint32_t> pm1_buf, qm1_buf;
         bq::array<uint32_t> cp_buf, cq_buf, m1_buf, m2_buf, h_buf, diff_buf, work_buf;
         p_buf.fill_uninitialized(lp);
         q_buf.fill_uninitialized(lq);
@@ -1276,6 +1280,8 @@ namespace bq {
         qi_buf.fill_uninitialized(lp);
         ep_buf.fill_uninitialized(lp);
         eq_buf.fill_uninitialized(lq);
+        pm1_buf.fill_uninitialized(lp);
+        qm1_buf.fill_uninitialized(lq);
         cp_buf.fill_uninitialized(lp);
         cq_buf.fill_uninitialized(lq);
         m1_buf.fill_uninitialized(lh);
@@ -1308,17 +1314,35 @@ namespace bq {
         if (!mont_p.init(p, lp) || !mont_q.init(q, lq)) {
             return false;
         }
-        // The public exponent is small in every real key, but reducing it costs nothing and keeps
-        // the modexp correct for a key that carries a large one.
-        bn_mod_binary(ep, e_l, c_limbs, p, lp, work);
-        bn_mod_binary(eq, e_l, c_limbs, q, lq, work);
+        // The blinding step below exponentiates s in the modulus it is given, so it needs e reduced
+        // into that modulus first: e does not have to fit in p's limbs, and a key with a large public
+        // exponent would otherwise index past the exponent array. Fermat is what makes a reduction
+        // legitimate here, and it is a reduction modulo p-1, not modulo p.
+        uint32_t* pm1 = pm1_buf.begin();
+        uint32_t* qm1 = qm1_buf.begin();
+        memcpy(pm1, p, sizeof(uint32_t) * lp);
+        memcpy(qm1, q, sizeof(uint32_t) * lq);
+        // Both are odd primes, so subtracting one borrows nothing.
+        pm1[0] -= 1U;
+        qm1[0] -= 1U;
+        bn_mod_binary(ep, e_l, c_limbs, pm1, lp, work);
+        bn_mod_binary(eq, e_l, c_limbs, qm1, lq, work);
         bn_mod_binary(cp_buf.begin(), c_l, c_limbs, p, lp, work);
         bn_mod_binary(cq_buf.begin(), c_l, c_limbs, q, lq, work);
 
-        if (!mont_p.pow_blinded(m1, cp_buf.begin(), ep, bn_bitlen(ep, lp), dp, bn_bitlen(dp, lp))) {
+        // A zero here means e is a multiple of p-1 or q-1. No key with a working private exponent
+        // does that - d*e = 1 modulo p-1 is unsolvable then - so the key is inconsistent rather than
+        // unusual, and s^0 = 1 would quietly decode to the wrong plaintext.
+        const size_t ep_bits = bn_bitlen(ep, lp);
+        const size_t eq_bits = bn_bitlen(eq, lq);
+        if (ep_bits == 0 || eq_bits == 0) {
             return false;
         }
-        if (!mont_q.pow_blinded(m2, cq_buf.begin(), eq, bn_bitlen(eq, lq), dq, bn_bitlen(dq, lq))) {
+
+        if (!mont_p.pow_blinded(m1, cp_buf.begin(), ep, ep_bits, dp, bn_bitlen(dp, lp))) {
+            return false;
+        }
+        if (!mont_q.pow_blinded(m2, cq_buf.begin(), eq, eq_bits, dq, bn_bitlen(dq, lq))) {
             return false;
         }
 
