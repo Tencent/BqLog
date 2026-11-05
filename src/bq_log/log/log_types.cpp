@@ -151,6 +151,13 @@ namespace bq {
             if (static_cast<uint64_t>(ext_off) + sizeof(_log_entry_ext_head_def) + ext.thread_name_len_ > data_len) {
                 return false;
             }
+            // Staying inside the record is not enough. The name is copied into a fixed-size stack
+            // buffer by the formatters, so a length that only fits the record is still a length that
+            // does not fit its destination. Nothing in the record path bounds this field otherwise:
+            // log_record_reader returns as soon as it sees an inline ext head.
+            if (ext.thread_name_len_ > MAX_THREAD_NAME_LEN) {
+                return false;
+            }
             args_end = ext_off;
         }
 

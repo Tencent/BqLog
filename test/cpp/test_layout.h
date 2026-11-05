@@ -22,6 +22,7 @@ namespace bq {
             test_result test_find_brace_and_copy();
             test_result test_find_brace_and_convert_u16();
             test_result test_throughput();
+            test_result test_validate_thread_name_bound();
         };
     }
 }

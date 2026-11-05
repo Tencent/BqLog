@@ -23,7 +23,7 @@ namespace bq {
     void init_log_thread_info(log_thread_info& info)
     {
         bq::string thread_name = bq::platform::thread::get_current_thread_name();
-        info.thread_name_len_ = static_cast<uint8_t>(bq::min_value(static_cast<size_t>(log_thread_info::MAX_THREAD_NAME_LEN), thread_name.size()));
+        info.thread_name_len_ = static_cast<uint8_t>(bq::min_value(static_cast<size_t>(MAX_THREAD_NAME_LEN), thread_name.size()));
         if (info.thread_name_len_ > 0) {
             memcpy(info.thread_name_, thread_name.c_str(), info.thread_name_len_);
         }

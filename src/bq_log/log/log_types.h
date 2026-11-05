@@ -205,6 +205,13 @@ namespace bq {
         bool validate() const;
     };
 
+    // The writer never stores a longer name, but the field that carries the length is a single byte,
+    // so a record read back out of a damaged file can claim up to 255. Every reader bounds the field
+    // by this before using it: a length that is merely "inside the record" is not a length that fits
+    // the buffers the formatters keep names in. It lives here rather than next to log_thread_info so
+    // that the record layer does not have to know about the buffer layer to check it.
+    static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
+
     BQ_PACK_BEGIN
     struct _log_entry_ext_head_def {
         uint8_t thread_name_len_;

@@ -227,9 +227,9 @@ bq::appender_decode_result bq::appender_decoder_compressed::parse_thread_info_te
     // The writer never exceeds MAX_THREAD_NAME_LEN, and the ext head carries the length in a single
     // byte that the layout turns into a stack buffer, so a longer name is a corrupt item, not a
     // thread with an unusual name.
-    if (thread_name_len > bq::log_thread_info::MAX_THREAD_NAME_LEN) {
+    if (thread_name_len > bq::MAX_THREAD_NAME_LEN) {
         bq::util::log_device_console(log_level::error, "decode compressed log file failed, thread name length %" PRIu64 " exceeds %u",
-            static_cast<uint64_t>(thread_name_len), static_cast<unsigned>(bq::log_thread_info::MAX_THREAD_NAME_LEN));
+            static_cast<uint64_t>(thread_name_len), static_cast<unsigned>(bq::MAX_THREAD_NAME_LEN));
         return appender_decode_result::failed_decode_error;
     }
     decoder_thread_info_template& info = thread_info_templates_map_[thread_info_idx];

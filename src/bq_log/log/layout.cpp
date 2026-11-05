@@ -15,7 +15,6 @@
 
 #include "bq_log/global/log_vars.h"
 #include "bq_log/utils/log_utils.h"
-#include "bq_log/types/buffer/log_buffer.h"
 
 namespace bq {
 
@@ -448,12 +447,14 @@ namespace bq {
             if (iter == thread_names_cache_.end()) {
                 const auto& ext_info = log_entry.get_ext_head();
                 // "[tid-" + up to 20 digits + " " + the name + "]\t" + terminator. The name is
-                // bounded by the format, and the decoder as well as log_record_reader reject
-                // anything longer, so the copy below cannot run past the end by construction.
-                char tmp[bq::log_thread_info::MAX_THREAD_NAME_LEN + 32];
+                // bounded twice on the way here - validate() rejects a record that claims more than
+                // MAX_THREAD_NAME_LEN, and the clamp below covers anything that reaches the layout
+                // without going through it - so the copy cannot run past this buffer.
+                char tmp[MAX_THREAD_NAME_LEN + 32];
                 uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", thread_id));
-                memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), ext_info.thread_name_len_);
-                cursor += ext_info.thread_name_len_;
+                const uint32_t name_len = bq::min_value(static_cast<uint32_t>(ext_info.thread_name_len_), static_cast<uint32_t>(MAX_THREAD_NAME_LEN));
+                memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), name_len);
+                cursor += name_len;
                 tmp[cursor++] = ']';
                 tmp[cursor++] = '\t';
                 assert(cursor < sizeof(tmp));
