@@ -354,25 +354,6 @@ namespace bq {
         current_file_size_ = bq::file_manager::instance().get_file_size(file_);
         return real_write_size;
     }
-
-    void appender_file_base::set_cache_write_padding(uint8_t new_padding)
-    {
-        if (cache_write_padding_ != new_padding) {
-            if (new_padding > cache_write_padding_) {
-                auto current_using_size = get_total_used_write_cache_size();
-                auto current_total_size = cache_write_entity_->size();
-                if (current_using_size + static_cast<size_t>(new_padding) - static_cast<size_t>(cache_write_padding_) > current_total_size) {
-                    resize_cache_write_entity(current_using_size + static_cast<size_t>(new_padding) - static_cast<size_t>(cache_write_padding_));
-                }
-            }
-            auto prev_data_ptr = cache_write_;
-            cache_write_padding_ = new_padding;
-            refresh_cache_write_ptr();
-            auto new_data_ptr = cache_write_;
-            memmove(new_data_ptr, prev_data_ptr, cache_write_cursor_);
-        }
-    }
-
     bool appender_file_base::on_appender_file_recovery_begin()
     {
         if (cache_write_entity_->size() < static_cast<size_t>(cache_write_ - static_cast<uint8_t*>(cache_write_entity_->data()))) {

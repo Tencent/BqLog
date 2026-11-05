@@ -215,8 +215,6 @@ namespace bq {
             cache_write_head_->cache_write_finished_cursor_ = cache_write_cursor_;
         }
 
-        void set_cache_write_padding(uint8_t new_padding);
-
         virtual bool on_appender_file_recovery_begin();
 
         virtual void on_appender_file_recovery_end();
