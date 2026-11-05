@@ -153,134 +153,134 @@ namespace bq {
 #endif
     }
 
-#define BQ_GEN_HASH_CORE(DO_COPY, CRC_U8, CRC_U16, CRC_U32, CRC_U64)             \
-    auto* s = reinterpret_cast<const uint8_t*>(src);                             \
-    auto* d = reinterpret_cast<uint8_t*>(dst);                                   \
-    uint32_t h1 = 0xFFFFFFFF, h2 = 0xFFFFFFFF, h3 = 0xFFFFFFFF, h4 = 0xFFFFFFFF; \
-    BQ_LIKELY_IF(len >= 32)                                                      \
-    {                                                                            \
-        const uint8_t* const src_end = s + len;                                  \
-        /* hash_only passes a null destination: it never writes, but the end   */\
-        /* pointer is derived before the copy is decided, and offsetting a     */\
-        /* null pointer is undefined behaviour even when it is unused.         */\
-        uint8_t* const dst_end = d + (DO_COPY ? len : 0);                        \
-        while (s <= src_end - 32) {                                              \
-            uint64_t v1, v2, v3, v4;                                             \
-            memcpy(&v1, s, 8);                                                   \
-            memcpy(&v2, s + 8, 8);                                               \
-            memcpy(&v3, s + 16, 8);                                              \
-            memcpy(&v4, s + 24, 8);                                              \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            {                                                                    \
-                memcpy(d, &v1, 8);                                               \
-                memcpy(d + 8, &v2, 8);                                           \
-                memcpy(d + 16, &v3, 8);                                          \
-                memcpy(d + 24, &v4, 8);                                          \
-                d += 32;                                                         \
-            }                                                                    \
-            h1 = CRC_U64(h1, v1);                                                \
-            h2 = CRC_U64(h2, v2);                                                \
-            h3 = CRC_U64(h3, v3);                                                \
-            h4 = CRC_U64(h4, v4);                                                \
-            s += 32;                                                             \
-        }                                                                        \
-        if (s < src_end) {                                                       \
-            s = src_end - 32;                                                    \
-            uint64_t v1, v2, v3, v4;                                             \
-            memcpy(&v1, s, 8);                                                   \
-            memcpy(&v2, s + 8, 8);                                               \
-            memcpy(&v3, s + 16, 8);                                              \
-            memcpy(&v4, s + 24, 8);                                              \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            {                                                                    \
-                d = dst_end - 32;                                                \
-                memcpy(d, &v1, 8);                                               \
-                memcpy(d + 8, &v2, 8);                                           \
-                memcpy(d + 16, &v3, 8);                                          \
-                memcpy(d + 24, &v4, 8);                                          \
-            }                                                                    \
-            h1 = CRC_U64(h1, v1);                                                \
-            h2 = CRC_U64(h2, v2);                                                \
-            h3 = CRC_U64(h3, v3);                                                \
-            h4 = CRC_U64(h4, v4);                                                \
-        }                                                                        \
-    }                                                                            \
-    else                                                                         \
-    {                                                                            \
-        uint32_t len_mix = (uint32_t)len;                                        \
-        if (len >= 16) {                                                         \
-            uint64_t v1, v2;                                                     \
-            memcpy(&v1, s, 8);                                                   \
-            memcpy(&v2, s + 8, 8);                                               \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            {                                                                    \
-                memcpy(d, &v1, 8);                                               \
-                memcpy(d + 8, &v2, 8);                                           \
-            }                                                                    \
-            h1 = CRC_U64(h1, v1);                                                \
-            h2 = CRC_U64(h2, v2);                                                \
-            const uint8_t* s_last = s + len - 16;                                \
-            memcpy(&v1, s_last, 8);                                              \
-            memcpy(&v2, s_last + 8, 8);                                          \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            {                                                                    \
-                uint8_t* d_last = d + len - 16;                                  \
-                memcpy(d_last, &v1, 8);                                          \
-                memcpy(d_last + 8, &v2, 8);                                      \
-            }                                                                    \
-            h3 = CRC_U64(h3 ^ len_mix, v1);                                      \
-            h4 = CRC_U64(h4 ^ len_mix, v2);                                      \
-        } else if (len >= 8) {                                                   \
-            uint64_t v;                                                          \
-            memcpy(&v, s, 8);                                                    \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            memcpy(d, &v, 8);                                                    \
-            h1 = CRC_U64(h1, v);                                                 \
-            const uint8_t* s_last = s + len - 8;                                 \
-            memcpy(&v, s_last, 8);                                               \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            {                                                                    \
-                uint8_t* d_last = d + len - 8;                                   \
-                memcpy(d_last, &v, 8);                                           \
-            }                                                                    \
-            h2 = CRC_U64(h2 ^ len_mix, v);                                       \
-        } else if (len >= 4) {                                                   \
-            uint32_t v;                                                          \
-            memcpy(&v, s, 4);                                                    \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            memcpy(d, &v, 4);                                                    \
-            h1 = CRC_U32(h1, v);                                                 \
-            const uint8_t* s_last = s + len - 4;                                 \
-            memcpy(&v, s_last, 4);                                               \
-            BQ_CONSTEXPR_IF(DO_COPY)                                             \
-            {                                                                    \
-                uint8_t* d_last = d + len - 4;                                   \
-                memcpy(d_last, &v, 4);                                           \
-            }                                                                    \
-            h2 = CRC_U32(h2 ^ len_mix, v);                                       \
-        } else if (len > 0) {                                                    \
-            if (len & 2) {                                                       \
-                uint16_t v;                                                      \
-                memcpy(&v, s, 2);                                                \
-                BQ_CONSTEXPR_IF(DO_COPY)                                         \
-                {                                                                \
-                    memcpy(d, &v, 2);                                            \
-                    d += 2;                                                      \
-                }                                                                \
-                h1 = CRC_U16(h1 ^ len_mix, v);                                   \
-                s += 2;                                                          \
-            }                                                                    \
-            if (len & 1) {                                                       \
-                uint8_t v = *s;                                                  \
-                BQ_CONSTEXPR_IF(DO_COPY)* d = v;                                 \
-                h2 = CRC_U8(h2 ^ len_mix, v);                                    \
-            }                                                                    \
-        }                                                                        \
-    }                                                                            \
-    uint32_t h3_rot = (h3 << 17) | (h3 >> 15);                                   \
-    uint32_t h4_rot = (h4 << 19) | (h4 >> 13);                                   \
-    uint64_t low = (uint64_t)(h1 ^ h3_rot);                                      \
-    uint64_t high = (uint64_t)(h2 ^ h4_rot);                                     \
+#define BQ_GEN_HASH_CORE(DO_COPY, CRC_U8, CRC_U16, CRC_U32, CRC_U64)              \
+    auto* s = reinterpret_cast<const uint8_t*>(src);                              \
+    auto* d = reinterpret_cast<uint8_t*>(dst);                                    \
+    uint32_t h1 = 0xFFFFFFFF, h2 = 0xFFFFFFFF, h3 = 0xFFFFFFFF, h4 = 0xFFFFFFFF;  \
+    BQ_LIKELY_IF(len >= 32)                                                       \
+    {                                                                             \
+        const uint8_t* const src_end = s + len;                                   \
+        /* hash_only passes a null destination: it never writes, but the end   */ \
+        /* pointer is derived before the copy is decided, and offsetting a     */ \
+        /* null pointer is undefined behaviour even when it is unused.         */ \
+        uint8_t* const dst_end = d + (DO_COPY ? len : 0);                         \
+        while (s <= src_end - 32) {                                               \
+            uint64_t v1, v2, v3, v4;                                              \
+            memcpy(&v1, s, 8);                                                    \
+            memcpy(&v2, s + 8, 8);                                                \
+            memcpy(&v3, s + 16, 8);                                               \
+            memcpy(&v4, s + 24, 8);                                               \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            {                                                                     \
+                memcpy(d, &v1, 8);                                                \
+                memcpy(d + 8, &v2, 8);                                            \
+                memcpy(d + 16, &v3, 8);                                           \
+                memcpy(d + 24, &v4, 8);                                           \
+                d += 32;                                                          \
+            }                                                                     \
+            h1 = CRC_U64(h1, v1);                                                 \
+            h2 = CRC_U64(h2, v2);                                                 \
+            h3 = CRC_U64(h3, v3);                                                 \
+            h4 = CRC_U64(h4, v4);                                                 \
+            s += 32;                                                              \
+        }                                                                         \
+        if (s < src_end) {                                                        \
+            s = src_end - 32;                                                     \
+            uint64_t v1, v2, v3, v4;                                              \
+            memcpy(&v1, s, 8);                                                    \
+            memcpy(&v2, s + 8, 8);                                                \
+            memcpy(&v3, s + 16, 8);                                               \
+            memcpy(&v4, s + 24, 8);                                               \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            {                                                                     \
+                d = dst_end - 32;                                                 \
+                memcpy(d, &v1, 8);                                                \
+                memcpy(d + 8, &v2, 8);                                            \
+                memcpy(d + 16, &v3, 8);                                           \
+                memcpy(d + 24, &v4, 8);                                           \
+            }                                                                     \
+            h1 = CRC_U64(h1, v1);                                                 \
+            h2 = CRC_U64(h2, v2);                                                 \
+            h3 = CRC_U64(h3, v3);                                                 \
+            h4 = CRC_U64(h4, v4);                                                 \
+        }                                                                         \
+    }                                                                             \
+    else                                                                          \
+    {                                                                             \
+        uint32_t len_mix = (uint32_t)len;                                         \
+        if (len >= 16) {                                                          \
+            uint64_t v1, v2;                                                      \
+            memcpy(&v1, s, 8);                                                    \
+            memcpy(&v2, s + 8, 8);                                                \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            {                                                                     \
+                memcpy(d, &v1, 8);                                                \
+                memcpy(d + 8, &v2, 8);                                            \
+            }                                                                     \
+            h1 = CRC_U64(h1, v1);                                                 \
+            h2 = CRC_U64(h2, v2);                                                 \
+            const uint8_t* s_last = s + len - 16;                                 \
+            memcpy(&v1, s_last, 8);                                               \
+            memcpy(&v2, s_last + 8, 8);                                           \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            {                                                                     \
+                uint8_t* d_last = d + len - 16;                                   \
+                memcpy(d_last, &v1, 8);                                           \
+                memcpy(d_last + 8, &v2, 8);                                       \
+            }                                                                     \
+            h3 = CRC_U64(h3 ^ len_mix, v1);                                       \
+            h4 = CRC_U64(h4 ^ len_mix, v2);                                       \
+        } else if (len >= 8) {                                                    \
+            uint64_t v;                                                           \
+            memcpy(&v, s, 8);                                                     \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            memcpy(d, &v, 8);                                                     \
+            h1 = CRC_U64(h1, v);                                                  \
+            const uint8_t* s_last = s + len - 8;                                  \
+            memcpy(&v, s_last, 8);                                                \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            {                                                                     \
+                uint8_t* d_last = d + len - 8;                                    \
+                memcpy(d_last, &v, 8);                                            \
+            }                                                                     \
+            h2 = CRC_U64(h2 ^ len_mix, v);                                        \
+        } else if (len >= 4) {                                                    \
+            uint32_t v;                                                           \
+            memcpy(&v, s, 4);                                                     \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            memcpy(d, &v, 4);                                                     \
+            h1 = CRC_U32(h1, v);                                                  \
+            const uint8_t* s_last = s + len - 4;                                  \
+            memcpy(&v, s_last, 4);                                                \
+            BQ_CONSTEXPR_IF(DO_COPY)                                              \
+            {                                                                     \
+                uint8_t* d_last = d + len - 4;                                    \
+                memcpy(d_last, &v, 4);                                            \
+            }                                                                     \
+            h2 = CRC_U32(h2 ^ len_mix, v);                                        \
+        } else if (len > 0) {                                                     \
+            if (len & 2) {                                                        \
+                uint16_t v;                                                       \
+                memcpy(&v, s, 2);                                                 \
+                BQ_CONSTEXPR_IF(DO_COPY)                                          \
+                {                                                                 \
+                    memcpy(d, &v, 2);                                             \
+                    d += 2;                                                       \
+                }                                                                 \
+                h1 = CRC_U16(h1 ^ len_mix, v);                                    \
+                s += 2;                                                           \
+            }                                                                     \
+            if (len & 1) {                                                        \
+                uint8_t v = *s;                                                   \
+                BQ_CONSTEXPR_IF(DO_COPY)* d = v;                                  \
+                h2 = CRC_U8(h2 ^ len_mix, v);                                     \
+            }                                                                     \
+        }                                                                         \
+    }                                                                             \
+    uint32_t h3_rot = (h3 << 17) | (h3 >> 15);                                    \
+    uint32_t h4_rot = (h4 << 19) | (h4 >> 13);                                    \
+    uint64_t low = (uint64_t)(h1 ^ h3_rot);                                       \
+    uint64_t high = (uint64_t)(h2 ^ h4_rot);                                      \
     return (high << 32) | low;
 
     // Implementations

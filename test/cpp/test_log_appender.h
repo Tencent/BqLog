@@ -1477,8 +1477,6 @@ namespace bq {
                     "decoder malformed file: a corrupt segment head linked from a valid one fails instead of ending the file");
             }
 
-
-
             static bq::string read_text_file(const bq::string& path)
             {
                 std::string content;

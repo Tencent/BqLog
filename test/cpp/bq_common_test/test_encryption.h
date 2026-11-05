@@ -150,9 +150,7 @@ eSFkEwI+QE7YZLQUCjw/GRTS6LczBS+EOgpfomXN272r
 )",
                                             R"(ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAAAgQC/KY6/zAKjjd+6G256EHBGqyCnfCBGFtAbZX2qb8IuVmnUhoVa3HfwqQz5IWzm5TKdojUD5L9SYy116HQFERLppq+AY16EeYv0pR61TnyzTgFRRXuuqmItIwECq2WucZ8Ys3AEQsfDY6Z31OINLx0ftCh7QKZHkPzvJy/y9pgwvQ== pippocao@PIPPOCAO-PC6
 )"));
-                prepared_keys.add(2048, bq::make_tuple<bq::string, bq::string>(
-                                                    bq::string(rsa_2048_private_pem()),
-                                                    bq::string(rsa_2048_public_ssh())));
+                prepared_keys.add(2048, bq::make_tuple<bq::string, bq::string>(bq::string(rsa_2048_private_pem()), bq::string(rsa_2048_public_ssh())));
                 prepared_keys.add(3072, bq::make_tuple<bq::string, bq::string>(R"(-----BEGIN RSA PRIVATE KEY-----
 MIIG4wIBAAKCAYEAqIFB3BDzMOp0gROwcooA6BBUzgAMHH3Eo5jLIa85r06KCe2q
 iNOF2PkTrWl67/W2PqdX66HVzr9TCQYsZ/KJlnqiq6JZjMBBRIPerZcCoJiqI8oj
