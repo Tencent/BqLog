@@ -12,7 +12,7 @@ ReflowComments:             false
 PointerAlignment:           Left
 BreakBeforeBraces:          WebKit
 # The tree writes an empty body as '{}' far more often than as '{ }'.
-SpaceInEmptyBraces:         Never
+SpaceInEmptyBlock:          false
 # Macros clang-format cannot see through. BQ_PACK_END already carries the ';', so never write one
 # after it, and put a BQ_PACK_BEGIN that opens a class in a namespace on its own line.
 StatementMacros:
