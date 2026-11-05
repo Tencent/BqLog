@@ -12,6 +12,11 @@ timestamps in every `.expected.txt` are UTC+8 renderings of the instants in the 
 `TZ=CST-8` for the length of the comparison; decoding a sample by hand on a machine in another zone
 gives the same instants written differently, and the files will not match.
 
+The text does not depend on the target's pointer width. A record stores a pointer argument in eight
+bytes whatever the host is, and the decoder reads the field as a 64-bit value rather than loading it
+into `void*`. The addresses in these samples are above 4 GB, so a 32-bit build that narrowed them
+would render shorter text and fail the comparison on byte count alone.
+
 | | written by | format | encryption |
 |---|---|---|---|
 | `v9/` | Release_2.3.1 (`eafdb24b`) | 9 | plaintext and `rsa_aes_xor` |

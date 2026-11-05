@@ -127,7 +127,9 @@ namespace bq {
 
         uint32_t insert_str_utf16(const char* str, const uint32_t len);
 
-        void insert_pointer(const void* ptr);
+        // Takes the serialized value, not a pointer: a record stores one in 8 bytes on every
+        // target, and loading it into void* would keep only half of it where a pointer is 32 bits.
+        void insert_pointer(uint64_t ptr_value);
 
         void insert_bool(bool value);
 
