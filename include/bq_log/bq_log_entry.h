@@ -150,13 +150,12 @@ namespace bq {
         static void force_flush_all_logs();
 
         /// <summary>
-        /// Supplies the secure random source used for log encryption keys.
-        /// Console platforms (PS4, PS5, Switch) have no CSPRNG the library can call and their SDK's
-        /// is under NDA, so the application injects one. Without it an encrypted appender still
-        /// works, but its segment keys come from a software mix of clocks, thread ids and addresses
-        /// that anyone holding the file can search, and it warns once when it is created. The
-        /// callback must fill the whole buffer and return true; returning false is treated as
-        /// "no source". Hosts that do have an OS CSPRNG do not need to call this.
+        /// Supplies the secure random source used for log encryption keys. Console platforms (PS4,
+        /// PS5, Switch) have no CSPRNG the library can call and their SDK's is under NDA, so the
+        /// application injects one. Without it an encrypted appender still works, but its segment
+        /// keys come from a software mix of clocks, thread ids and addresses that anyone holding the
+        /// file can search, and it warns once when it is created. Hosts that do have an OS CSPRNG
+        /// need not call this.
         /// </summary>
         /// <param name="fn">Callback filling buf with size bytes of cryptographically secure random data, or null to remove it</param>
         static void set_secure_random_source(bq::type_func_ptr_secure_random_source fn);

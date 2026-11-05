@@ -72,16 +72,11 @@ namespace bq {
 
         virtual bool log_impl(const log_entry_handle& handle) = 0;
 
-        // Per-entry segment-boundary hooks. Called by process_log_chunk()
-        // BEFORE log_impl on the entry that triggers a recovery / new-segment
-        // transition. Subclasses use them to insert a marker (binary segment
-        // header, "===== RECOVER START =====\n", etc.) into the output stream.
-        // Return false to signal that the segment marker could NOT be emitted
-        // (e.g. disk-full, refresh_file_handle failed, file_ stays closed) so
-        // subclasses can bail BEFORE mutating subclass-side state (segment key,
-        // cache padding, segment counters, etc.). The caller in log_imp.cpp
-        // ignores the return value today; this is purely a chain-of-responsibility
-        // signal between base and derived hooks.
+        // Per-entry segment-boundary hooks, called by process_log_chunk() before log_impl on the
+        // entry that triggers a recovery or new-segment transition, so a subclass can write its
+        // marker into the stream. False says the marker could not be emitted (disk-full, a failed
+        // refresh), which lets the subclass bail before mutating its own state; log_imp.cpp ignores
+        // the value today, so this is only a signal between base and derived hooks.
         virtual bool on_log_item_recovery_begin(bq::log_entry_handle& read_handle)
         {
             (void)read_handle;

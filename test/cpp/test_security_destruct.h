@@ -21,16 +21,12 @@
 namespace bq {
     namespace test {
 
-        // The write cache is flushed twice on the way out of a log object - once by
-        // appender_file_binary, which knows how to encrypt, and once by appender_file_base, which does
-        // not. The base one runs after the derived destructor has already completed, so its virtual
-        // call lands on appender_file_base::flush_write_cache() and the pending bytes go to disk as
-        // they sit in memory.
-        //
-        // The pending bytes are only "plaintext" in the sense of "not encrypted": the compressed
-        // appender has already compressed them, so the marker string never appears literally in the
-        // file. The observable is therefore the decoder's: a correctly written tail decrypts and
-        // decompresses back into the record, an unencrypted one does not.
+        // The write cache is flushed twice on the way out - by appender_file_binary, which can
+        // encrypt, and then by appender_file_base after the derived destructor has already
+        // completed, so the second virtual call lands on the base and the pending bytes reach the
+        // disk as they sit in memory. Those bytes are "not encrypted" rather than readable: the
+        // appender already compressed them, so the observable is the decoder's, and a correctly
+        // written tail decrypts and decompresses back into the record.
         class test_security_destruct : public test_base {
         private:
             static const bq::string& appender_pub_key()

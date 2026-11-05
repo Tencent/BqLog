@@ -21,16 +21,13 @@
 namespace bq {
     namespace test {
 
-        // The runtime writes one format version and reads one format version. Old files are the
-        // standalone tool's job, and "the runtime refuses them, with a message that says where to
-        // go" is a property worth pinning: it is the difference between a user upgrading and a user
-        // staring at a decode failure.
-        //
-        // The samples under test/data/legacy are real files written by Release_2.3.1 (format 9) and
-        // Release_2.7.3 (format 10), with the decoded text their own decoders produced. Two things
-        // are checked here: the runtime declines them, and the tool's segment layers - registered in
-        // this binary exactly as the tool registers them at startup, and nowhere else in the runtime -
-        // reproduce their golden text byte for byte.
+        // The runtime writes one format version and reads one; old files are the standalone tool's
+        // job, and "the runtime declines them with a message that says where to go" is worth pinning
+        // - it is the difference between a user upgrading and a user staring at a decode failure.
+        // The samples under test/data/legacy were written by Release_2.3.1 (format 9) and
+        // Release_2.7.3 (format 10), each with the text its own decoder produced: the runtime has to
+        // decline them, and the tool's segment layers, registered here as the tool registers them and
+        // nowhere else in the runtime, have to reproduce that text byte for byte.
         class test_legacy_format : public test_base {
         private:
             // The samples are source-tree data, not generated output: <repo>/test/data/legacy, as seen

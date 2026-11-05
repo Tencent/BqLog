@@ -884,17 +884,12 @@ namespace bq {
             }
         }
 
-        // One definition for every POSIX target, consoles included. A console SDK does not declare
-        // getrandom() and has no /dev/urandom, so both steps below answer no and this returns false on
-        // its own: the caller derives its keys from the software mix, warns once, and the title is
-        // expected to have called bq::log::set_secure_random_source() before that. No platform macro
-        // is needed to say so, and a separate console definition would only be a second answer to keep
-        // in step.
-        //
-        // Only these two tiers, because a name that exists is not a promise that it links: devkitA64
-        // declares getentropy() and ships an object whose body calls a symbol libnx does not provide,
-        // which a probe cannot see. /dev/urandom costs one open() per segment key and either resolves
-        // or reports an error; it never fails at link time.
+        // One definition for every POSIX target, consoles included: a console SDK declares no
+        // getrandom() and has no /dev/urandom, so both tiers answer no, the caller falls back to the
+        // software mix and warns, and the title is expected to have called
+        // bq::log::set_secure_random_source() before that. Only these two tiers, because a declared
+        // name is not one that links: devkitA64 ships a getentropy() whose body calls a symbol libnx
+        // lacks, which no probe can see, while /dev/urandom either opens or reports an error.
         bool secure_random_bytes(void* buf, size_t size)
         {
             if (!buf || size == 0) {

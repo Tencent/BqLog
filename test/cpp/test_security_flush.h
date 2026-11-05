@@ -437,17 +437,12 @@ namespace bq {
             }
 
         public:
-            // When write() takes fewer bytes than the cache holds, everything it did not take
-            // stays pending, and the bytes a producer appended meanwhile line up behind them. The
-            // fixup has to slide both down by the number of bytes that landed, in one move. Copying
-            // the unwritten part to the front and then moving the tail there as well puts the tail
-            // exactly where the records that were never written used to be, so those records are
-            // lost - and with encryption on, the revert then runs over the wrong bytes as well.
-            //
-            // A sync log flushes on every write, so the only way to have a pending window is to make
-            // that flush come up short: the record that was not fully written is what the next flush
-            // has to salvage. The tail is the record the flush hook appends while the write is in
-            // flight - the same bytes a producer thread would put there.
+            // A short write leaves the records it did not take pending, with whatever a producer
+            // appended meanwhile behind them, and the fixup has to slide both down in one move:
+            // copying the unwritten part forward first would put the tail where those records were
+            // and lose them, and with encryption on the revert would then run over the wrong bytes.
+            // A sync log has a pending window only when its flush comes up short, so this case makes
+            // it short and appends the tail from the flush hook, as a producer thread would.
             void case_short_write_keeps_tail(test_result& result)
             {
                 scoped_fault_and_hook_guard guard;
