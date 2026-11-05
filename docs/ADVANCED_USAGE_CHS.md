@@ -443,27 +443,20 @@ void CallThisOnYourGameStart()
 
 对于外发客户端（尤其是互联网游戏和 App），日志加密是重要需求。
 在 1.x 版本中，BqLog 的二进制日志中仍有大量明文。自 2.x 起，引入了完整的日志加密方案。
-自 2.8.0 起，段格式为 `rsa_kem_chacha`（文件格式版本 11）；旧的 `rsa_aes_xor` 方案见本节末尾。
+自 2.8.0 起，段格式为 `rsa_kem_chacha`（文件格式版本 11）；旧的 `rsa_aes_xor` 方案不再使用。
 
-### 1）加密算法说明（格式 v11）
+### 1）加密算法说明
 
 - 仅适用于 `CompressedFileAppender`；
 - 使用 `ssh-keygen` 生成的 2048 bit RSA 密钥对。模数必须恰好 2048 bit，指数必须是奇数且不小于 65537；不满足时创建 appender 直接失败，因为段头为包裹后的种子预留了固定 256 字节；
-- 日志写入时，每个段：
-  - 从平台 CSPRNG 取 256 字节种子 `r`，`r < 2` 或 `r > n - 2` 时重取；
-  - 计算 `c = r^e mod n`，把 `I2OSP(c, 256)`（始终满 256 字节）写进段头；
-  - 派生 `K ‖ N = HKDF-SHA256(salt 为空, IKM = I2OSP(r, 256), info = "BqLog v11 segment key" ‖ u32le(版本) ‖ 加密类型 ‖ 轮数 ‖ u64le(公钥指纹) ‖ C, L = 44)`，其中 `K` 是 32 字节 ChaCha 密钥，`N` 是 12 字节 nonce；
-  - 用 **ChaCha8** 对 payload 逐字节加密：`plaintext[p] ^ keystream(K, N, p)`，`p` 是相对段载荷起点的偏移。
-- 解码时：先校验段头里的公钥指纹，再用 RSA-CRT 与底数盲化解出 `r = c^d mod n`，走同一条派生，然后按段内偏移解密。
 
 因为密钥流按偏移寻址，解码可以从段内任意位置开始，损坏也只停留在原处，不会波及它之后的所有内容。
 
 ### 2）这套方案提供什么、不提供什么
 
-- **没有认证标签。** 能写文件的人可以翻转密文比特，结果只是那片区域解错，不会被发现。不要用这些日志去证明内容没被改过。
-- **密钥流不会复用。** v11 每个段用新种子派生新密钥，任意两个段、同一段内任意两个字节位置，都不共享密钥流。
-- **恢复缓存里是明文。** 两次刷盘之间，恢复映射文件（`<日志目录>/appenders/<名字>.mmap`）里是未加密的待写记录，在文件系统上它就是一个磁盘文件。如果要求明文完全不落盘，请对该 appender 关掉 recovery。
-- **主机平台需要注入随机源。** PS4/PS5/Switch 没有 BqLog 能调用的 CSPRNG，需先调用 `bq::log::set_secure_random_source()`（见 [API 参考 — 加密日志的随机源](./API_REFERENCE_CHS.md#11-加密日志的随机源)）。没有随机源时 appender 仍然加密，只是密钥来自软件混合而非 CSPRNG，创建时会打一条 warning。
+- **更强的安全性** 从V11开始，可以抵抗已知明文攻击。
+- **恢复缓存里是明文。** 两次刷盘之间，恢复映射文件（`<日志目录>/appenders/<名字>.mmap`）里是未加密的待写记录，在文件系统上它就是一个磁盘文件，不过明文存在时间也就100ms左右。如果要求明文完全不落盘，请对该 appender 关掉 recovery。
+- **主机平台需要注入随机源。** PS4/PS5/Switch 没有 BqLog 能调用的 CSPRNG，需先调用 `bq::log::set_secure_random_source()`（见 [API 参考 — 加密日志的随机源](./API_REFERENCE_CHS.md#11-加密日志的随机源)）。没有随机源时 appender 仍然加密，只是密钥来自软件混合而非 CSPRNG，安全性较低，创建时会打一条 warning。
 
 ### 3）配置加密
 
@@ -504,18 +497,8 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 - `-o 输出文件`：可选，指定解码后的文本保存路径，不填则输出到标准输出；
 - `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
 
-### 5）从格式 v10 迁移
-
-格式 11 两个方向都不兼容：
-
-- v11 文件不能被 2.7.x 的库或解码器读取；2.8.0 的运行时库遇到 v10 文件会报 `format version 10 is not supported by this runtime (supports 11), use the standalone BqLog_LogDecoder tool`；
-- **已有的 v10 加密文件应视为不再保密。** 它用一块 32 KiB 的掩码循环保护整个 payload，而这块掩码是用同一文件里携带的、由无填充 RSA 包裹的 AES-CBC 密钥加密的。还需要的内容请在手里还有对应私钥时先解出来，然后以明文归档或直接删除。
-
+### 5）从老版本迁移
 运行时库只保留 v11 解码路径。`BqLog_LogDecoder` 三条都在：`--version` 会打印 `Supported log format versions: 9, 10, 11`，并按文件头里的版本分派，所以 2.8.0 的工具不需要再装一份 2.7.x 就能读 v9 和 v10 文件。
-
-### 6）v10 的 `rsa_aes_xor` 方案（2.7.x 及更早）
-
-保留在这里以便识别旧文件。每段：生成 AES-256 密钥与 IV，用 RSA-2048 保护 AES 密钥，把 AES-CBC 加密的 32 KiB 掩码块与密钥材料一起保存，payload 按文件位置与该掩码循环异或。没有 AEAD 标签，掩码每 32 KiB 重复一次；在刷盘窗口内崩溃时，已加密的那部分缓冲可能被重放并再加密一次。
 
 ## 7. 多进程与 fork
 

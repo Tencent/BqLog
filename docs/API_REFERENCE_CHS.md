@@ -847,7 +847,7 @@ CSPRNG，其 SDK 的实现又在 NDA 之下，因此需要应用在创建 log �
 appender 仍然工作**，但段密钥来自时钟、线程 id 与地址的软件混合，创建时会打一条 warning 说明这一点。
 建议在这些平台注入：不是来自 CSPRNG 的密钥材料，任何拿到日志文件的人都能离线搜索。明文 log 不受影响。
 
-有系统 CSPRNG 的平台（Windows、macOS、iOS、Linux、Android、鸿蒙）不需要调用。
+有系统 CSPRNG 的平台（Windows、macOS、iOS、Linux、Android、鸿蒙）会无视用户注入的版本而调用系统自带的。
 
 同一个随机源也负责提供格式 v11 的每段 KEM 种子（每段 256 字节），因此注入的回调必须是真正的
 CSPRNG，不能是带种子的 PRNG —— 见[高级用法 — 日志加密和解密](./ADVANCED_USAGE_CHS.md#6-日志加密和解密)。

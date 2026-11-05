@@ -72,8 +72,6 @@ uint32_t bq::appender_decoder_compressed::get_binary_format_version() const
 
 bool bq::appender_decoder_compressed::is_supported_enc_type(appender_file_binary::appender_encryption_type type) const
 {
-    // rsa_aes_xor is a v10 segment. It cannot appear in a file that passed the version check above,
-    // so seeing one means the file is corrupt, not old.
     return type == appender_file_binary::appender_encryption_type::plaintext
         || type == appender_file_binary::appender_encryption_type::rsa_kem_chacha;
 }
