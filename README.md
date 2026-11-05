@@ -59,7 +59,7 @@
 
 ## 📋 What's New in v2.8.x
 
-- **New encrypted log format (v11)**: every segment gets its own seed, wrapped with RSA-KEM and turned into a key and nonce with HKDF-SHA256; the payload is encrypted with ChaCha8 and addressed by the offset inside the segment. A 10 MB file with 1 MB segments is about 3% smaller than before, and the cost of encryption relative to plaintext fell from 28% to 15%.
+- **New encrypted log format (v11)**: every segment gets its own seed, wrapped with RSA-KEM and turned into a key and nonce with HKDF-SHA256; the payload is encrypted with ChaCha8 and addressed by the offset inside the segment. A 10 MB file with 1 MB segments is about 3% smaller than before, and the keystream is generated with ChaCha8 rather than AES, which is where most of the cost of the old scheme came from.
 - **The library reads what it writes**: v11 only. An older file produces a console message naming the standalone `BqLog_LogDecoder`, which reads v9, v10 and v11.
 - **Faster RSA**: Montgomery multiplication, CRT and base blinding for private-key operations. A 2048-bit public-key operation takes about 0.20 ms.
 - **Smaller runtime**: the AES and 32 KiB XOR-mask code left the library and now lives only in the standalone decoder.

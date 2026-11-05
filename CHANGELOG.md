@@ -6,7 +6,7 @@
 - **Encrypted log format v11.** The encryption layer of `binary_file` appenders was rebuilt:
   - a segment key is wrapped with RSA-KEM instead of RSA-encrypting an AES key, and derived with HKDF-SHA256 from the shared secret, the format version, the encryption type, the round count, the public-key fingerprint and the KEM ciphertext;
   - the payload is encrypted with ChaCha8 as a keystream addressed by the offset inside the segment, so decoding can start anywhere in a segment and a damaged region stays local;
-  - the 32 KiB XOR blob is gone. A segment head grows by 256 bytes, so a 10 MB file with a 1 MB segment size shrinks by about 3%.
+  - the 32 KiB XOR blob is gone. A segment's fixed overhead drops from 33,048 bytes to 268, so a 10 MB file with a 1 MB segment size shrinks by about 3%.
 - **Compatibility**: v11 writes and reads v11 only. A v9 or v10 file has to be decoded with the standalone `BqLog_LogDecoder`, which reads 9, 10 and 11 (`--version` lists them), and a v11 file cannot be read by an older library. Existing encrypted files were written by the v10 scheme and should be treated as no longer confidential: see the security notes in `docs/`.
 - **RSA**: modular exponentiation moved to Montgomery multiplication with Chinese remaindering and base blinding for private-key operations. A 2048-bit public-key operation costs about 0.20 ms.
 - **ChaCha20 / ChaCha12 / ChaCha8** with NEON, AVX2 and SSE2 kernels, all byte-identical to the portable path.
