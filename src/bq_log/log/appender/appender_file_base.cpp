@@ -72,9 +72,11 @@ namespace bq {
         auto& state = BQ_PACK_ACCESS_BY_TYPE(cache_write_head_->flush_state_, bq::platform::atomic<uint32_t>);
         // seq_cst and not release: the transform that runs next overwrites this buffer in place, and
         // those stores must not become visible before this one - a crash in between would leave an
-        // uninterpretable buffer marked plaintext. A seq_cst store is that barrier by itself on every
-        // platform we build for, and a process crash asks nothing more of it: the bytes are in the
-        // page cache already, and only a power cut would need msync.
+        // uninterpretable buffer marked plaintext. What that asks for is the compiler not moving them
+        // across this store, which seq_cst gives in every compiler we build with. The hardware order
+        // asks for less than it looks: this buffer is a mapping the same process writes, a process
+        // crash leaves the pages as the CPU wrote them, and only a power cut would need msync. So
+        // x86's full barrier (xchg) and ARM's release store (stlr) are both acceptable here.
         state.store(static_cast<uint32_t>(flush_transforming), bq::platform::memory_order::seq_cst);
     }
 
