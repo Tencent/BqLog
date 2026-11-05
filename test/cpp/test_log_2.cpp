@@ -444,13 +444,15 @@ namespace bq {
                     }
                 }
                 bq::log::force_flush_all_logs();
-                // The one NetBSD run this case ever failed in (clang 17, 2026-11-04) was short by
-                // exactly one async dispatch, and the sync count was exact. force_flush_all holds the
-                // write lock that the worker's whole process() pass holds in read mode, so a record
-                // it had already taken cannot be the missing one; a record the async buffer dropped
-                // while full would not arrive later at all. Re-flushing with a deadline tells the two
-                // apart: a count that arrives on a later flush was committed but not seen by the
-                // first, and one that never arrives fails here after the deadline with the numbers.
+                // The one NetBSD run this case has ever failed in (clang 17, run 41786506107) was
+                // short by exactly one async dispatch, and the sync count was exact. No record can
+                // have been discarded: the default policy is block_when_full and this case sets no
+                // other, so what happened is that the record was committed and the first
+                // process(true) did not see it. That is a question about the buffer's read side, not
+                // about this test, and it is recorded for the next release. Until it is answered the
+                // case re-flushes with a deadline: counts that agree after extra flushes say the
+                // record was late, and the warning below leaves that in the log even when the case
+                // passes; counts that never agree fail here with the numbers.
                 const uint64_t flush_deadline = bq::platform::high_performance_epoch_ms() + 3000;
                 auto flush_counters_agree = []() {
                     const uint64_t expected = test_force_flush_callback::idx.load_seq_cst();
@@ -462,6 +464,9 @@ namespace bq {
                     bq::platform::thread::sleep(5);
                     bq::log::force_flush_all_logs();
                     ++flush_retries;
+                }
+                if (flush_retries > 0) {
+                    test_output_param(bq::log_level::warning, "force flush test: the counters needed %d extra flushes to agree, idx:%" PRIu64 ", sync:%" PRIu64 ", async:%" PRIu64 "\n", static_cast<int32_t>(flush_retries), test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());
                 }
                 bool force_flush_sync_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_sync.load_seq_cst());
                 bool force_flush_async_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_async.load_seq_cst());
