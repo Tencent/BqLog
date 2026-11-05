@@ -213,6 +213,8 @@ namespace bq {
         (void)disable_helper;
         for (decltype(log_imp_list_)::size_type i = 0; i < log_imp_list_.size(); ++i) {
             auto& log_impl = log_imp_list_[i];
+            // A sync log delivers and flushes inside the call that logged, through sync_process, so
+            // by the time anyone can ask for a flush there is nothing of its left to write.
             if (log_impl->get_thread_mode() != log_thread_mode::sync) {
                 log_impl->process(true);
             }
@@ -244,7 +246,7 @@ namespace bq {
         }
         switch (log->get_thread_mode()) {
         case log_thread_mode::sync:
-            // do nothing
+            // Nothing pending, for the reason given in force_flush_all.
             break;
         case log_thread_mode::async:
         case log_thread_mode::independent: {
