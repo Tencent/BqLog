@@ -837,8 +837,8 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                 check_mont_against_reference(result, a, zero, n, "e = 0");
                 check_mont_against_reference(result, a, one, n, "e = 1");
 
-                // P1.2 acceptance: one public-key operation on a 2048-bit key. The exponent is the
-                // real one, so this is the cost the appender pays when it wraps a segment key.
+                // One public-key operation on a 2048-bit key. The exponent is the real one, so this
+                // is the cost the appender pays when it wraps a segment key.
                 bq::array<uint8_t> base;
                 fill_random_bytes(base, 255);
                 base[0] |= 0x01;

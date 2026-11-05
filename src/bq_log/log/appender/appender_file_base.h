@@ -324,8 +324,8 @@ namespace bq {
             char padding1_[DEFAULT_BUFFER_ALIGNMENT - sizeof(uint64_t) * 3 - sizeof(file_path_)];
         } BQ_PACK_END
         static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
-        // The state word reuses the four bytes that were reserved here before v11, so the head keeps
-        // its size and every other offset stays where older processes left them.
+        // The state word sits in the four reserved bytes after the two 64-bit fields, so the head
+        // keeps its size and the offsets of the fields after it stay where a reader expects them.
         static_assert(offsetof(mmap_head, flush_state_) == sizeof(uint64_t) * 2, "flush state moved out of the reserved slot");
         static_assert(offsetof(mmap_head, file_path_size_) == sizeof(uint64_t) * 2 + sizeof(uint32_t), "file path size moved");
         bq::unique_ptr<bq::normal_buffer> cache_write_entity_;

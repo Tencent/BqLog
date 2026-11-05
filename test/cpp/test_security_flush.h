@@ -523,13 +523,13 @@ namespace bq {
                 clean_all(log_name);
             }
 
-            // D-2: encryption happens in place inside a flush window, so a crash between the transform
+            // Encryption happens in place inside a flush window, so a crash between the transform
             // and the accounting can leave the write cache holding ciphertext. Recovery cannot tell
             // that apart from plaintext by looking at the buffer, and appending it to a fresh segment
-            // would transform it a second time. v11 answers it by recording that a window is open and
-            // discarding whatever the window still holds (RD §2.4.3), so what this asserts is the
-            // invariant that survives either way: bytes that never reached the file, or that reached
-            // it only halfway, must never be written a second time.
+            // would transform it a second time. v11 records that a window is open and discards
+            // whatever the window still holds, so what this asserts is the invariant that survives
+            // either way: bytes that never reached the file, or that reached it only halfway, must
+            // never be written a second time.
             void case_recovery_does_not_replay_transform_window(test_result& result)
             {
                 scoped_fault_and_hook_guard guard;
@@ -619,7 +619,7 @@ namespace bq {
                 return result;
             }
 
-            // P3.3: the segment encryption head is written with a struct copy and read back with one,
+            // The segment encryption head is written with a struct copy and read back with one,
             // so a round trip through a byte buffer only means something if the bytes really sit where
             // the format table says. The static_asserts in the header cover the offsets; this covers
             // the values, and the fact that the payload base follows the head exactly.
@@ -701,7 +701,7 @@ namespace bq {
                 }
             }
 
-            // P3.4: the state word is what recovery reads instead of guessing, so its value at each
+            // The state word is what recovery reads instead of guessing, so its value at each
             // instant is part of the contract, not an implementation detail. Inside the window it is
             // transforming; outside it is idle, and a plaintext appender never moves it at all.
             void case_flush_state_word(test_result& result)
