@@ -524,6 +524,20 @@ namespace bq {
             }
         }
 
+#if defined(BQ_ANDROID)
+        // Some Android ROMs (vivo on Android 16) hide a file in app-specific external storage from the
+        // system file manager unless its group can write it; the app sandbox keeps other apps out.
+        // The creation mode is cut by the umask and never reaches an existing file, hence the fchmod.
+        static void make_group_writable(const platform_file_handle& file_handle)
+        {
+            constexpr mode_t group_rw = S_IRGRP | S_IWGRP;
+            struct stat file_info;
+            if (fstat(file_handle, &file_info) == 0 && (file_info.st_mode & group_rw) != group_rw) {
+                (void)fchmod(file_handle, (file_info.st_mode & 07777) | group_rw);
+            }
+        }
+#endif
+
         int32_t open_file(const char* path, file_open_mode_enum mode, platform_file_handle& out_file_handle)
         {
 #if defined(BQ_UNIT_TEST)
@@ -548,7 +562,12 @@ namespace bq {
             // then execs would hold the file locked after this process is gone.
             flags |= O_CLOEXEC;
 
-            out_file_handle = open(path, flags, S_IRUSR | S_IWUSR | S_IRGRP);
+#if defined(BQ_ANDROID)
+            constexpr mode_t create_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
+#else
+            constexpr mode_t create_mode = S_IRUSR | S_IWUSR | S_IRGRP;
+#endif
+            out_file_handle = open(path, flags, create_mode);
 
             if (!is_platform_handle_valid(out_file_handle)) {
                 return errno;
@@ -558,6 +577,11 @@ namespace bq {
                 out_file_handle = invalid_platform_file_handle;
                 return EACCES;
             }
+#if defined(BQ_ANDROID)
+            if ((int32_t)(mode & file_open_mode_enum::write)) {
+                make_group_writable(out_file_handle);
+            }
+#endif
             return 0;
         }
 

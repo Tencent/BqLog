@@ -63,6 +63,43 @@ namespace bq {
         }
 #endif
 
+#if defined(BQ_POSIX) && !defined(BQ_PS) && !defined(BQ_SWITCH)
+        inline mode_t get_permission_bits(const bq::string& path)
+        {
+            struct stat file_info;
+            return stat(path.c_str(), &file_info) == 0 ? (file_info.st_mode & 0777) : static_cast<mode_t>(0);
+        }
+
+        // Android leaves a written file group writable, even one created narrower before; everywhere
+        // else the group can only read it.
+        inline void test_file_permission(test_result& result, bq::file_manager& file_manager)
+        {
+            const bq::string path = TO_ABSOLUTE_PATH("cc/bb/ff/permission/p.log", base_dir_type);
+            file_manager.remove_file_or_dir(path);
+            auto handle = file_manager.open_file(path, file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+            result.add_result(handle.is_valid(), "file permission: create");
+            file_manager.close_file(handle);
+            const mode_t created = get_permission_bits(path);
+            result.add_result((created & (S_IRUSR | S_IWUSR)) == (S_IRUSR | S_IWUSR), "file permission: owner can read and write, mode:%o", static_cast<uint32_t>(created));
+#if defined(BQ_ANDROID)
+            result.add_result((created & (S_IRGRP | S_IWGRP)) == (S_IRGRP | S_IWGRP), "file permission: group can read and write a new file, mode:%o", static_cast<uint32_t>(created));
+
+            chmod(path.c_str(), S_IRUSR | S_IWUSR);
+            handle = file_manager.open_file(path, file_open_mode_enum::read);
+            file_manager.close_file(handle);
+            result.add_result(get_permission_bits(path) == (S_IRUSR | S_IWUSR), "file permission: a read-only open leaves the mode alone");
+
+            handle = file_manager.open_file(path, file_open_mode_enum::read_write);
+            file_manager.close_file(handle);
+            const mode_t reopened = get_permission_bits(path);
+            result.add_result(reopened == (S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP), "file permission: an existing file is widened when opened for write, mode:%o", static_cast<uint32_t>(reopened));
+#else
+            result.add_result((created & (S_IWGRP | S_IWOTH)) == 0, "file permission: group and others cannot write, mode:%o", static_cast<uint32_t>(created));
+#endif
+            file_manager.remove_file_or_dir(path);
+        }
+#endif
+
         template <bool>
         struct test_file_manager_large_file_truncate {
             static void test(test_result&, bq::file_manager&) {}
@@ -255,6 +292,9 @@ namespace bq {
                 }
 #if BQ_HAS_FORK
                 test_exclusive_lock_scope(result, file_manager);
+#endif
+#if defined(BQ_POSIX) && !defined(BQ_PS) && !defined(BQ_SWITCH)
+                test_file_permission(result, file_manager);
 #endif
 
                 if (bq::memory_map::is_platform_support()) {
