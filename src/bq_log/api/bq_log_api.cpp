@@ -766,15 +766,15 @@ namespace bq {
             return true;
         }
 #endif
-    }
 
-    BQ_API void __api_set_secure_random_source(bq::type_func_ptr_secure_random_source fn)
-    {
-        bq::encryption::set_secure_random_source(fn);
-    }
+        BQ_API void __api_set_secure_random_source(bq::type_func_ptr_secure_random_source fn)
+        {
+            bq::encryption::set_secure_random_source(fn);
+        }
 
-    BQ_API bool __api_has_secure_random_source()
-    {
-        return bq::encryption::has_secure_random_source();
+        BQ_API bool __api_has_secure_random_source()
+        {
+            return bq::encryption::has_secure_random_source();
+        }
     }
 }
