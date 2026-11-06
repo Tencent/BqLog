@@ -796,6 +796,25 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                     check_mont_against_reference(result, a, e, n, "random");
                 }
 
+                // The reduction that replaces bit-by-bit c mod p, up to twice the modulus width.
+                for (int32_t i = 0; i < 200; ++i) {
+                    const size_t n_size = 1 + bq::util::rand() % 128;
+                    fill_random_bytes(n, n_size);
+                    n[0] = static_cast<uint8_t>(n[0] | ((i % 2 == 0) ? 0x80 : 0x01));
+                    n[n.size() - 1] |= 0x01;
+                    fill_random_bytes(a, 1 + bq::util::rand() % (2 * ((n_size + 3) / 4) * 4));
+                    if (i % 7 == 0) {
+                        memset(a.begin(), 0xFF, a.size());
+                    }
+                    bq::array<uint8_t> mont_out;
+                    bq::array<uint8_t> ref_out;
+                    const bool ok = bq::rsa::test_mod_reduce(a, n, mont_out, ref_out)
+                        && mont_out.size() == ref_out.size()
+                        && (mont_out.size() == 0 || memcmp(mont_out.begin(), ref_out.begin(), mont_out.size()) == 0);
+                    result.add_result(ok, "montgomery reduction agrees with the bit-by-bit one (n = %d B, a = %d B)",
+                        static_cast<int32_t>(n.size()), static_cast<int32_t>(a.size()));
+                }
+
                 // Boundary bases and exponents, on the largest modulus the loop above used.
                 fill_random_bytes(n, 256);
                 n[0] |= 0x80;
@@ -1050,6 +1069,41 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                     ciphertext.fill_uninitialized(256);
                     memset(ciphertext.begin(), 0xFF, 256);
                     result.add_result(!bq::rsa::kem_decapsulate(pri, ciphertext, secret), "rsa kem: rejects a ciphertext above the modulus");
+                }
+
+                // The CRT path on its own, since the check below would hide a wrong CRT result behind the d path.
+                bool crt_agrees = true;
+                for (int32_t i = 0; i < 20 && crt_agrees; ++i) {
+                    bq::array<uint8_t> ciphertext;
+                    bq::array<uint8_t> secret;
+                    crt_agrees = bq::rsa::kem_encapsulate(pub, ciphertext, secret) && bq::rsa::test_crt_agrees_with_d(pri, ciphertext);
+                }
+                result.add_result(crt_agrees, "rsa kem: the CRT path gives c^d mod n");
+
+                // Every result is checked against the public key: bad CRT parameters fall back to d,
+                // a bad d behind good CRT parameters is never used, and a key bad on both sides fails.
+                {
+                    bq::array<uint8_t> ciphertext;
+                    bq::array<uint8_t> sender_secret;
+                    const bool wrapped = bq::rsa::kem_encapsulate(pub, ciphertext, sender_secret);
+                    auto unwraps_to_sender = [&](const bq::rsa::private_key& key) {
+                        bq::array<uint8_t> secret;
+                        return bq::rsa::kem_decapsulate(key, ciphertext, secret) && secret.size() == sender_secret.size()
+                            && memcmp(secret.begin(), sender_secret.begin(), secret.size()) == 0;
+                    };
+                    bq::rsa::private_key bad_crt = pri;
+                    bad_crt.qinv_[bad_crt.qinv_.size() - 1] ^= 0x01;
+                    bq::rsa::private_key bad_d = pri;
+                    bad_d.d_[bad_d.d_.size() - 1] ^= 0x02;
+                    bq::rsa::private_key bad_both = bad_crt;
+                    bad_both.d_ = bad_d.d_;
+                    bq::rsa::private_key no_crt = pri;
+                    no_crt.p_.clear();
+                    bq::array<uint8_t> secret;
+                    result.add_result(wrapped && unwraps_to_sender(bad_crt), "rsa kem: a wrong qinv falls back to d");
+                    result.add_result(wrapped && unwraps_to_sender(bad_d), "rsa kem: a wrong d is not reached when CRT is right");
+                    result.add_result(wrapped && !bq::rsa::kem_decapsulate(bad_both, ciphertext, secret), "rsa kem: a key wrong on both paths is rejected");
+                    result.add_result(wrapped && unwraps_to_sender(no_crt), "rsa kem: a key without CRT parameters uses d");
                 }
             }
 

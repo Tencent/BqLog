@@ -112,6 +112,15 @@ namespace bq {
             const bq::array<uint8_t>& e,
             const bq::array<uint8_t>& n,
             bq::array<uint8_t>& out);
+
+        // Test-only a mod n, by the Montgomery reduction and by the bit-by-bit reference.
+        static bool test_mod_reduce(const bq::array<uint8_t>& a,
+            const bq::array<uint8_t>& n,
+            bq::array<uint8_t>& out_mont,
+            bq::array<uint8_t>& out_ref);
+
+        // Test-only: the CRT path on its own gives c^d mod n.
+        static bool test_crt_agrees_with_d(const private_key& pri, const bq::array<uint8_t>& ciphertext);
 #endif
     };
 
