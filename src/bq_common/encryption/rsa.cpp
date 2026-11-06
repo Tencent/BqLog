@@ -363,6 +363,8 @@ namespace bq {
         return (int32_t)((a[wi] >> bo) & 1u);
     }
 
+#if defined(BQ_UNIT_TEST)
+    // Reference modexp for the tests to compare the Montgomery path against.
     static void mod_double(uint32_t* r, const uint32_t* a, const uint32_t* m, size_t l, uint32_t* tmp)
     {
         uint32_t carry = bn_add(tmp, a, a, l);
@@ -379,8 +381,6 @@ namespace bq {
         bn_copy(r, tmp, l);
     }
 
-#if defined(BQ_UNIT_TEST)
-    // Reference modexp for the tests to compare the Montgomery path against.
     static void mod_add(uint32_t* r, const uint32_t* a, const uint32_t* b, const uint32_t* m, size_t l, uint32_t* tmp)
     {
         uint32_t carry = bn_add(tmp, a, b, l);
@@ -459,20 +459,6 @@ namespace bq {
         out.insert_batch(out.end(), tmp.begin() + static_cast<ptrdiff_t>(i), k - i);
     }
 
-    // Montgomery arithmetic on little-endian 32-bit limbs with a 64-bit accumulator (no __int128).
-
-    static void bn_sub_from_zero(uint32_t* r, const uint32_t* n, size_t l)
-    {
-        // 0 - n == ~n + 1, which is 2^(32l) - n: the value R - n with R = 2^(32l).
-        uint64_t borrow = 1U;
-        for (size_t i = 0; i < l; ++i) {
-            // XOR rather than ~, which MSVC C4319 flags on zero extension.
-            const uint64_t v = static_cast<uint64_t>(n[i] ^ 0xFFFFFFFFU) + borrow;
-            r[i] = static_cast<uint32_t>(v);
-            borrow = v >> 32;
-        }
-    }
-
     static void bn_rshift1(uint32_t* x, size_t l)
     {
         for (size_t i = 0; i < l; ++i) {
@@ -492,16 +478,6 @@ namespace bq {
             }
         }
         return true;
-    }
-
-    // -n0^-1 mod 2^32 by Newton's iteration: 3 correct bits to start, doubled five times.
-    static uint32_t bn_n0_inverse(uint32_t n0)
-    {
-        uint32_t x = n0;
-        for (int32_t i = 0; i < 5; ++i) {
-            x = static_cast<uint32_t>(x * (2U - n0 * x));
-        }
-        return static_cast<uint32_t>(0U - x);
     }
 
     static void bn_mul_school(uint32_t* r, const uint32_t* a, size_t la, const uint32_t* b, size_t lb, size_t lr)
@@ -548,127 +524,193 @@ namespace bq {
 
     static bool bn_mod_inverse(uint32_t* x, const uint32_t* a, const uint32_t* m, size_t l);
 
-    // Montgomery domain modulo an odd n, R = 2^(32 * limbs). Per call, never cached in the shared key.
+#if defined(BQ_X86_64) || defined(BQ_ARM_64)
+    typedef uint64_t mont_limb;
+    bq_forceinline mont_limb mont_mul_wide(mont_limb a, mont_limb b, mont_limb& hi)
+    {
+        return bq::bq_umul128(a, b, hi);
+    }
+#else
+    typedef uint32_t mont_limb;
+    bq_forceinline mont_limb mont_mul_wide(mont_limb a, mont_limb b, mont_limb& hi)
+    {
+        const uint64_t p = static_cast<uint64_t>(a) * b;
+        hi = static_cast<uint32_t>(p >> 32);
+        return static_cast<uint32_t>(p);
+    }
+#endif
+    constexpr size_t mont_limb_words = sizeof(mont_limb) / sizeof(uint32_t);
+    constexpr size_t mont_limb_bits = sizeof(mont_limb) * 8U;
+
+    // r + a * b + c; the carry out goes back into c and cannot overflow.
+    bq_forceinline mont_limb mont_mac(mont_limb r, mont_limb a, mont_limb b, mont_limb& c)
+    {
+        mont_limb hi;
+        mont_limb lo = mont_mul_wide(a, b, hi);
+        lo += c;
+        hi += static_cast<mont_limb>(lo < c);
+        lo += r;
+        hi += static_cast<mont_limb>(lo < r);
+        c = hi;
+        return lo;
+    }
+
+    static mont_limb mont_limbs_sub(mont_limb* r, const mont_limb* a, const mont_limb* b, size_t l)
+    {
+        mont_limb borrow = 0;
+        for (size_t i = 0; i < l; ++i) {
+            const mont_limb ai = a[i];
+            const mont_limb d = ai - b[i];
+            const mont_limb b1 = static_cast<mont_limb>(ai < b[i]);
+            r[i] = d - borrow;
+            borrow = b1 | static_cast<mont_limb>(d < borrow);
+        }
+        return borrow;
+    }
+
+    static void mont_select(mont_limb* r, const mont_limb* if_one, const mont_limb* if_zero, mont_limb take_one, size_t l)
+    {
+        const mont_limb mask = 0U - take_one;
+        for (size_t i = 0; i < l; ++i) {
+            r[i] = (if_one[i] & mask) | (if_zero[i] & ~mask);
+        }
+    }
+
+    static void mont_limbs_from_words(mont_limb* r, size_t l, const uint32_t* w, size_t words)
+    {
+        for (size_t i = 0; i < l; ++i) {
+            mont_limb v = 0;
+            for (size_t k = 0; k < mont_limb_words; ++k) {
+                const size_t idx = i * mont_limb_words + k;
+                if (idx < words) {
+                    v |= static_cast<mont_limb>(w[idx]) << (32U * k);
+                }
+            }
+            r[i] = v;
+        }
+    }
+
+    static void mont_limbs_to_words(uint32_t* w, size_t words, const mont_limb* r)
+    {
+        for (size_t idx = 0; idx < words; ++idx) {
+            w[idx] = static_cast<uint32_t>(r[idx / mont_limb_words] >> (32U * (idx % mont_limb_words)));
+        }
+    }
+
+    // Montgomery domain modulo an odd n on native-width limbs, R = 2^(mont_limb_bits * limbs).
+    // The interface stays on 32-bit words; per call, never cached in the shared key.
     class mont_ctx {
     public:
         mont_ctx()
-            : l_(0)
+            : words_(0)
+            , l_(0)
             , n0inv_(0)
         {
         }
 
-        bool init(const uint32_t* n, size_t l)
+        bool init(const uint32_t* n, size_t words)
         {
-            if (l == 0 || (n[0] & 1U) == 0U) {
+            if (words == 0 || (n[0] & 1U) == 0U) {
                 return false;
             }
-            l_ = l;
-            n0inv_ = bn_n0_inverse(n[0]);
-            n_.fill_uninitialized(l);
-            memcpy(n_.begin(), n, l * sizeof(uint32_t));
-            one_.fill_uninitialized(l);
-            bn_zero(one_.begin(), l);
-            one_.begin()[0] = 1U;
-            r2_.fill_uninitialized(l);
-            t_.fill_uninitialized(l + 2U);
-            d_.fill_uninitialized(l);
+            words_ = words;
+            l_ = (words + mont_limb_words - 1U) / mont_limb_words;
+            n_words_.fill_uninitialized(words);
+            memcpy(n_words_.begin(), n, words * sizeof(uint32_t));
+            n_.fill_uninitialized(l_);
+            mont_limbs_from_words(n_.begin(), l_, n, words);
+            n0inv_ = n0_inverse(n_[0]);
+            one_.fill_uninitialized(l_);
+            set_one(one_.begin());
+            r2_.fill_uninitialized(l_);
+            t_.fill_uninitialized(l_ + 2U);
+            d_.fill_uninitialized(l_);
+            a_.fill_uninitialized(l_);
+            b_.fill_uninitialized(l_);
             compute_r2();
             return true;
-        }
-
-        size_t limbs() const { return l_; }
-
-        // r = a * b * R^-1 mod n; r may alias a or b.
-        void mul(uint32_t* r, const uint32_t* a, const uint32_t* b)
-        {
-            const size_t l = l_;
-            const uint32_t* n = n_.begin();
-            uint32_t* t = t_.begin();
-            for (size_t i = 0; i <= l; ++i) {
-                t[i] = 0U;
-            }
-            for (size_t i = 0; i < l; ++i) {
-                const uint32_t bi = b[i];
-                uint64_t c = 0U;
-                for (size_t j = 0; j < l; ++j) {
-                    c = c + t[j] + static_cast<uint64_t>(a[j]) * bi;
-                    t[j] = static_cast<uint32_t>(c);
-                    c >>= 32;
-                }
-                c += t[l];
-                t[l] = static_cast<uint32_t>(c);
-                t[l + 1U] = static_cast<uint32_t>(c >> 32);
-
-                const uint32_t q = t[0] * n0inv_;
-                c = static_cast<uint64_t>(t[0]) + static_cast<uint64_t>(q) * n[0];
-                for (size_t j = 1; j < l; ++j) {
-                    c = (c >> 32) + t[j] + static_cast<uint64_t>(q) * n[j];
-                    t[j - 1U] = static_cast<uint32_t>(c);
-                }
-                c = (c >> 32) + t[l];
-                t[l - 1U] = static_cast<uint32_t>(c);
-                t[l] = t[l + 1U] + static_cast<uint32_t>(c >> 32);
-            }
-            // Branch-free final subtraction.
-            uint32_t* d = d_.begin();
-            const uint32_t borrow = bn_sub(d, t, n, l);
-            const uint32_t top = t[l] - borrow;
-            const uint32_t take_d = 0U - ((top >> 31) ^ 1U);
-            for (size_t j = 0; j < l; ++j) {
-                r[j] = (d[j] & take_d) | (t[j] & ~take_d);
-            }
-        }
-
-        void to_mont(uint32_t* r, const uint32_t* x)
-        {
-            mul(r, x, r2_.begin());
-        }
-
-        void from_mont(uint32_t* r, const uint32_t* x)
-        {
-            mul(r, x, one_.begin());
         }
 
         // r = a * b mod n, for callers staying outside the Montgomery domain.
         void mod_mul(uint32_t* r, const uint32_t* a, const uint32_t* b)
         {
-            mul(r, a, b);
-            mul(r, r, r2_.begin());
+            mont_limbs_from_words(a_.begin(), l_, a, words_);
+            mont_limbs_from_words(b_.begin(), l_, b, words_);
+            mul(a_.begin(), a_.begin(), b_.begin());
+            mul(a_.begin(), a_.begin(), r2_.begin());
+            mont_limbs_to_words(r, words_, a_.begin());
         }
 
-        // r = x^e mod n, e given as e_bits bits of little-endian limbs.
+        // r = x^e mod n for a public exponent of e_bits bits; the timing follows e.
         void pow(uint32_t* r, const uint32_t* x, const uint32_t* e, size_t e_bits)
         {
-            bq::array<uint32_t> acc_buf;
-            bq::array<uint32_t> base_buf;
-            acc_buf.fill_uninitialized(l_);
+            bq::array<mont_limb> base_buf;
             base_buf.fill_uninitialized(l_);
-            uint32_t* acc = acc_buf.begin();
-            uint32_t* base = base_buf.begin();
-            to_mont(base, x);
-            to_mont(acc, one_.begin());
+            mont_limb* base = base_buf.begin();
+            mont_limb* acc = a_.begin();
+            mont_limbs_from_words(base, l_, x, words_);
+            mul(base, base, r2_.begin());
+            memcpy(acc, one_.begin(), l_ * sizeof(mont_limb));
+            mul(acc, acc, r2_.begin());
             for (size_t i = e_bits; i > 0; --i) {
                 mul(acc, acc, acc);
-                if (bn_getbit(e, l_, i - 1) != 0) {
+                if (bn_getbit(e, words_, i - 1) != 0) {
                     mul(acc, acc, base);
                 }
             }
             from_mont(r, acc);
         }
 
-        // r = c^d mod n on c * s^e, unblinded by s^-1. The square/multiply pattern still follows d,
-        // which is acceptable for the offline decoder. False when s is not invertible.
-        bool pow_blinded(uint32_t* r, const uint32_t* c, const uint32_t* pub_e, size_t pub_e_bits,
-            const uint32_t* d, size_t d_bits)
+        // r = x^d mod n over all words of d with a fixed 4-bit window: no branch or address depends on d.
+        void pow_secret(uint32_t* r, const uint32_t* x, const uint32_t* d)
+        {
+            constexpr size_t window_size = 16U;
+            const size_t l = l_;
+            bq::array<mont_limb> table_buf;
+            table_buf.fill_uninitialized(window_size * l);
+            mont_limb* table = table_buf.begin();
+            mont_limb* acc = a_.begin();
+            mont_limb* picked = b_.begin();
+            mul(table, one_.begin(), r2_.begin());
+            mont_limbs_from_words(table + l, l, x, words_);
+            mul(table + l, table + l, r2_.begin());
+            for (size_t k = 2; k < window_size; ++k) {
+                mul(table + k * l, table + (k - 1U) * l, table + l);
+            }
+            memcpy(acc, table, l * sizeof(mont_limb));
+            for (size_t w = words_ * 8U; w > 0; --w) {
+                const size_t bit = (w - 1U) * 4U;
+                const uint32_t index = (d[bit >> 5] >> (bit & 31U)) & 0xFU;
+                for (size_t s = 0; s < 4; ++s) {
+                    mul(acc, acc, acc);
+                }
+                for (size_t j = 0; j < l; ++j) {
+                    mont_limb v = 0;
+                    for (uint32_t k = 0; k < window_size; ++k) {
+                        const mont_limb hit = static_cast<mont_limb>(((k ^ index) - 1U) >> 31);
+                        v |= table[k * l + j] & (0U - hit);
+                    }
+                    picked[j] = v;
+                }
+                mul(acc, acc, picked);
+            }
+            from_mont(r, acc);
+            bq::encryption::secure_zero(table, window_size * l * sizeof(mont_limb));
+            bq::encryption::secure_zero(picked, l * sizeof(mont_limb));
+            bq::encryption::secure_zero(acc, l * sizeof(mont_limb));
+        }
+
+        // r = c^d mod n on c * s^e, unblinded by s^-1. False when s is not invertible.
+        bool pow_blinded(uint32_t* r, const uint32_t* c, const uint32_t* pub_e, size_t pub_e_bits, const uint32_t* d)
         {
             bq::array<uint32_t> s_buf;
             bq::array<uint32_t> se_buf;
             bq::array<uint32_t> blinded_buf;
             bq::array<uint32_t> inv_buf;
-            s_buf.fill_uninitialized(l_);
-            se_buf.fill_uninitialized(l_);
-            blinded_buf.fill_uninitialized(l_);
-            inv_buf.fill_uninitialized(l_);
+            s_buf.fill_uninitialized(words_);
+            se_buf.fill_uninitialized(words_);
+            blinded_buf.fill_uninitialized(words_);
+            inv_buf.fill_uninitialized(words_);
             uint32_t* s = s_buf.begin();
             uint32_t* se = se_buf.begin();
             uint32_t* blinded = blinded_buf.begin();
@@ -679,11 +721,11 @@ namespace bq {
             bool got_seed = false;
             for (int32_t attempt = 0; attempt < 4 && !got_seed; ++attempt) {
                 bq::encryption::fill_random_bytes(seed, sizeof(seed));
-                bn_zero(s, l_);
-                for (size_t i = 0; i < sizeof(seed) && i / 4U < l_; ++i) {
+                bn_zero(s, words_);
+                for (size_t i = 0; i < sizeof(seed) && i / 4U < words_; ++i) {
                     s[i / 4U] |= static_cast<uint32_t>(seed[i]) << (8U * (i % 4U));
                 }
-                got_seed = !bn_is_zero(s, l_);
+                got_seed = !bn_is_zero(s, words_);
             }
             if (!got_seed) {
                 // No usable randomness: a partially blinded result is worse than a clear failure.
@@ -693,8 +735,8 @@ namespace bq {
 
             pow(se, s, pub_e, pub_e_bits);
             mod_mul(blinded, c, se);
-            pow(r, blinded, d, d_bits);
-            if (!bn_mod_inverse(inv, s, n_.begin(), l_)) {
+            pow_secret(r, blinded, d);
+            if (!bn_mod_inverse(inv, s, n_words_.begin(), words_)) {
                 return false;
             }
             mod_mul(r, r, inv);
@@ -712,35 +754,105 @@ namespace bq {
             return true;
         }
 
+        // -n0^-1 mod 2^bits by Newton's iteration: 3 correct bits to start, doubled each step.
+        static mont_limb n0_inverse(mont_limb n0)
+        {
+            mont_limb x = n0;
+            for (int32_t i = 0; i < 5; ++i) {
+                x = static_cast<mont_limb>(x * (2U - n0 * x));
+            }
+            return static_cast<mont_limb>(0U - x);
+        }
+
+        void set_one(mont_limb* r) const
+        {
+            memset(r, 0, l_ * sizeof(mont_limb));
+            r[0] = 1U;
+        }
+
+        void from_mont(uint32_t* r, mont_limb* x)
+        {
+            mul(x, x, one_.begin());
+            mont_limbs_to_words(r, words_, x);
+        }
+
+        // r = a * b * R^-1 mod n; r may alias a or b, but none of them may be t_ or d_.
+        void mul(mont_limb* r, const mont_limb* a, const mont_limb* b)
+        {
+            const size_t l = l_;
+            const mont_limb* n = n_.begin();
+            mont_limb* t = t_.begin();
+            memset(t, 0, (l + 2U) * sizeof(mont_limb));
+            for (size_t i = 0; i < l; ++i) {
+                const mont_limb bi = b[i];
+                mont_limb c = 0;
+                for (size_t j = 0; j < l; ++j) {
+                    t[j] = mont_mac(t[j], a[j], bi, c);
+                }
+                mont_limb s = t[l] + c;
+                t[l + 1U] = static_cast<mont_limb>(s < c);
+                t[l] = s;
+
+                const mont_limb q = static_cast<mont_limb>(t[0] * n0inv_);
+                c = 0;
+                (void)mont_mac(t[0], q, n[0], c);
+                for (size_t j = 1; j < l; ++j) {
+                    t[j - 1U] = mont_mac(t[j], q, n[j], c);
+                }
+                s = t[l] + c;
+                t[l - 1U] = s;
+                t[l] = t[l + 1U] + static_cast<mont_limb>(s < c);
+            }
+            mont_limb* d = d_.begin();
+            const mont_limb borrow = mont_limbs_sub(d, t, n, l);
+            // t < 2n: keep t only when it is below n, i.e. no top limb and the subtraction borrowed.
+            mont_select(r, d, t, static_cast<mont_limb>(t[l] | (borrow ^ 1U)), l);
+        }
+
+        // r = 2r mod n for r < n, branch-free.
+        void mod_double(mont_limb* r)
+        {
+            const size_t l = l_;
+            mont_limb* t = t_.begin();
+            const mont_limb carry = r[l - 1U] >> (mont_limb_bits - 1U);
+            for (size_t i = l - 1U; i > 0; --i) {
+                t[i] = (r[i] << 1) | (r[i - 1U] >> (mont_limb_bits - 1U));
+            }
+            t[0] = r[0] << 1;
+            const mont_limb borrow = mont_limbs_sub(d_.begin(), t, n_.begin(), l);
+            mont_select(r, d_.begin(), t, carry | (borrow ^ 1U), l);
+        }
+
         void compute_r2()
         {
             const size_t l = l_;
-            const uint32_t* n = n_.begin();
-            uint32_t* r2 = r2_.begin();
-            uint32_t* tmp = d_.begin();
-            // R mod n is -n when the top bit is set; otherwise double up from one.
-            if ((n[l - 1U] & 0x80000000U) != 0U) {
-                bn_sub_from_zero(r2, n, l);
+            mont_limb* r2 = r2_.begin();
+            // R mod n is R - n when the top bit is set; otherwise double up from one.
+            if ((n_[l - 1U] >> (mont_limb_bits - 1U)) != 0U) {
+                memset(r2, 0, l * sizeof(mont_limb));
+                (void)mont_limbs_sub(r2, r2, n_.begin(), l);
             } else {
-                bn_zero(r2, l);
-                r2[0] = 1U;
-                for (size_t i = 0; i < 32U * l; ++i) {
-                    mod_double(r2, r2, n, l, tmp);
+                set_one(r2);
+                for (size_t i = 0; i < mont_limb_bits * l; ++i) {
+                    mod_double(r2);
                 }
             }
-            // R^2 = R * 2^(32l) mod n.
-            for (size_t i = 0; i < 32U * l; ++i) {
-                mod_double(r2, r2, n, l, tmp);
+            for (size_t i = 0; i < mont_limb_bits * l; ++i) {
+                mod_double(r2);
             }
         }
 
+        size_t words_;
         size_t l_;
-        uint32_t n0inv_;
-        bq::array<uint32_t> n_;
-        bq::array<uint32_t> one_;
-        bq::array<uint32_t> r2_;
-        bq::array<uint32_t> t_;
-        bq::array<uint32_t> d_;
+        mont_limb n0inv_;
+        bq::array<uint32_t> n_words_;
+        bq::array<mont_limb> n_;
+        bq::array<mont_limb> one_;
+        bq::array<mont_limb> r2_;
+        bq::array<mont_limb> t_;
+        bq::array<mont_limb> d_;
+        bq::array<mont_limb> a_;
+        bq::array<mont_limb> b_;
     };
 
     // x/2 mod m for odd m.
@@ -1289,10 +1401,10 @@ namespace bq {
             return false;
         }
 
-        if (!mont_p.pow_blinded(m1, cp_buf.begin(), ep, ep_bits, dp, bn_bitlen(dp, lp))) {
+        if (!mont_p.pow_blinded(m1, cp_buf.begin(), ep, ep_bits, dp)) {
             return false;
         }
-        if (!mont_q.pow_blinded(m2, cq_buf.begin(), eq, eq_bits, dq, bn_bitlen(dq, lq))) {
+        if (!mont_q.pow_blinded(m2, cq_buf.begin(), eq, eq_bits, dq)) {
             return false;
         }
 
@@ -1327,8 +1439,7 @@ namespace bq {
             return false;
         }
         const size_t e_bits = bn_bitlen(e_l, out_limbs);
-        const size_t d_bits = bn_bitlen(d_l, out_limbs);
-        if (!mont.pow_blinded(out, c_l, e_l, e_bits, d_l, d_bits)) {
+        if (!mont.pow_blinded(out, c_l, e_l, e_bits, d_l)) {
             bq::util::log_device_console(bq::log_level::error, "rsa: blinding failed, no usable random source");
             return false;
         }
@@ -1524,6 +1635,30 @@ namespace bq {
             return false;
         }
         mont.pow(r_l.begin(), a_l.begin(), e_l.begin(), bn_bitlen(e_l.begin(), l));
+        fixed_limbs_to_min_be(r_l.begin(), l, out);
+        return true;
+    }
+
+    bool rsa::test_mod_pow_mont_secret(const bq::array<uint8_t>& a, const bq::array<uint8_t>& e,
+        const bq::array<uint8_t>& n, bq::array<uint8_t>& out)
+    {
+        if (a.size() == 0 || e.size() == 0 || n.size() == 0) {
+            return false;
+        }
+        size_t l = limbs_for_bytes(n.size());
+        bq::array<uint32_t> n_l, a_l, e_l, r_l;
+        n_l.fill_uninitialized(l);
+        a_l.fill_uninitialized(l);
+        e_l.fill_uninitialized(l);
+        r_l.fill_uninitialized(l);
+        be_to_fixed_limbs(n_l.begin(), l, n);
+        be_to_fixed_limbs(a_l.begin(), l, a);
+        be_to_fixed_limbs(e_l.begin(), l, e);
+        mont_ctx mont;
+        if (!mont.init(n_l.begin(), l)) {
+            return false;
+        }
+        mont.pow_secret(r_l.begin(), a_l.begin(), e_l.begin());
         fixed_limbs_to_min_be(r_l.begin(), l, out);
         return true;
     }

@@ -106,6 +106,12 @@ namespace bq {
             const bq::array<uint8_t>& e,
             const bq::array<uint8_t>& n,
             bq::array<uint8_t>& out);
+
+        // Test-only fixed-window modexp, the private-key path.
+        static bool test_mod_pow_mont_secret(const bq::array<uint8_t>& a,
+            const bq::array<uint8_t>& e,
+            const bq::array<uint8_t>& n,
+            bq::array<uint8_t>& out);
 #endif
     };
 

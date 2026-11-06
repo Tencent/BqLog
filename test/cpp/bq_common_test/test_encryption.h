@@ -761,6 +761,13 @@ rJjndnUwweqNEHGPf1PuBCvmXa5GPzla03pN44/YhywCWtxsrAGF9ayamEOG
                     && (mont_out.size() == 0 || memcmp(mont_out.begin(), ref_out.begin(), mont_out.size()) == 0);
                 result.add_result(same, "montgomery modexp agrees with the schoolbook one (%s, n = %d B, e = %d B)",
                     what, static_cast<int32_t>(n.size()), static_cast<int32_t>(e.size()));
+                bq::array<uint8_t> secret_out;
+                const bool secret_ok = bq::rsa::test_mod_pow_mont_secret(a, e, n, secret_out);
+                const bool secret_same = secret_ok && ref_ok
+                    && secret_out.size() == ref_out.size()
+                    && (secret_out.size() == 0 || memcmp(secret_out.begin(), ref_out.begin(), secret_out.size()) == 0);
+                result.add_result(secret_same, "fixed-window modexp agrees with the schoolbook one (%s, n = %d B, e = %d B)",
+                    what, static_cast<int32_t>(n.size()), static_cast<int32_t>(e.size()));
             }
 
             // Montgomery against the reference modexp, which a round trip alone cannot catch.
