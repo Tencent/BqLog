@@ -243,6 +243,7 @@ namespace bq {
     {
         appender_file_base::on_file_open(is_new_created);
         current_file_is_new_created_ = is_new_created;
+        fresh_file_metadata_end_pos_ = UINT64_MAX;
         if (enc_type_ != appender_encryption_type::plaintext) {
             if (!is_new_created) {
                 bq::util::log_device_console(bq::log_level::error, "encrypted binary appender attempted to reuse an existing file: %s", get_file_handle().abs_file_path().c_str());
@@ -292,6 +293,7 @@ namespace bq {
             }
             mark_write_finished();
             flush_write_cache();
+            fresh_file_metadata_end_pos_ = get_current_file_size();
         }
     }
 
@@ -399,6 +401,10 @@ namespace bq {
     {
         if (!appender_file_base::on_log_item_new_begin(read_handle)) {
             return false;
+        }
+        // A fresh file's first segment holds only the metadata, so keep writing into it.
+        if (current_file_is_new_created_ && get_current_file_size() == fresh_file_metadata_end_pos_) {
+            return true;
         }
         if (append_new_segment(appender_segment_type::normal)) {
             return true;

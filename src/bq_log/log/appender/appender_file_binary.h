@@ -238,6 +238,8 @@ namespace bq {
         seg_info cur_read_seg_;
         appender_encryption_type enc_type_;
         bool current_file_is_new_created_ = false;
+        // File size right after a fresh file's metadata, UINT64_MAX otherwise.
+        uint64_t fresh_file_metadata_end_pos_ = UINT64_MAX;
         bool warned_weak_key_source_ = false;
         segment_key cur_seg_key_ {};
         uint64_t cur_seg_payload_base_ = 0;

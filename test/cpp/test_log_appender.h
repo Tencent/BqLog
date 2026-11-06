@@ -102,6 +102,11 @@ namespace bq {
                 parse_exist_log_file(context); // used to seek file to begin of data section
             }
 
+            bool new_begin_for_test(bq::log_entry_handle& handle)
+            {
+                return on_log_item_new_begin(handle);
+            }
+
             bool write_payload_for_test(const bq::array<uint8_t>& data)
             {
                 auto handle = alloc_write_cache(data.size());
@@ -971,6 +976,28 @@ namespace bq {
                     && encrypted_segments.size() == 1
                     && encrypted_segments[0].enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha;
                 result.add_result(encryption_switch_ok, "normal appender encryption switch starts a new file");
+
+                const bq::string fresh_keys[] = { "", pub_key_a };
+                for (uint32_t i = 0; i < 2; ++i) {
+                    clear_appender_file_base_test_folder();
+                    const bq::string fresh_name = "appender_test/segment_fresh_file";
+                    const bq::array<uint8_t> entry = make_recovery_log_entry(105);
+                    bq::log_entry_handle handle(entry.begin(), static_cast<uint32_t>(entry.size()));
+                    bool fresh_ok = false;
+                    {
+                        appender_file_binary_for_test writer;
+                        fresh_ok = writer.init("segment_fresh", make_binary_recovery_test_config(fresh_name, fresh_keys[i]), &log_obj)
+                            && writer.new_begin_for_test(handle)
+                            && writer.write_payload_for_test(make_segment_payload(105, i))
+                            && writer.new_begin_for_test(handle);
+                    }
+                    bq::array<appender_file_binary::appender_file_segment_head> fresh_segments;
+                    fresh_ok = fresh_ok
+                        && read_binary_segment_chain_for_test(TO_ABSOLUTE_PATH(fresh_name + "_1.bt", 0), fresh_segments)
+                        && fresh_segments.size() == 2;
+                    result.add_result(fresh_ok, "fresh file reuses its metadata segment, encrypted:%d, segment_count:%zu",
+                        static_cast<int32_t>(i), fresh_segments.size());
+                }
             }
 
             static bq::property_value make_binary_recovery_test_config(const bq::string& file_name, const bq::string& pub_key)
