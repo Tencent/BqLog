@@ -15,7 +15,7 @@
 - **Behavior change**: on Android, files BqLog writes are now group writable (`0660` instead of `0640`), including a file left narrower by an earlier version once it is opened for writing again. Some ROMs (seen on vivo, Android 16) hide a file in app-specific external storage from the system file manager unless the group can write it; the app sandbox still keeps other apps out. Other platforms are unchanged ([#93](https://github.com/Tencent/BqLog/issues/93)).
 - **Unreal Engine 6 — Verse**: experimental Verse support, provided by the optional `BqLogVerse` plugin in the `ue6` package. See [Engine Integration — Verse](docs/ENGINE_INTEGRATION.md#4-using-bqlog-in-verse-ue6).
 - **Bug fixes**:
-  - Java, Node.js, Python: log text handed back to the wrapper (snapshot, `log_decoder`, console buffer, and the Java and Python console callbacks) was cut off at the first `\0`; Java also garbled characters outside the BMP, such as emoji, along with the text after them.
+  - Java, Node.js, Python: log text handed back to the wrapper (snapshot, `log_decoder`, console buffer, and the Java and Python console callbacks) was cut off at the first `\0`. On desktop JVMs (HotSpot), Java also turned a character outside the BMP, such as an emoji, into four wrong ones, and lost three characters from the end of the text for each.
   - console callback: a message BqLog prints itself could arrive with the length of an earlier log entry, and be read past its end.
   - Unreal Engine: an `FName` argument lost its number suffix (`Actor_12` came out as `Actor`), and on UE 4.x–5.1 an ANSI `FName` was read from a buffer that had already been freed.
 

@@ -108,74 +108,158 @@ namespace bq {
             return result;
         }
 
-        // Decodes len bytes of UTF-8 into UTF-16. No byte yields more than one unit, so out needs room
-        // for len units. A malformed or cut-off sequence becomes U+FFFD. Surrogates encoded as 3-byte
-        // sequences are passed through, so a lone surrogate in a Java string comes back as it went in.
-        static size_t decode_utf8_to_utf16(const uint8_t* src, size_t len, jchar* out)
+        // find_byte_to_modify() returns the index of the first byte utf8_to_modified_utf8() has to change, or len
+        // if there is none: a '\0' and, except on Android, anything from 0xF0 up, the lead byte of a 4-byte
+        // sequence. It runs over every string on its way to Java, so it reads 16 bytes at a time where it can.
+#if defined(BQ_ANDROID)
+        static size_t find_byte_to_modify(const uint8_t* src, size_t len)
         {
-            size_t in = 0;
-            size_t out_len = 0;
-            while (in < len) {
-                const uint32_t lead = src[in];
-                if (lead < 0x80U) {
-                    out[out_len++] = static_cast<jchar>(lead);
-                    ++in;
-                    continue;
-                }
-                size_t tail_count;
-                uint32_t code_point;
-                uint32_t min_code_point;
-                if ((lead & 0xE0U) == 0xC0U) {
-                    tail_count = 1;
-                    code_point = lead & 0x1FU;
-                    min_code_point = 0x80U;
-                } else if ((lead & 0xF0U) == 0xE0U) {
-                    tail_count = 2;
-                    code_point = lead & 0x0FU;
-                    min_code_point = 0x800U;
-                } else if ((lead & 0xF8U) == 0xF0U) {
-                    tail_count = 3;
-                    code_point = lead & 0x07U;
-                    min_code_point = 0x10000U;
-                } else {
-                    out[out_len++] = static_cast<jchar>(0xFFFDU);
-                    ++in;
-                    continue;
-                }
-                size_t consumed = 1;
-                while (consumed <= tail_count && in + consumed < len && (src[in + consumed] & 0xC0U) == 0x80U) {
-                    code_point = (code_point << 6) | (src[in + consumed] & 0x3FU);
-                    ++consumed;
-                }
-                in += consumed;
-                if (consumed <= tail_count || code_point < min_code_point || code_point > 0x10FFFFU) {
-                    out[out_len++] = static_cast<jchar>(0xFFFDU);
-                } else if (code_point >= 0x10000U) {
-                    code_point -= 0x10000U;
-                    out[out_len++] = static_cast<jchar>(0xD800U + (code_point >> 10));
-                    out[out_len++] = static_cast<jchar>(0xDC00U + (code_point & 0x3FFU));
-                } else {
-                    out[out_len++] = static_cast<jchar>(code_point);
-                }
+            const void* nul = len > 0 ? memchr(src, 0, len) : nullptr;
+            return nul ? static_cast<size_t>(static_cast<const uint8_t*>(nul) - src) : len;
+        }
+#else
+        static size_t find_byte_to_modify_sw(const uint8_t* src, size_t i, size_t len)
+        {
+            while (i < len && src[i] != 0 && src[i] < 0xF0U) {
+                ++i;
             }
-            return out_len;
+            return i;
         }
 
-        jstring create_jstring_from_utf8(JNIEnv* env, const char* utf8, size_t len)
+#if defined(BQ_X86)
+        // Adding 0x10 wraps 0xF0..0xFF round to 0x00..0x0F and takes 0x00 to 0x10, while every other byte ends up
+        // above 0x10, so one unsigned compare against 0x10 finds both. SSE2 only, the x86 baseline, so no CPU check.
+        static BQ_HW_SIMD_SSE2_TARGET size_t find_byte_to_modify(const uint8_t* src, size_t len)
         {
-            constexpr size_t stack_capacity = 512;
-            jchar stack_buffer[stack_capacity];
-            if (!utf8) {
-                len = 0;
+            const __m128i bias = _mm_set1_epi8(0x10);
+            size_t i = 0;
+            for (; i + 64 <= len; i += 64) {
+                const __m128i a = _mm_add_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src + i)), bias);
+                const __m128i b = _mm_add_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src + i + 16)), bias);
+                const __m128i c = _mm_add_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src + i + 32)), bias);
+                const __m128i d = _mm_add_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src + i + 48)), bias);
+                const __m128i m = _mm_min_epu8(_mm_min_epu8(a, b), _mm_min_epu8(c, d));
+                if (_mm_movemask_epi8(_mm_cmpeq_epi8(_mm_min_epu8(m, bias), m)) != 0) {
+                    break;
+                }
             }
-            jchar* out = stack_buffer;
-            bq::array<jchar> heap_buffer;
-            if (len > stack_capacity) {
-                heap_buffer.fill_uninitialized(len);
-                out = &heap_buffer[0];
+            for (; i + 16 <= len; i += 16) {
+                const __m128i a = _mm_add_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src + i)), bias);
+                const uint32_t mask = static_cast<uint32_t>(_mm_movemask_epi8(_mm_cmpeq_epi8(_mm_min_epu8(a, bias), a)));
+                if (mask != 0) {
+                    return i + bq_ctz64(mask);
+                }
             }
-            const size_t out_len = decode_utf8_to_utf16(reinterpret_cast<const uint8_t*>(utf8), len, out);
-            return env->NewString(out, static_cast<jsize>(out_len));
+            if (i < len && len >= 16) {
+                // The last 16 bytes, overlapping what is already known to be clean, so a hit is at i or later.
+                const __m128i a = _mm_add_epi8(_mm_loadu_si128(reinterpret_cast<const __m128i*>(src + len - 16)), bias);
+                const uint32_t mask = static_cast<uint32_t>(_mm_movemask_epi8(_mm_cmpeq_epi8(_mm_min_epu8(a, bias), a)));
+                return mask != 0 ? len - 16 + bq_ctz64(mask) : len;
+            }
+            return find_byte_to_modify_sw(src, i, len);
+        }
+#elif defined(BQ_ARM_NEON)
+        // Same idea as the SSE2 version above.
+        static size_t find_byte_to_modify(const uint8_t* src, size_t len)
+        {
+            const uint8x16_t bias = vdupq_n_u8(0x10);
+            size_t i = 0;
+            for (; i + 64 <= len; i += 64) {
+                const uint8x16_t a = vaddq_u8(vld1q_u8(src + i), bias);
+                const uint8x16_t b = vaddq_u8(vld1q_u8(src + i + 16), bias);
+                const uint8x16_t c = vaddq_u8(vld1q_u8(src + i + 32), bias);
+                const uint8x16_t d = vaddq_u8(vld1q_u8(src + i + 48), bias);
+                if (bq_vmaxvq_u8(vcleq_u8(vminq_u8(vminq_u8(a, b), vminq_u8(c, d)), bias)) != 0) {
+                    break;
+                }
+            }
+            for (; i + 16 <= len; i += 16) {
+                const uint64_t mask = bq_neon_byte_mask(vcleq_u8(vaddq_u8(vld1q_u8(src + i), bias), bias));
+                if (mask != 0) {
+                    return i + (bq_ctz64(mask) >> 2);
+                }
+            }
+            if (i < len && len >= 16) {
+                // The last 16 bytes, overlapping what is already known to be clean, so a hit is at i or later.
+                const uint64_t mask = bq_neon_byte_mask(vcleq_u8(vaddq_u8(vld1q_u8(src + len - 16), bias), bias));
+                return mask != 0 ? len - 16 + (bq_ctz64(mask) >> 2) : len;
+            }
+            return find_byte_to_modify_sw(src, i, len);
+        }
+#else
+        static size_t find_byte_to_modify(const uint8_t* src, size_t len)
+        {
+            size_t i = 0;
+            for (; i + 8 <= len; i += 8) {
+                uint64_t v;
+                memcpy(&v, src + i, sizeof(v));
+                // Leaves the top bit of a byte set if the byte is 0x00, or if its top 4 bits are all set.
+                const uint64_t hit = ((v - 0x0101010101010101ULL) & ~v) | (v & (v << 1) & (v << 2) & (v << 3));
+                if ((hit & 0x8080808080808080ULL) != 0) {
+                    break;
+                }
+            }
+            return find_byte_to_modify_sw(src, i, len);
+        }
+#endif
+#endif
+
+#if !defined(BQ_ANDROID)
+        // The code point of the well-formed 4-byte UTF-8 sequence at p, or 0 if there is none.
+        static uint32_t read_4_byte_sequence(const uint8_t* p, size_t remaining)
+        {
+            if (remaining < 4 || (p[0] & 0xF8U) != 0xF0U || (p[1] & 0xC0U) != 0x80U || (p[2] & 0xC0U) != 0x80U || (p[3] & 0xC0U) != 0x80U) {
+                return 0;
+            }
+            const uint32_t code_point = ((p[0] & 0x07U) << 18) | ((p[1] & 0x3FU) << 12) | ((p[2] & 0x3FU) << 6) | (p[3] & 0x3FU);
+            return (code_point >= 0x10000U && code_point <= 0x10FFFFU) ? code_point : 0;
+        }
+#endif
+
+        const char* utf8_to_modified_utf8(const char* utf8, size_t len, bq::array<char>& buffer)
+        {
+            const uint8_t* src = reinterpret_cast<const uint8_t*>(utf8);
+            size_t i = find_byte_to_modify(src, len);
+            if (i == len) {
+                return utf8;
+            }
+            // A '\0' grows to 2 bytes and a 4-byte sequence to 6, so twice the length is enough, plus the '\0'.
+            buffer.clear();
+            buffer.fill_uninitialized(len * 2 + 1);
+            uint8_t* out = reinterpret_cast<uint8_t*>(&buffer[0]);
+            size_t copied = 0;
+            while (true) {
+                // Everything between copied and i goes over as it is.
+                memcpy(out, src + copied, i - copied);
+                out += i - copied;
+                if (i == len) {
+                    break;
+                }
+                const uint8_t c = src[i];
+                if (c == 0) {
+                    *out++ = 0xC0;
+                    *out++ = 0x80;
+                    i += 1;
+#if !defined(BQ_ANDROID)
+                } else if (const uint32_t code_point = read_4_byte_sequence(src + i, len - i)) {
+                    const uint32_t units[2] = { 0xD800U + ((code_point - 0x10000U) >> 10), 0xDC00U + ((code_point - 0x10000U) & 0x3FFU) };
+                    for (uint32_t unit : units) {
+                        *out++ = static_cast<uint8_t>(0xE0U | (unit >> 12));
+                        *out++ = static_cast<uint8_t>(0x80U | ((unit >> 6) & 0x3FU));
+                        *out++ = static_cast<uint8_t>(0x80U | (unit & 0x3FU));
+                    }
+                    i += 4;
+#endif
+                } else {
+                    // A malformed byte from 0xF0 up is copied as it is, as when nothing needs changing.
+                    *out++ = c;
+                    i += 1;
+                }
+                copied = i;
+                i += find_byte_to_modify(src + i, len - i);
+            }
+            *out = 0;
+            return &buffer[0];
         }
 
         static void init_reflection_variables()

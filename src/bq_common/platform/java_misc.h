@@ -36,10 +36,11 @@ namespace bq {
 
         jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian);
 
-        // Creates a Java string from len bytes of UTF-8. Use this rather than NewStringUTF for any text
-        // that has a length: NewStringUTF stops at the first '\0', and it reads modified UTF-8, where the
-        // 4-byte sequences of characters outside the BMP (emoji, for one) are not valid.
-        jstring create_jstring_from_utf8(JNIEnv* env, const char* utf8, size_t len);
+        // Makes len bytes of UTF-8 fit for NewStringUTF(), which takes modified UTF-8 and stops at the first
+        // '\0': a '\0' becomes C0 80 and, except on Android, whose runtime reads 4-byte sequences, a 4-byte
+        // sequence becomes its surrogate pair. Returns utf8 itself when there is nothing to change, which is
+        // almost always, or else the converted copy in buffer.
+        const char* utf8_to_modified_utf8(const char* utf8, size_t len, bq::array<char>& buffer);
 
         jint jni_init(JavaVM* vm, void* reserved);
 

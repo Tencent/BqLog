@@ -15,7 +15,7 @@
 - **行为变更**：Android 上，BqLog 写的文件改为同组可写（`0660`，原来是 `0640`）；旧版本留下的窄权限文件，再次以写方式打开时也会补上。部分 ROM（vivo、Android 16 上发现）的系统文件管理器不显示应用专属外部存储里同组不可写的文件；应用沙盒仍然挡住其他应用。其他平台不变（[#93](https://github.com/Tencent/BqLog/issues/93)）。
 - **Unreal Engine 6 — Verse**：实验性引入 Verse 支持，由 `ue6` 包中的可选插件 `BqLogVerse` 提供。详见[引擎集成 — Verse](docs/ENGINE_INTEGRATION_CHS.md#4在-verse-中使用-bqlogue6)。
 - **问题修复**：
-  - Java、Node.js、Python：回到 wrapper 的日志文本（snapshot、`log_decoder`、console buffer，以及 Java 和 Python 的 console 回调）在第一个 `\0` 处被截断；Java 还会把 emoji 等 BMP 以外的字符连同其后的文本一起弄乱。
+  - Java、Node.js、Python：回到 wrapper 的日志文本（snapshot、`log_decoder`、console buffer，以及 Java 和 Python 的 console 回调）在第一个 `\0` 处被截断。在桌面 JVM（HotSpot）上，Java 还会把 emoji 等 BMP 以外的字符变成 4 个错误字符，而且每出现一个，文本末尾就丢掉 3 个字符。
   - console 回调：BqLog 自己输出的提示信息可能带着之前某条日志的长度，读到文本末尾之外。
   - Unreal Engine：`FName` 参数丢了数字后缀（`Actor_12` 输出成 `Actor`）；UE 4.x–5.1 上 ANSI `FName` 读的是已经释放的缓冲区。
 
