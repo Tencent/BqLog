@@ -196,7 +196,7 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1name_1by_
     if (!bq::api::__api_get_log_name_by_id((uint64_t)log_id, &name_def)) {
         return nullptr;
     }
-    return bq::platform::create_jstring_from_utf8(env, name_def.str, name_def.len);
+    return env->NewStringUTF(name_def.str);
 }
 
 /*
@@ -221,7 +221,7 @@ JNIEXPORT jstring JNICALL Java_bq_impl_log_1invoker__1_1api_1get_1log_1category_
     if (!bq::api::__api_get_log_category_name_by_index((uint64_t)log_id, (uint32_t)index, &name_def)) {
         return nullptr;
     }
-    return bq::platform::create_jstring_from_utf8(env, name_def.str, name_def.len);
+    return env->NewStringUTF(name_def.str);
 }
 
 /*

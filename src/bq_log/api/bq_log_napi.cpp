@@ -621,7 +621,7 @@ BQ_NAPI_DEF(get_log_name_by_id, napi_env, env, napi_callback_info, info)
     if (!bq::api::__api_get_log_name_by_id(id, &name_def)) {
         return nullptr;
     }
-    return bq::make_napi_str_utf8(env, name_def.str, name_def.len);
+    return bq::make_napi_str_utf8(env, name_def.str);
 }
 
 // get_log_categories_count(log_id: bigint): number
@@ -656,7 +656,7 @@ BQ_NAPI_DEF(get_log_category_name_by_index, napi_env, env, napi_callback_info, i
     if (!bq::api::__api_get_log_category_name_by_index(id, index, &name_def)) {
         return nullptr;
     }
-    return bq::make_napi_str_utf8(env, name_def.str, name_def.len);
+    return bq::make_napi_str_utf8(env, name_def.str);
 }
 
 // log_device_console(level: number, content: string): void

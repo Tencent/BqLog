@@ -42,9 +42,9 @@
 
 // ----------------------------- console callback -----------------------------
 
-// Builds a str from len bytes of UTF-8. Text that has a length must not go through
-// PyUnicode_FromString or the "s" format of Py_BuildValue, which stop at the first '\0'.
-// Bytes that are not valid UTF-8 become U+FFFD rather than raising, as in the C#, Java and
+// Builds a str from len bytes of UTF-8, for log text, which can hold a '\0':
+// PyUnicode_FromString and the "s" format of Py_BuildValue stop at the first one.
+// Bytes that are not valid UTF-8 become U+FFFD rather than raising, as in the C# and
 // Node.js wrappers.
 static PyObject* py_str_from_utf8(const char* str, size_t len)
 {
@@ -563,7 +563,7 @@ static PyObject* py_get_log_name_by_id(PyObject* self, PyObject* args)
     if (!bq::api::__api_get_log_name_by_id(static_cast<uint64_t>(log_id_ull), &name_def)) {
         Py_RETURN_NONE;
     }
-    return py_str_from_utf8(name_def.str, name_def.len);
+    return PyUnicode_FromString(name_def.str ? name_def.str : "");
 }
 
 // get_log_categories_count(log_id: int) -> int
@@ -591,7 +591,7 @@ static PyObject* py_get_log_category_name_by_index(PyObject* self, PyObject* arg
     if (!bq::api::__api_get_log_category_name_by_index(static_cast<uint64_t>(log_id_ull), index, &name_def)) {
         Py_RETURN_NONE;
     }
-    return py_str_from_utf8(name_def.str, name_def.len);
+    return PyUnicode_FromString(name_def.str ? name_def.str : "");
 }
 
 // get_log_merged_log_level_bitmap_by_log_id(log_id: int) -> int
@@ -910,7 +910,7 @@ static PyObject* py_get_stack_trace(PyObject* self, PyObject* args)
     }
     bq::_api_string_def trace_def = { nullptr, 0 };
     bq::api::__api_get_stack_trace(&trace_def, skip);
-    return py_str_from_utf8(trace_def.str, trace_def.len);
+    return PyUnicode_FromString(trace_def.str ? trace_def.str : "");
 }
 
 // is_enable_for(log_id: int, category_idx: int, level: int) -> bool
