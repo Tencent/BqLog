@@ -215,14 +215,20 @@ namespace bq {
         }
         auto level = handle.get_level();
         auto& console_misc = get_console_misc();
-        auto& data = _tls_console_callback_data;
-        data.category_idx_ = static_cast<int32_t>(handle.get_category_idx());
-        data.length_ = (int32_t)log_entry_cache_.size();
-        data.log_id_ = parent_log_->id();
         if (console_misc.buffer().is_enable()) {
             console_misc.buffer().insert(handle.get_log_head().timestamp_epoch, parent_log_->id(), static_cast<int32_t>(handle.get_category_idx()), level, log_entry_cache_.c_str(), (int32_t)log_entry_cache_.size());
         } else {
+            // The console callback reads the length from here, since the text may contain '\0'. It is
+            // cleared again afterwards: with no callback registered nothing consumes it, and a message
+            // bq itself prints later on this thread would then be reported with this length.
+            auto& data = _tls_console_callback_data;
+            data.category_idx_ = static_cast<int32_t>(handle.get_category_idx());
+            data.length_ = (int32_t)log_entry_cache_.size();
+            data.log_id_ = parent_log_->id();
             util::log_device_console_plain_text(level, log_entry_cache_.c_str());
+            data.category_idx_ = 0;
+            data.length_ = 0;
+            data.log_id_ = 0;
         }
         return true;
     }
