@@ -14,6 +14,8 @@
 - **Behavior change**: a public key is validated before an encrypted appender is created - the modulus must be exactly 2048 bits and the exponent odd and at least 65537. A 1024-bit or 4096-bit key used to produce files that could not be decoded (the segment head reserves a fixed 256-byte field for the wrapped key).
 - **Behavior change**: on Android, files BqLog writes are now group writable (`0660` instead of `0640`), including a file left narrower by an earlier version once it is opened for writing again. Some ROMs (seen on vivo, Android 16) hide a file in app-specific external storage from the system file manager unless the group can write it; the app sandbox still keeps other apps out. Other platforms are unchanged ([#93](https://github.com/Tencent/BqLog/issues/93)).
 - **Unreal Engine 6 — Verse**: experimental Verse support, provided by the optional `BqLogVerse` plugin in the `ue6` package. See [Engine Integration — Verse](docs/ENGINE_INTEGRATION.md#4-using-bqlog-in-verse-ue6).
+- **Bug fixes**:
+  - Unreal Engine: an `FName` argument lost its number suffix (`Actor_12` came out as `Actor`), and on UE 4.x–5.1 an ANSI `FName` was read from a buffer that had already been freed.
 
 ## [v2.7.3] - 2026-10-29
 - **Bug fix**: removed the `fork()` handling. BqLog is multi-threaded, so it supports only a `fork()` that is followed immediately by `exec()` of a new process; a child must not keep using what it inherited.
