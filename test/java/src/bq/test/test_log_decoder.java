@@ -15,7 +15,7 @@ import java.io.File;
 import java.io.FilenameFilter;
 
 public class test_log_decoder extends test_base {
-	private static String find_compressed_file(String folder_path, String file_prefix)
+	static String find_compressed_file(String folder_path, String file_prefix)
 	{
 		File folder = new File(folder_path);
 		File[] entries = folder.listFiles(new FilenameFilter() {

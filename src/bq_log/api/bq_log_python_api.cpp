@@ -42,6 +42,15 @@
 
 // ----------------------------- console callback -----------------------------
 
+// Builds a str from len bytes of UTF-8. Text that has a length must not go through
+// PyUnicode_FromString or the "s" format of Py_BuildValue, which stop at the first '\0'.
+// Bytes that are not valid UTF-8 become U+FFFD rather than raising, as in the C#, Java and
+// Node.js wrappers.
+static PyObject* py_str_from_utf8(const char* str, size_t len)
+{
+    return PyUnicode_DecodeUTF8(str ? str : "", str ? static_cast<Py_ssize_t>(len) : 0, "replace");
+}
+
 static PyObject* py_console_callback = nullptr;
 
 // Called from C++ worker thread. Must acquire GIL before accessing any Python state.
@@ -61,19 +70,21 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
     // unregisters it while we are executing (after we release the GIL or
     // if __api_unregister_console_callbacks doesn't provide a barrier).
     Py_INCREF(cb);
-    PyObject* args = Py_BuildValue("(Kiisi)",
-        (unsigned long long)log_id,
-        (int)category_idx,
-        (int)log_level,
-        content,
-        (int)length);
+    PyObject* text = py_str_from_utf8(content, static_cast<size_t>(length > 0 ? length : 0));
+    PyObject* args = text ? Py_BuildValue("(KiiNi)",
+                                (unsigned long long)log_id,
+                                (int)category_idx,
+                                (int)log_level,
+                                text,
+                                (int)length)
+                          : nullptr;
     if (args) {
         PyObject* ret = PyObject_CallObject(cb, args);
         Py_XDECREF(ret);
-        if (PyErr_Occurred()) {
-            PyErr_Clear();
-        }
         Py_DECREF(args);
+    }
+    if (PyErr_Occurred()) {
+        PyErr_Clear();
     }
     Py_DECREF(cb);
     PyGILState_Release(gstate);
@@ -552,7 +563,7 @@ static PyObject* py_get_log_name_by_id(PyObject* self, PyObject* args)
     if (!bq::api::__api_get_log_name_by_id(static_cast<uint64_t>(log_id_ull), &name_def)) {
         Py_RETURN_NONE;
     }
-    return PyUnicode_FromString(name_def.str ? name_def.str : "");
+    return py_str_from_utf8(name_def.str, name_def.len);
 }
 
 // get_log_categories_count(log_id: int) -> int
@@ -580,7 +591,7 @@ static PyObject* py_get_log_category_name_by_index(PyObject* self, PyObject* arg
     if (!bq::api::__api_get_log_category_name_by_index(static_cast<uint64_t>(log_id_ull), index, &name_def)) {
         Py_RETURN_NONE;
     }
-    return PyUnicode_FromString(name_def.str ? name_def.str : "");
+    return py_str_from_utf8(name_def.str, name_def.len);
 }
 
 // get_log_merged_log_level_bitmap_by_log_id(log_id: int) -> int
@@ -718,8 +729,12 @@ static PyObject* py_log_decoder_decode(PyObject* self, PyObject* args)
     Py_BEGIN_ALLOW_THREADS
         result = bq::api::__api_log_decoder_decode(handle, &text);
     Py_END_ALLOW_THREADS
-    const char* text_str = (result == bq::appender_decode_result::success && text.str) ? text.str : "";
-    return Py_BuildValue("(is)", static_cast<int>(result), text_str);
+    const bool decoded = (result == bq::appender_decode_result::success && text.str);
+    PyObject* text_obj = py_str_from_utf8(decoded ? text.str : "", decoded ? text.len : 0);
+    if (!text_obj) {
+        return nullptr;
+    }
+    return Py_BuildValue("(iN)", static_cast<int>(result), text_obj);
 }
 
 // log_decoder_destroy(handle: int) -> None
@@ -828,19 +843,21 @@ static void BQ_STDCALL py_console_buffer_fetch_callback(
     if (!ctx || !ctx->py_callback)
         return;
 
-    PyObject* cb_args = Py_BuildValue("(Kiisi)",
-        (unsigned long long)log_id,
-        (int)category_idx,
-        (int)log_level,
-        content,
-        (int)length);
+    PyObject* text = py_str_from_utf8(content, static_cast<size_t>(length > 0 ? length : 0));
+    PyObject* cb_args = text ? Py_BuildValue("(KiiNi)",
+                                   (unsigned long long)log_id,
+                                   (int)category_idx,
+                                   (int)log_level,
+                                   text,
+                                   (int)length)
+                             : nullptr;
     if (cb_args) {
         PyObject* ret = PyObject_CallObject(ctx->py_callback, cb_args);
         Py_XDECREF(ret);
-        if (PyErr_Occurred()) {
-            PyErr_Clear();
-        }
         Py_DECREF(cb_args);
+    }
+    if (PyErr_Occurred()) {
+        PyErr_Clear();
     }
 }
 
@@ -878,7 +895,7 @@ static PyObject* py_take_snapshot_string(PyObject* self, PyObject* args)
     Py_BEGIN_ALLOW_THREADS
         bq::api::__api_take_snapshot_string(log_id, tz_config, &snapshot_def);
     Py_END_ALLOW_THREADS
-    PyObject* result = PyUnicode_FromString(snapshot_def.str ? snapshot_def.str : "");
+    PyObject* result = py_str_from_utf8(snapshot_def.str, snapshot_def.len);
     bq::api::__api_release_snapshot_string(log_id, &snapshot_def);
     return result;
 }
@@ -893,7 +910,7 @@ static PyObject* py_get_stack_trace(PyObject* self, PyObject* args)
     }
     bq::_api_string_def trace_def = { nullptr, 0 };
     bq::api::__api_get_stack_trace(&trace_def, skip);
-    return PyUnicode_FromString(trace_def.str ? trace_def.str : "");
+    return py_str_from_utf8(trace_def.str, trace_def.len);
 }
 
 // is_enable_for(log_id: int, category_idx: int, level: int) -> bool

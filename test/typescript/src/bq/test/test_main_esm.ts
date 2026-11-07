@@ -14,6 +14,7 @@ import { test_log_1 } from "./test_log_1.ts";
 import { test_log_2 } from "./test_log_2.ts";
 import { test_log_category } from "./test_log_category.ts";
 import { test_log_decoder } from "./test_log_decoder.ts";
+import { test_log_embedded_nul } from "./test_log_embedded_nul.ts";
 import { bq } from "@pippocao/bqlog";
 import { createRequire } from 'module';
 
@@ -35,6 +36,7 @@ async function run_tests() {
         test_manager.add_test(new test_log_2("Test Log MultiThread"));
         test_manager.add_test(new test_log_category("Test Log Category"));
         test_manager.add_test(new test_log_decoder("Test Log Decoder"));
+        test_manager.add_test(new test_log_embedded_nul("Test Log Embedded NUL"));
 
         const result = await test_manager.test();
         if (result) {

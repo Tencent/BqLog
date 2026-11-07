@@ -108,6 +108,76 @@ namespace bq {
             return result;
         }
 
+        // Decodes len bytes of UTF-8 into UTF-16. No byte yields more than one unit, so out needs room
+        // for len units. A malformed or cut-off sequence becomes U+FFFD. Surrogates encoded as 3-byte
+        // sequences are passed through, so a lone surrogate in a Java string comes back as it went in.
+        static size_t decode_utf8_to_utf16(const uint8_t* src, size_t len, jchar* out)
+        {
+            size_t in = 0;
+            size_t out_len = 0;
+            while (in < len) {
+                const uint32_t lead = src[in];
+                if (lead < 0x80U) {
+                    out[out_len++] = static_cast<jchar>(lead);
+                    ++in;
+                    continue;
+                }
+                size_t tail_count;
+                uint32_t code_point;
+                uint32_t min_code_point;
+                if ((lead & 0xE0U) == 0xC0U) {
+                    tail_count = 1;
+                    code_point = lead & 0x1FU;
+                    min_code_point = 0x80U;
+                } else if ((lead & 0xF0U) == 0xE0U) {
+                    tail_count = 2;
+                    code_point = lead & 0x0FU;
+                    min_code_point = 0x800U;
+                } else if ((lead & 0xF8U) == 0xF0U) {
+                    tail_count = 3;
+                    code_point = lead & 0x07U;
+                    min_code_point = 0x10000U;
+                } else {
+                    out[out_len++] = static_cast<jchar>(0xFFFDU);
+                    ++in;
+                    continue;
+                }
+                size_t consumed = 1;
+                while (consumed <= tail_count && in + consumed < len && (src[in + consumed] & 0xC0U) == 0x80U) {
+                    code_point = (code_point << 6) | (src[in + consumed] & 0x3FU);
+                    ++consumed;
+                }
+                in += consumed;
+                if (consumed <= tail_count || code_point < min_code_point || code_point > 0x10FFFFU) {
+                    out[out_len++] = static_cast<jchar>(0xFFFDU);
+                } else if (code_point >= 0x10000U) {
+                    code_point -= 0x10000U;
+                    out[out_len++] = static_cast<jchar>(0xD800U + (code_point >> 10));
+                    out[out_len++] = static_cast<jchar>(0xDC00U + (code_point & 0x3FFU));
+                } else {
+                    out[out_len++] = static_cast<jchar>(code_point);
+                }
+            }
+            return out_len;
+        }
+
+        jstring create_jstring_from_utf8(JNIEnv* env, const char* utf8, size_t len)
+        {
+            constexpr size_t stack_capacity = 512;
+            jchar stack_buffer[stack_capacity];
+            if (!utf8) {
+                len = 0;
+            }
+            jchar* out = stack_buffer;
+            bq::array<jchar> heap_buffer;
+            if (len > stack_capacity) {
+                heap_buffer.fill_uninitialized(len);
+                out = &heap_buffer[0];
+            }
+            const size_t out_len = decode_utf8_to_utf16(reinterpret_cast<const uint8_t*>(utf8), len, out);
+            return env->NewString(out, static_cast<jsize>(out_len));
+        }
+
         static void init_reflection_variables()
         {
             jni_env env_holder;

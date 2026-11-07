@@ -36,6 +36,11 @@ namespace bq {
 
         jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian);
 
+        // Creates a Java string from len bytes of UTF-8. Use this rather than NewStringUTF for any text
+        // that has a length: NewStringUTF stops at the first '\0', and it reads modified UTF-8, where the
+        // 4-byte sequences of characters outside the BMP (emoji, for one) are not valid.
+        jstring create_jstring_from_utf8(JNIEnv* env, const char* utf8, size_t len);
+
         jint jni_init(JavaVM* vm, void* reserved);
 
         void try_to_detach_thread();
