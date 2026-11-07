@@ -6553,12 +6553,13 @@ jobs:
         run: |
           set -euo pipefail
           DIST="${{ github.workspace }}/dist"
-          # Generic UE4/UE5 zip: root is BqLog/ (what users get from GitHub Release).
+          # Generic UE4/UE5/UE6 zip: root is BqLog/ (what users get from GitHub Release);
+          # the UE6 zip also holds the optional BqLogVerse/ plugin.
           # The .uplugin EngineVersion stays as the two-segment "4.27" / "5.8" set by
           # linux_build_all_and_pack.sh — two-segment values fail FEngineVersion::Parse,
           # which makes FPluginManager::IsPluginCompatible short-circuit to true, so the
-          # plugin loads cleanly on any 4.22~4.27 / 5.0~5.8 without the "load anyway?" dialog.
-          for ue in ue4 ue5; do
+          # plugin loads cleanly on any 4.22~4.27 / 5.0~5.8 / 6.0 without the "load anyway?" dialog.
+          for ue in ue4 ue5 ue6; do
             mkdir -p "$DIST/$ue"
             (cd "$DIST/$ue" && unzip -q "$DIST/bqlog-unreal-plugin-${VERSION}-${ue}.zip")
           done
@@ -6664,6 +6665,12 @@ jobs:
         with:
           name: unreal_plugin_sources_ue5_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist/ue5
+
+      - name: Upload UE6 Source Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: unreal_plugin_sources_ue6_${{ needs.extract_version.outputs.version }}
+          path: ${{ github.workspace }}/dist/ue6
 
       - name: Upload UE4 Fab Source Artifacts (4.22~4.27)
         uses: actions/upload-artifact@v6
@@ -7026,7 +7033,7 @@ jobs:
             exit 1
           fi
 
-          UE_VARIANTS=(ue4 ue5)
+          UE_VARIANTS=(ue4 ue5 ue6)
 
           for ue in "${UE_VARIANTS[@]}"; do
             stage_dir="$TMP_ROOT/$ue"
@@ -7051,13 +7058,20 @@ jobs:
             fi
             rm -f "$public_dir"/BqLog_h_*.txt
 
-            # Replace version in .uplugin
+            # BqLogVerse (the Verse API, source only) needs UE6's Verse, so only the ue6 package carries it.
+            if [[ "$ue" == "ue6" ]]; then
+              rsync -a --exclude Binaries --exclude Intermediate "$ROOT/plugin/unreal/BqLogVerse/" "$stage_dir/BqLogVerse/"
+            fi
+
+            # Replace version in every .uplugin
             VERSION_MAJOR=$(echo "$VERSION" | cut -d. -f1)
             VERSION_MINOR=$(echo "$VERSION" | cut -d. -f2)
             VERSION_PATCH=$(echo "$VERSION" | cut -d. -f3)
             VERSION_INT=$(( VERSION_MAJOR * 10000 + VERSION_MINOR * 100 + VERSION_PATCH ))
-            sed -i "s/\"Version\": 1/\"Version\": $VERSION_INT/" "$plugin_dir/BqLog.uplugin"
-            sed -i "s/\"VersionName\": \"1.0\"/\"VersionName\": \"$VERSION\"/" "$plugin_dir/BqLog.uplugin"
+            for uplugin in "$stage_dir"/*/*.uplugin; do
+              sed -i "s/\"Version\": 1/\"Version\": $VERSION_INT/" "$uplugin"
+              sed -i "s/\"VersionName\": \"1.0\"/\"VersionName\": \"$VERSION\"/" "$uplugin"
+            done
             if [[ "$ue" == "ue4" ]]; then
               sed -i "s/\"EngineVersion\": \"5.8\"/\"EngineVersion\": \"4.27\"/" "$plugin_dir/BqLog.uplugin"
               sed -i 's/"PlatformAllowList"/"WhitelistPlatforms"/g' "$plugin_dir/BqLog.uplugin"
@@ -7105,10 +7119,10 @@ jobs:
               copy_file_follow "${ANDROID_SO[$abi]}" "$thirdparty_root/Android/$abi/libBqLog.so"
             done
 
-            find "$plugin_dir" -name ".gitkeep" -delete
+            find "$stage_dir" -name ".gitkeep" -delete
             zip_name="bqlog-unreal-plugin-prebuilt-${VERSION}-${ue}.zip"
             rm -f "$DIST_DIR/$zip_name" "$DIST_DIR/$zip_name.sha256"
-            (cd "$stage_dir" && zip -qry "$DIST_DIR/$zip_name" "BqLog")
+            (cd "$stage_dir" && zip -qry "$DIST_DIR/$zip_name" *)
             (cd "$DIST_DIR" && sha256sum "$zip_name" | tr '[:upper:]' '[:lower:]' > "$zip_name.sha256")
           done
 
@@ -7128,7 +7142,7 @@ jobs:
           # fails FEngineVersion::Parse, which makes IsPluginCompatible bail out
           # to true, so the plugin loads without a "load anyway?" dialog on any
           # supported engine version.
-          for ue in ue4 ue5; do
+          for ue in ue4 ue5 ue6; do
             mkdir -p "$DIST/$ue"
             (cd "$DIST/$ue" && unzip -q "$DIST/bqlog-unreal-plugin-prebuilt-${VERSION}-${ue}.zip")
           done
@@ -7144,6 +7158,12 @@ jobs:
         with:
           name: unreal_plugin_prebuilt_ue5_${{ needs.extract_version.outputs.version }}
           path: ${{ github.workspace }}/dist/ue5
+
+      - name: Upload UE6 Prebuilt Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: unreal_plugin_prebuilt_ue6_${{ needs.extract_version.outputs.version }}
+          path: ${{ github.workspace }}/dist/ue6
 
   # Unity & Tuanjie packages (shared logic via matrix)
   engine_package_build:

@@ -156,10 +156,14 @@ Generation steps are as follows:
    - `business_log.cppm` (C++20 module unit: `import bq.business_log;` instead of the header)
    - `business_log.java` (Java wrapper)
    - `business_log.cs` (C# wrapper)
-   - `business_log.ts` (TypeScript wrapper)
+   - `business_log_nodejs.ts` (TypeScript wrapper for Node.js, works with both ESM and CommonJS)
+   - `business_log_ohos.ts` (ArkTS wrapper for HarmonyOS)
+   - `business_log.py` (Python wrapper)
+   - `business_log.go` (Go wrapper)
    - `business_log_for_UE.h` (Coordinate with UE project, Category can be referenced in Blueprint)
+   - `business_log.verse` (Verse module for UE6 with the BqLogVerse plugin, see [Using BqLog in Verse](ENGINE_INTEGRATION.md#4-using-bqlog-in-verse-ue6))
 
-   The module name is the class name with a `bq.` prefix: `bq::business_log` is `import bq.business_log;`.
+   The C++20 module name is the class name with a `bq.` prefix: `bq::business_log` is `import bq.business_log;`.
 
 4. Import these files in project to use Log class with Category.
    For example C++:

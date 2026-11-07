@@ -149,10 +149,14 @@ const bq::array<bq::string>& get_categories_name_array() const;
   - `business_log.cppm`（C++20 模块单元，用 `import bq.business_log;` 代替 include 头文件）
   - `business_log.java`（Java wrapper）
   - `business_log.cs`（C# wrapper）
-  - `business_log.ts`（TypeScript wrapper）
+  - `business_log_nodejs.ts`（Node.js 的 TypeScript wrapper，ESM 和 CommonJS 都支持）
+  - `business_log_ohos.ts`（鸿蒙 HarmonyOS 的 ArkTS wrapper）
+  - `business_log.py`（Python wrapper）
+  - `business_log.go`（Go wrapper）
   - `business_log_for_UE.h`（配合 UE 工程，可在蓝图中引用 Category）
+  - `business_log.verse`（Verse 模块，用于装了 BqLogVerse 插件的 UE6，见[在 Verse 中使用 BqLog](ENGINE_INTEGRATION_CHS.md#4在-verse-中使用-bqlogue6)）
 
-  模块名就是类名加 `bq.` 前缀：`bq::business_log` 对应 `import bq.business_log;`。
+  C++20 模块名就是类名加 `bq.` 前缀：`bq::business_log` 对应 `import bq.business_log;`。
 
 4. 在工程中引入这些文件，即可使用带 Category 的日志类。
    例如 C++：

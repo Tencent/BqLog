@@ -16,7 +16,7 @@ TARGET_DIR="$TMP_DIR/BqLog"
 PUBLIC_DIR="$TARGET_DIR/Source/BqLog/Public"
 PRIVATE_DIR="$TARGET_DIR/Source/BqLog/Private"
 DIST_DIR="$ROOT_DIR/dist"
-UE_VERSIONS=(ue4 ue5)
+UE_VERSIONS=(ue4 ue5 ue6)
 
 if ! command -v zip >/dev/null 2>&1; then
   echo "ERROR: 'zip' command not found. Please install zip." >&2
@@ -65,13 +65,21 @@ for ue_version in "${UE_VERSIONS[@]}"; do
 
   rm -f "$PUBLIC_DIR"/*.txt 2>/dev/null || true
 
-  # Replace version in .uplugin
+  # BqLogVerse (the Verse API) needs UE6's Verse, so only the ue6 package carries it.
+  if [[ "$ue_version" == "ue6" ]]; then
+    cp -R "$ROOT_DIR/plugin/unreal/BqLogVerse" "$TMP_DIR/"
+    rm -rf "$TMP_DIR/BqLogVerse/Binaries" "$TMP_DIR/BqLogVerse/Intermediate"
+  fi
+
+  # Replace version in every .uplugin
   VERSION_MAJOR=$(echo "$VERSION" | cut -d. -f1)
   VERSION_MINOR=$(echo "$VERSION" | cut -d. -f2)
   VERSION_PATCH=$(echo "$VERSION" | cut -d. -f3)
   VERSION_INT=$(( VERSION_MAJOR * 10000 + VERSION_MINOR * 100 + VERSION_PATCH ))
-  sed -i '' "s/\"Version\": 1/\"Version\": $VERSION_INT/" "$TARGET_DIR/BqLog.uplugin"
-  sed -i '' "s/\"VersionName\": \"1.0\"/\"VersionName\": \"$VERSION\"/" "$TARGET_DIR/BqLog.uplugin"
+  for uplugin in "$TMP_DIR"/*/*.uplugin; do
+    sed -i '' "s/\"Version\": 1/\"Version\": $VERSION_INT/" "$uplugin"
+    sed -i '' "s/\"VersionName\": \"1.0\"/\"VersionName\": \"$VERSION\"/" "$uplugin"
+  done
   # Replace EngineVersion based on UE major version
   if [[ "$ue_version" == "ue4" ]]; then
     sed -i '' "s/\"EngineVersion\": \"5.8\"/\"EngineVersion\": \"4.27\"/" "$TARGET_DIR/BqLog.uplugin"
@@ -84,11 +92,11 @@ for ue_version in "${UE_VERSIONS[@]}"; do
   fi
 
   # Remove .gitkeep files before zipping
-  find "$TARGET_DIR" -name ".gitkeep" -delete
+  find "$TMP_DIR" -name ".gitkeep" -delete
 
   ZIP_NAME="bqlog-unreal-plugin-${VERSION}-${ue_version}.zip"
   rm -f "$DIST_DIR/$ZIP_NAME"
-  (cd "$TMP_DIR" && zip -rq "$DIST_DIR/$ZIP_NAME" "BqLog")
+  (cd "$TMP_DIR" && zip -rq "$DIST_DIR/$ZIP_NAME" *)
   (cd "$DIST_DIR" && shasum -a 256 "$ZIP_NAME" | tr '[:upper:]' '[:lower:]' > "$ZIP_NAME.sha256")
   echo "Created $DIST_DIR/$ZIP_NAME"
 done

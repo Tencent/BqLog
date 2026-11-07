@@ -292,9 +292,11 @@ FString UBqLogFunctionLibrary::BqLogTakeSnapshot(UBqLog* LogInstance, const FStr
     FString SnapshotString;
     if (snapshot_str_def.len > 0 && snapshot_str_def.str != nullptr)
     {
-        SnapshotString = snapshot_str_def.str;
-        FUTF8ToTCHAR Converter(reinterpret_cast<const ANSICHAR*>(snapshot_str_def.str), snapshot_str_def.len);
-        SnapshotString = FString(Converter.Get(), Converter.Length());
+        // Copy exactly len bytes. The converted text has no terminator, and a log entry may itself
+        // contain '\0', so reading up to a zero would run past the end or stop early. FString(Ptr, N)
+        // does just that: N is extra slack, not a length.
+        FUTF8ToTCHAR Converter(reinterpret_cast<const ANSICHAR*>(snapshot_str_def.str), static_cast<int32>(snapshot_str_def.len));
+        SnapshotString.AppendChars(Converter.Get(), Converter.Length());
     }
     bq::api::__api_release_snapshot_string(log_id, &snapshot_str_def);
     return SnapshotString;

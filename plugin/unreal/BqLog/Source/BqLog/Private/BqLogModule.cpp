@@ -13,12 +13,28 @@
 #include "Containers/Map.h"
 #include "HAL/CriticalSection.h"
 #include "Misc/Paths.h"
+#include "Runtime/Launch/Resources/Version.h"
 #include "bq_log/bq_log.h"
 
 // UE4 does not have UE_LOG_SOURCE_FILE
 #ifndef UE_LOG_SOURCE_FILE
 #define UE_LOG_SOURCE_FILE(x) x
 #endif
+
+namespace
+{
+    // FString(Len, Ptr) is deprecated from UE 5.4 on; AppendChars works on every version.
+    FString bq_utf8_to_fstring(const char* str, uint32_t len)
+    {
+        FString result;
+        if (str && len > 0)
+        {
+            FUTF8ToTCHAR conv(reinterpret_cast<const ANSICHAR*>(str), static_cast<int32>(len));
+            result.AppendChars(conv.Get(), conv.Length());
+        }
+        return result;
+    }
+}
 
 struct bq_log_category_key
 {
@@ -66,14 +82,14 @@ private:
             if (bq::api::__api_get_log_category_name_by_index(log_id, (uint32_t)category_idx, &cat_str)
                 && cat_str.str && cat_str.len > 0)
             {
-                category_name = FString(cat_str.len, UTF8_TO_TCHAR(cat_str.str));
+                category_name = bq_utf8_to_fstring(cat_str.str, cat_str.len);
                 got_name = true;
             }
             bq::_api_string_def name_str;
             if (bq::api::__api_get_log_name_by_id(log_id, &name_str)
                 && name_str.str && name_str.len > 0)
             {
-                category_name =  TEXT("Bq|") + FString(name_str.len, UTF8_TO_TCHAR(name_str.str)) + TEXT("|") + category_name;
+                category_name =  TEXT("Bq|") + bq_utf8_to_fstring(name_str.str, name_str.len) + TEXT("|") + category_name;
                 got_name = true;
             }
         }
@@ -84,7 +100,10 @@ private:
             category_name = TEXT("BqLog");
         }
 
-        FLogCategoryBase* new_cat = new FLogCategoryBase(*category_name, ELogVerbosity::Log, ELogVerbosity::All);
+        // The console appender's own levels already decided what reaches here, so the UE
+        // category lets every verbosity through by default. UE5 never asked the category,
+        // UE6 does, and a default of Log would silently drop verbose and debug entries there.
+        FLogCategoryBase* new_cat = new FLogCategoryBase(*category_name, ELogVerbosity::VeryVerbose, ELogVerbosity::All);
 
         // double-check: another thread may have inserted while we were building the name
         FScopeLock lock(&cache_lock_);
@@ -98,39 +117,43 @@ private:
         return *new_cat;
     }
 
-    static void BQ_STDCALL on_bq_log_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
+    static ELogVerbosity::Type to_ue_verbosity(bq::log_level log_level)
     {
-        const ANSICHAR* u8_str = reinterpret_cast<const ANSICHAR*>(content ? content : "");
-        int32_t tchar_len = (length >= 0) ? length : FCStringAnsi::Strlen(u8_str);
-        FUTF8ToTCHAR conv(u8_str, tchar_len);
-
-        FLogCategoryBase& category = get_category(log_id, category_idx);
-        const FName category_name = category.GetCategoryName();
-
         switch (log_level)
         {
         case bq::log_level::verbose:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::VeryVerbose, TEXT("%.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::VeryVerbose;
         case bq::log_level::debug:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::Verbose, TEXT("%.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::Verbose;
         case bq::log_level::info:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::Display, TEXT("%.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::Display;
         case bq::log_level::warning:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::Warning, TEXT("%.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::Warning;
         case bq::log_level::error:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::Error, TEXT("%.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::Error;
         case bq::log_level::fatal:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::Fatal, TEXT("%.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::Fatal;
         default:
-            FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category_name, ELogVerbosity::Log, TEXT("Unknown Log Level: %.*s"), conv.Length(), conv.Get());
-            break;
+            return ELogVerbosity::Log;
         }
+    }
+
+    static void BQ_STDCALL on_bq_log_console_callback(uint64_t log_id, int32_t category_idx, bq::log_level log_level, const char* content, int32_t length)
+    {
+        const ANSICHAR* u8_str = reinterpret_cast<const ANSICHAR*>(content ? content : "");
+        const int32 u8_len = (length >= 0) ? static_cast<int32>(length) : FCStringAnsi::Strlen(u8_str);
+
+        const FLogCategoryBase& category = get_category(log_id, category_idx);
+        const ELogVerbosity::Type verbosity = to_ue_verbosity(log_level);
+
+#if ENGINE_MAJOR_VERSION >= 6
+        // UE6 removed FMsg::Logf_Internal. DynamicLog takes a UTF-8 format whose %s reads UTF-8,
+        // so the text goes through without a conversion.
+        UE::Logging::DynamicLog(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category, verbosity, nullptr, "%.*s", u8_len, u8_str);
+#else
+        FUTF8ToTCHAR conv(u8_str, u8_len);
+        FMsg::Logf_Internal(UE_LOG_SOURCE_FILE(__FILE__), __LINE__, category.GetCategoryName(), verbosity, TEXT("%.*s"), conv.Length(), conv.Get());
+#endif
     }
 public:
     virtual void StartupModule() override

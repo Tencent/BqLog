@@ -1,0 +1,42 @@
+{
+	"FileVersion": 3,
+	"EngineVersion": "6.0",
+	"Version": 1,
+	"VersionName": "1.0",
+	"FriendlyName": "BqLog Verse",
+	"Description": "Verse API for BqLog (UE6 only). Verse code can create and configure BqLog log objects, or use ones that C++, Blueprint or a BqLog asset created, and write to them by category.",
+	"Category": "Logging",
+	"CreatedBy": "Tencent",
+	"CreatedByURL": "https://github.com/Tencent/BqLog",
+	"DocsURL": "https://github.com/Tencent/BqLog/blob/main/docs/ENGINE_INTEGRATION.md",
+	"MarketplaceURL": "",
+	"SupportURL": "https://github.com/Tencent/BqLog/issues",
+	"Copyright": "Copyright (C) 2025 Tencent. All rights reserved.",
+	"EnabledByDefault": false,
+	"CanContainContent": false,
+	"CanContainVerse": true,
+	"IsBetaVersion": false,
+	"IsExperimentalVersion": true,
+	"Installed": false,
+	"Modules": [
+		{
+			"Name": "BqLogVerse",
+			"Type": "Runtime",
+			"LoadingPhase": "Default"
+		}
+	],
+	"Plugins": [
+		{
+			"Name": "BqLog",
+			"Enabled": true
+		},
+		{
+			"Name": "Solaris",
+			"Enabled": true
+		},
+		{
+			"Name": "Verse",
+			"Enabled": true
+		}
+	]
+}

@@ -8,6 +8,7 @@
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  */
+using System.IO;
 using UnrealBuildTool;
 
 public class BqLogBPNodes : ModuleRules
@@ -23,8 +24,15 @@ public class BqLogBPNodes : ModuleRules
 		});
 
 		PrivateDependencyModuleNames.AddRange(new[] {
-			"BlueprintGraph", "KismetCompiler", "Kismet", "BqLog"
+			"BlueprintGraph", "Kismet", "BqLog"
 		});
+
+		// UE6 folded the KismetCompiler module into BlueprintGraph (the headers keep their
+		// names), so depend on it only where the engine still ships it as its own module.
+		if (Directory.Exists(Path.Combine(EngineDirectory, "Source", "Editor", "KismetCompiler")))
+		{
+			PrivateDependencyModuleNames.Add("KismetCompiler");
+		}
 
 		if (Target.bBuildEditor)
 		{

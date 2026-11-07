@@ -13,6 +13,7 @@
 - **行为变更**：主机平台（PS4、PS5、Switch）上，未通过 `bq::log::set_secure_random_source()` 注入随机源时，加密 appender 仍然工作，但段密钥来自时钟、线程 id 与地址的软件混合，创建时打一条 warning 说明这一点。建议在这些平台注入随机源：不是来自 CSPRNG 的密钥材料，任何拿到日志文件的人都能离线搜索。明文 log 不受影响。
 - **行为变更**：创建加密 appender 前会校验公钥——模数必须恰好 2048 bit，指数必须是奇数且不小于 65537。以前配 1024 bit 或 4096 bit 的公钥能写出文件但解不开（段头为包裹后的密钥预留了固定 256 字节）。
 - **行为变更**：Android 上，BqLog 写的文件改为同组可写（`0660`，原来是 `0640`）；旧版本留下的窄权限文件，再次以写方式打开时也会补上。部分 ROM（vivo、Android 16 上发现）的系统文件管理器不显示应用专属外部存储里同组不可写的文件；应用沙盒仍然挡住其他应用。其他平台不变（[#93](https://github.com/Tencent/BqLog/issues/93)）。
+- **Unreal Engine 6 — Verse**：实验性引入 Verse 支持，由 `ue6` 包中的可选插件 `BqLogVerse` 提供。详见[引擎集成 — Verse](docs/ENGINE_INTEGRATION_CHS.md#4在-verse-中使用-bqlogue6)。
 
 ## [v2.7.3] - 2026-10-29
 - **问题修复**：去掉对 `fork()` 的错误处理。BqLog 是多线程的，只支持 `fork()` 之后立即 `exec()` 出新进程的用法；子进程不能继续使用从父进程继承的日志对象。
