@@ -58,8 +58,21 @@
 
 ## 📋 v2.8.x 更新亮点
 
-- **新的加密日志格式（v11）**：加密方案升级，可以抵抗已知明文攻击和AI分析。 
-- **工具兼容性**：`BqLog_LogDecoder`同时支持2.x版本所有的压缩文件。
+- **新的加密日志格式**：加密方案升级，可以抵抗已知明文攻击和 AI 分析。
+- **工具兼容性**：`BqLog_LogDecoder` 可以解码 2.x 全系列版本写出的压缩日志。
+- **Unreal Engine 6**：实验性支持 UE6 的 Verse 脚本，提供对应的 Wrapper 和 Category Log Wrapper 生成，详见[引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)。
+
+## 📋 v2.7.x 更新亮点
+
+- **C++20 模块**：支持 `import bq.log;`，并在模块模式下提供无宏的快速模式接口。
+- **主机平台**：实验性支持 PlayStation 4、PlayStation 5 与 Nintendo Switch。
+- **多进程**：多个进程可以写同一个日志目录，各自拥有独立的恢复数据。
+- **软件包仓库**：支持 Homebrew、vcpkg、NuGet。
+
+## 📋 v2.6.x 更新亮点
+
+- **快速模式**：新增 C++ 专用的 `BQ_LOG_FAST_*` 宏，把级别判断、时间戳和参数写入内联到调用点，大幅降低调用线程的延迟。
+- **整体性能提升**：同一 benchmark 下，文本输出快 14%～30%，压缩输出最多快约 40%，详见 [Benchmark](docs/BENCHMARK_CHS.md)。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 

@@ -59,8 +59,21 @@
 
 ## 📋 What's New in v2.8.x
 
-- **New encrypted log format (v11)**: an upgraded encryption scheme that resists known-plaintext attacks and AI-assisted analysis.
-- **Tool compatibility**: `BqLog_LogDecoder` decodes the compressed files of every 2.x release.
+- **New encrypted log format**: an upgraded encryption scheme that resists known-plaintext attacks and AI-assisted analysis.
+- **Tool compatibility**: `BqLog_LogDecoder` now decodes compressed logs written by every 2.x release.
+- **Unreal Engine 6**: experimental support for Verse scripting on UE6, with generated wrappers and category log wrappers. See the [engine integration guide](docs/ENGINE_INTEGRATION.md).
+
+## 📋 What's New in v2.7.x
+
+- **C++20 modules**: `import bq.log;` replaces the header include, with a macro-free fast mode available in module form.
+- **Console platforms**: experimental support for PlayStation 4, PlayStation 5, and Nintendo Switch.
+- **Multi-process**: several processes can write to the same log directory, each with its own recovery data.
+- **Package repositories**: Homebrew, vcpkg, and NuGet.
+
+## 📋 What's New in v2.6.x
+
+- **Fast mode**: C++-only `BQ_LOG_FAST_*` macros that inline level checks, timestamps, and parameter writes at the call site, cutting call-thread latency.
+- **Whole-pipeline gains**: on the same benchmark, text output is 14%–30% faster and compressed output up to about 40% faster. See [Benchmark](docs/BENCHMARK.md).
 
 > Full changelog → [CHANGELOG.md](CHANGELOG.md)
 

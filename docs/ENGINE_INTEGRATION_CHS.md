@@ -113,7 +113,7 @@ PublicDependencyModuleNames.Add("BqLog");
 #include "BqLog.h"
 ```
 
-> **不要**手动添加 include 目录，`BqLog` 模块会导出所需路径。蓝图节点模块 `BqLogBPNodes` 是编辑器专用模块，也**不需要**加入依赖。修改 `.uproject` 或 `.Build.cs` 后，如果 IDE 没有自动刷新，请重新生成项目文件，然后重新编译 Editor Target。
+> **在 Unreal Engine 中请包含 `"BqLog.h"`，不要用 `"bq_log/bq_log.h"`**——后者不包含 Unreal Engine 适配。**也不要**手动添加 include 目录，`BqLog` 模块会导出所需路径。蓝图节点模块 `BqLogBPNodes` 是编辑器专用模块，同样**不需要**加入依赖。修改 `.uproject` 或 `.Build.cs` 后，如果 IDE 没有自动刷新，请重新生成项目文件，再重新编译 Editor Target。
 
 ### 1）对 `FName` / `FString` / `FText` 的支持
 
@@ -210,8 +210,6 @@ Unreal 插件会自动将所有 BqLog 输出转接到 Unreal 的 Output Log，�
            if (GameLog := bq.get_log_by_name["Game"]):
                GameLog.debug("player {Name} joined")
    ```
-
-   和 C++ 一样，各级别函数内部自己判断级别，调用前不需要先检查。变量不要起名叫 `Log`：`/Verse.org/Verse` 里有同名的函数 `Log`（对数），编辑器会报名字有歧义。
 
 3. **Category 日志**：`BqLog_CategoryLogGenerator` 还会生成 `<ClassName>.verse`（见 [Category 日志类生成](ADVANCED_USAGE_CHS.md#category-日志类生成)）。把它放进项目或插件的 Verse 目录，就会在那里定义模块 `<ClassName>`，分类和 C++ 的同名类一致，用法也和其他语言一样：
 

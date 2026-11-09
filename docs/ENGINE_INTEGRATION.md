@@ -113,7 +113,7 @@ You can then include the Unreal adapter from C++:
 #include "BqLog.h"
 ```
 
-> Do **not** add include directories manually. The `BqLog` module exports the required paths. The Blueprint node module `BqLogBPNodes` is editor-only and does **not** need to be added to your dependencies. After changing `.uproject` or `.Build.cs`, regenerate project files if your IDE does not refresh automatically, then rebuild the Editor target.
+> **Inside Unreal Engine, include `"BqLog.h"`, not `"bq_log/bq_log.h"`** — the latter carries no Unreal adapter. **Also do not** add include directories manually: the `BqLog` module exports the required paths. The Blueprint node module `BqLogBPNodes` is editor-only and does **not** need to be added to your dependencies. After changing `.uproject` or `.Build.cs`, regenerate project files if your IDE does not refresh automatically, then rebuild the Editor target.
 
 ### 1) Support for `FName` / `FString` / `FText`
 
@@ -213,8 +213,6 @@ The `ue6` package also contains `BqLogVerse`, a plugin that brings BqLog to Vers
            if (GameLog := bq.get_log_by_name["Game"]):
                GameLog.debug("player {Name} joined")
    ```
-
-   As in C++, each level function checks the level itself, so there is nothing to test before calling it. Do not call a variable `Log`: the editor reports it as ambiguous with the function `Log` (the logarithm) of `/Verse.org/Verse`.
 
 3. **Category logs**: `BqLog_CategoryLogGenerator` also writes `<ClassName>.verse` (see [Category log class generation](ADVANCED_USAGE.md#category-log-class-generation)). Put it in a Verse folder of your project or plugin; it defines the module `<ClassName>` there, with the same categories as the C++ class, used as in the other languages:
 

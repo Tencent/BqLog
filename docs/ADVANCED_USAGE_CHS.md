@@ -452,9 +452,7 @@ void CallThisOnYourGameStart()
 ### 1）加密算法说明
 
 - 仅适用于 `CompressedFileAppender`；
-- 使用 `ssh-keygen` 生成的 2048 bit RSA 密钥对。模数必须恰好 2048 bit，指数必须是奇数且不小于 65537；不满足时创建 appender 直接失败，因为段头为包裹后的种子预留了固定 256 字节；
-
-因为密钥流按偏移寻址，解码可以从段内任意位置开始，损坏也只停留在原处，不会波及它之后的所有内容。
+- 使用 `ssh-keygen` 生成的 2048 bit RSA 密钥对；其他长度或指数的密钥会在创建 appender 时被拒绝。
 
 ### 2）这套方案提供什么、不提供什么
 
