@@ -221,7 +221,11 @@ namespace bq {
 
             auto appender_names = all_apenders_config.get_object_key_set();
             for (const auto& name_key : appender_names) {
-                add_appender(name_key, all_apenders_config[name_key]);
+                if (!add_appender(name_key, all_apenders_config[name_key])) {
+                    // a log whose appenders are gone would look alive and write nothing
+                    util::log_device_console(bq::log_level::error, "create log \"%s\" failed: appender \"%s\" config is invalid", name_.c_str(), name_key.c_str());
+                    return false;
+                }
             }
             refresh_merged_log_level_bitmap();
         }
@@ -250,6 +254,26 @@ namespace bq {
     bool log_imp::reset_config(const property_value& config)
     {
         const auto& log_config = config["log"];
+        const auto& all_apenders_config = config["appenders_config"];
+
+        // Checked before anything is touched: the block below destroys the working appenders while
+        // it swaps them out, so an unusable config would leave this log alive with none.
+        {
+            if (!all_apenders_config.is_object()) {
+                util::log_device_console(bq::log_level::error, "reset log \"%s\" failed, invalid appenders_config", name_.c_str());
+                return false;
+            }
+            auto appender_names = all_apenders_config.get_object_key_set();
+            for (const auto& name_key : appender_names) {
+                const auto& appender_config = all_apenders_config[name_key];
+                if (appender_base::check_config(appender_config) == appender_base::config_check_result::reject) {
+                    util::log_device_console(bq::log_level::error,
+                        "reset log \"%s\" failed: appender \"%s\" of type \"%s\" needs a non-empty \"file_name\" config",
+                        name_.c_str(), name_key.c_str(), ((string)appender_config["type"]).trim().c_str());
+                    return false;
+                }
+            }
+        }
 
         // init print_stack_levels
         {
@@ -259,11 +283,6 @@ namespace bq {
         // init or reset appenders
         {
             bq::platform::scoped_spin_lock lock(spin_lock_);
-            const auto& all_apenders_config = config["appenders_config"];
-            if (!all_apenders_config.is_object()) {
-                util::log_device_console(bq::log_level::error, "create_log parse property failed, invalid appenders_config");
-                return false;
-            }
             decltype(recovery_appenders_) previous_recovery_appenders;
             if (recover_status_ == recover_status_enum::in_recovering) {
                 previous_recovery_appenders = bq::move(recovery_appenders_);
@@ -298,13 +317,20 @@ namespace bq {
                 }
             }
             tmp_list.clear();
+            bool all_appenders_created = true;
             for (const auto& name : new_create_appender_names) {
-                add_appender(name, all_apenders_config[name]);
+                if (!add_appender(name, all_apenders_config[name])) {
+                    // the check above accepted this config, so only a real creation failure gets here
+                    all_appenders_created = false;
+                }
             }
             if (recover_status_ == recover_status_enum::in_recovering) {
                 recovery_appenders_need_begin_ = recovery_appenders_.size() != appenders_list_.size();
             }
             refresh_merged_log_level_bitmap();
+            if (!all_appenders_created) {
+                return false;
+            }
         }
         // init categories mask
         {
@@ -333,32 +359,36 @@ namespace bq {
     bool log_imp::add_appender(const string& name, const bq::property_value& jobj)
     {
         const auto& type_obj = jobj["type"];
-        if (!type_obj.is_string()) {
-            util::log_device_console(bq::log_level::error, "add_appender failed, appender \"%s\" has invalid \"type\" config", name.c_str());
-            return false;
-        }
-        bq::string type_str = ((string)type_obj).trim();
-        for (int32_t i = 0; i < (int32_t)appender_base::appender_type::type_count; ++i) {
-            if (type_str.equals_ignore_case(appender_base::get_config_name_by_type((appender_base::appender_type)i))) {
+        const bq::string type_str = type_obj.is_string() ? ((string)type_obj).trim() : bq::string("");
 
-                break;
-            }
+        switch (appender_base::check_config(jobj)) {
+        case appender_base::config_check_result::reject:
+            util::log_device_console(bq::log_level::error,
+                "add_appender failed, appender \"%s\" of type \"%s\" needs a non-empty \"file_name\" config",
+                name.c_str(), type_str.c_str());
+            return false;
+        case appender_base::config_check_result::ignore:
+            // a type this version does not know (raw_file was removed): skip it, the log is fine
+            util::log_device_console(bq::log_level::warning, "bq log warning: appender \"%s\" ignored, unsupported type \"%s\"", name.c_str(), type_str.c_str());
+            return true;
+        default:
+            break;
         }
+
         bq::unique_ptr<appender_base> appender;
         if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::console))) {
             appender = bq::make_unique<appender_console>();
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::text_file))) {
             appender = bq::make_unique<appender_file_text>();
-        } else if (type_str.equals_ignore_case("raw_file")) {
-            util::log_device_console(bq::log_level::warning, "bq log warning: appender \"%s\" ignored, type raw_file has been removed, use compressed_file instead", name.c_str());
-            return false;
         } else if (type_str.equals_ignore_case(appender_base::get_config_name_by_type(appender_base::appender_type::compressed_file))) {
             appender = bq::make_unique<appender_file_compressed>();
         } else {
-            util::log_device_console(bq::log_level::error, "bq log error: invalid Appender type : %s", type_str.c_str());
-            return false;
+            // check_config() accepted the type, so this is unreachable
+            util::log_device_console(bq::log_level::warning, "bq log warning: appender \"%s\" ignored, unsupported type \"%s\"", name.c_str(), type_str.c_str());
+            return true;
         }
         if (!appender->init(name, jobj, this)) {
+            util::log_device_console(bq::log_level::error, "add_appender failed, appender \"%s\" of type \"%s\" could not be created", name.c_str(), type_str.c_str());
             return false;
         }
         appenders_list_.push_back(bq::move(appender));

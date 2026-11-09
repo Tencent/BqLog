@@ -19,7 +19,6 @@
 
 namespace bq {
     static constexpr size_t CACHE_READ_DEFAULT_SIZE = 32 * 1024;
-    static constexpr size_t CACHE_WRITE_DEFAULT_SIZE = 64 * 1024;
     static constexpr size_t CACHE_WRITE_MIN_SIZE = 64 * 1024;
     static constexpr size_t CACHE_WRITE_MAX_SIZE = 4 * 1024 * 1024;
 
@@ -217,21 +216,26 @@ namespace bq {
 
     bool appender_file_base::init_impl(const bq::property_value& config_obj)
     {
-        set_basic_configs(config_obj);
+        if (!set_basic_configs(config_obj)) {
+            // nothing to open, and the sizes below are only assigned by a successful parse
+            return false;
+        }
         if (is_recovery_enabled()) {
             try_recover();
             clean_cache_write();
         }
         assert(get_total_used_write_cache_size() <= write_cache_target_size_);
         resize_cache_write_entity(write_cache_target_size_);
-        return !config_file_name_.is_empty();
+        return true;
     }
 
     bool appender_file_base::reset_impl(const bq::property_value& config_obj)
     {
         bq::string prev_config_file_name = config_file_name_;
         auto prev_base_dir_type = base_dir_type_;
-        set_basic_configs(config_obj);
+        if (!set_basic_configs(config_obj)) {
+            return false;
+        }
         return (prev_config_file_name == config_file_name_) && (prev_base_dir_type == base_dir_type_);
     }
 
@@ -462,15 +466,16 @@ namespace bq {
         return parent_log_->get_buffer().get_config().need_recovery;
     }
 
-    void appender_file_base::set_basic_configs(const bq::property_value& config_obj)
+    bool appender_file_base::set_basic_configs(const bq::property_value& config_obj)
     {
         config_file_name_.clear();
-        if (!config_obj["file_name"].is_string()) {
-            util::log_device_console(bq::log_level::error, "init appender \"%s\" failed, can not find valid \"file_name\" token", ((string)config_obj["name"]).c_str());
-            return;
-        } else {
-            config_file_name_ = ((string)config_obj["file_name"]).trim();
+        if (!is_valid_file_name(config_obj)) {
+            util::log_device_console(bq::log_level::error,
+                "appender \"%s\" init failed, a file appender needs a non-empty \"file_name\" config",
+                get_name().c_str());
+            return false;
         }
+        config_file_name_ = ((string)config_obj["file_name"]).trim();
 
         if (config_obj["base_dir_type"].is_integral()) {
             base_dir_type_ = static_cast<int32_t>((bq::property_value::integral_type)config_obj["base_dir_type"]);
@@ -510,7 +515,7 @@ namespace bq {
             capacity_limit_ = 0;
         }
 
-        write_cache_target_size_ = CACHE_WRITE_DEFAULT_SIZE;
+        write_cache_target_size_ = DEFAULT_WRITE_CACHE_SIZE;
         if (config_obj["write_cache_size"].is_integral()) {
             int64_t configured_size = static_cast<int64_t>(config_obj["write_cache_size"]);
             if (configured_size > 0) {
@@ -526,6 +531,7 @@ namespace bq {
         } else {
             enable_rolling_log_file_ = true;
         }
+        return true;
     }
 
     void appender_file_base::refresh_cache_write_head_size(bool need_recovery, const bq::string& mmap_file_abs_path)

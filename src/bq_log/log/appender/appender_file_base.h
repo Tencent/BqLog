@@ -205,7 +205,7 @@ namespace bq {
 #else
     private:
 #endif
-        void set_basic_configs(const bq::property_value& config_obj);
+        bool set_basic_configs(const bq::property_value& config_obj);
 
         void refresh_cache_write_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
 
@@ -262,6 +262,10 @@ namespace bq {
             return cache_write_head_size_ + static_cast<size_t>(cache_write_padding_) + cache_write_cursor_;
         }
 
+    protected:
+        // Also the initial value of write_cache_target_size_, which a failed parse leaves unassigned.
+        static constexpr size_t DEFAULT_WRITE_CACHE_SIZE = 64 * 1024;
+
     private:
         bq::string config_file_name_;
         bool always_create_new_file_;
@@ -272,7 +276,7 @@ namespace bq {
         bool enable_rolling_log_file_;
         uint64_t expire_time_ms_;
         uint64_t capacity_limit_;
-        size_t write_cache_target_size_;
+        size_t write_cache_target_size_ = DEFAULT_WRITE_CACHE_SIZE;
         uint64_t current_file_expire_time_epoch_ms_;
         bool flush_when_destruct_ = true;
         bool disk_full_drop_ = false;

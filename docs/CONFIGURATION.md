@@ -104,6 +104,8 @@ An empty value (`key=`) is ignored.
 | `enable_rolling_log_file`    | No       | `true` / `false`                        | `true`            | No               | Yes                | Yes                      |
 | `pub_key`                   | No       | RSA2048 Public Key (OpenSSH `ssh-rsa` text)  | Empty (No encryption)        | No               | No                | Yes (Enable hybrid encryption)      |
 
+A mandatory field that is missing or empty is a config error, not a warning: `create_log` and `reset_config` report failure, and a log that already exists keeps its previous configuration and appenders. An appender whose `type` this version does not know (`raw_file` was removed) is skipped with a warning, so a config written for another version still creates the log.
+
 #### `appenders_config.xxx.type`
 
 Specify Appender type:

@@ -53,7 +53,9 @@ namespace bq {
             }
             virtual bool init_impl(const bq::property_value& config_obj) override
             {
-                appender_file_base::init_impl(config_obj);
+                if (!appender_file_base::init_impl(config_obj)) {
+                    return false;
+                }
                 set_flush_when_destruct(false);
                 open_new_indexed_file_by_name();
                 return true;
@@ -576,6 +578,89 @@ namespace bq {
                 clear_appender_file_base_test_folder();
                 (void)result;
             }
+            static uint64_t get_log_dir_size(const bq::string& relative_dir)
+            {
+                bq::array<bq::string> files;
+                bq::file_manager::get_all_files(TO_ABSOLUTE_PATH(relative_dir, 0), files, true);
+                uint64_t total = 0;
+                for (const auto& file : files) {
+                    if (!file.end_with("/")) {
+                        total += bq::file_manager::get_file_size(file);
+                    }
+                }
+                return total;
+            }
+
+            // A file appender configured without file_name used to fail while setting up the write
+            // cache, reading a member only a successful parse assigns.
+            void do_appender_config_reject_test(test_result& result)
+            {
+                test_output_dynamic(bq::log_level::info, "appender config validation test begin, please wait...          \r");
+                // a folder of its own: the log created here stays alive and keeps its file open,
+                // so it must not share the folder the later cases delete
+                bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH("appender_config_test", 0));
+
+                const bq::string appender_without_file_name = "appenders_config.no_name.type=text_file\n"
+                                                              "appenders_config.no_name.levels=[all]\n";
+
+                {
+                    bq::log log_obj = bq::log::create_log("reject_text_file_without_file_name", appender_without_file_name);
+                    result.add_result(!log_obj.is_valid(), "create_log fails when a text_file appender has no file_name");
+                }
+                {
+                    bq::log log_obj = bq::log::create_log("reject_compressed_file_without_file_name",
+                        "appenders_config.no_name.type=compressed_file\n"
+                        "appenders_config.no_name.levels=[all]\n");
+                    result.add_result(!log_obj.is_valid(), "create_log fails when a compressed_file appender has no file_name");
+                }
+                {
+                    bq::log log_obj = bq::log::create_log("reject_blank_file_name",
+                        "appenders_config.blank.type=text_file\n"
+                        "appenders_config.blank.file_name=   \n"
+                        "appenders_config.blank.levels=[all]\n");
+                    result.add_result(!log_obj.is_valid(), "create_log fails when file_name holds only blanks");
+                }
+
+                // a type this version does not know is skipped, the log itself still works
+                {
+                    bq::log log_obj = bq::log::create_log("ignore_unknown_appender_type",
+                        "appenders_config.removed.type=raw_file\n"
+                        "appenders_config.removed.file_name=appender_config_test/ignored\n"
+                        "appenders_config.console.type=console\n"
+                        "appenders_config.console.enable=false\n"
+                        "appenders_config.console.levels=[all]\n");
+                    result.add_result(log_obj.is_valid(), "create_log survives an appender type it does not know");
+                }
+
+                // a rejected reset must not disturb the appender that is working right now
+                {
+                    const bq::string keep_dir = "appender_config_test/reset_reject";
+                    bq::log log_obj = bq::log::create_log("reset_reject_keeps_appender",
+                        bq::string("appenders_config.f.type=text_file\n") + "appenders_config.f.file_name=" + keep_dir + "/keep\n" + "appenders_config.f.levels=[all]\n");
+                    result.add_result(log_obj.is_valid(), "create_log for the reset test succeeds");
+
+                    log_obj.info("before the rejected reset %d", 1);
+                    log_obj.force_flush();
+                    const uint64_t size_before = get_log_dir_size(keep_dir);
+
+                    result.add_result(!log_obj.reset_config(appender_without_file_name), "reset_config fails when an appender has no file_name");
+
+                    log_obj.info("after the rejected reset %d", 2);
+                    log_obj.force_flush();
+                    const uint64_t size_after = get_log_dir_size(keep_dir);
+                    result.add_result(size_before > 0 && size_after > size_before,
+                        "the appender keeps writing after a rejected reset_config, size %" PRIu64 " -> %" PRIu64,
+                        size_before, size_after);
+
+                    const bq::string new_dir = "appender_config_test/reset_accept";
+                    result.add_result(log_obj.reset_config(bq::string("appenders_config.f.type=text_file\n") + "appenders_config.f.file_name=" + new_dir + "/new\n" + "appenders_config.f.levels=[all]\n"),
+                        "reset_config accepts a valid appender config");
+                    log_obj.info("after the accepted reset %d", 3);
+                    log_obj.force_flush();
+                    result.add_result(get_log_dir_size(new_dir) > 0, "the replaced appender writes into the new file");
+                }
+            }
+
             void do_file_appender_test(test_result& result)
             {
                 do_appender_test<appender_file_base_for_test>(result, "appender_file_base_test", false, "", "");
@@ -1869,6 +1954,7 @@ namespace bq {
                 constexpr int32_t loop_count = 4;
 #endif
                 do_binary_appender_test_with_enc(result);
+                do_appender_config_reject_test(result);
                 do_decoder_malformed_file_test(result);
                 do_decoder_resync_test(result);
                 do_decoder_untrusted_size_allocation_test(result);

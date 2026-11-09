@@ -27,6 +27,17 @@ namespace bq {
             type_count
         };
 
+        // ignore: a type this version does not know, the caller warns and skips it.
+        // reject: a known appender whose config cannot work, the caller fails the call.
+        enum class config_check_result {
+            ok,
+            ignore,
+            reject,
+        };
+
+        // No side effects and no output: a caller can reject a config before it disturbs a working log.
+        static config_check_result check_config(const bq::property_value& config_obj);
+
         appender_base();
         virtual ~appender_base();
 
@@ -63,9 +74,13 @@ namespace bq {
         }
 
     private:
-        void set_basic_configs(const bq::property_value& config_obj);
+        // False means the config cannot produce a working appender, so init() fails.
+        bool set_basic_configs(const bq::property_value& config_obj);
 
     protected:
+        // A file appender without a usable "file_name" cannot be created.
+        static bool is_valid_file_name(const bq::property_value& config_obj);
+
         virtual bool init_impl(const bq::property_value& config_obj) = 0;
 
         virtual bool reset_impl(const bq::property_value& config_obj) = 0;

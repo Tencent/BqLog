@@ -57,7 +57,10 @@ namespace bq {
         clear();
         parent_log_ = parent_log;
         name_ = name;
-        set_basic_configs(config_obj);
+        if (!set_basic_configs(config_obj)) {
+            clear();
+            return false;
+        }
         return init_impl(config_obj);
     }
 
@@ -72,8 +75,38 @@ namespace bq {
         clear();
         parent_log_ = parent_log_backup;
         name_ = name_backup;
-        set_basic_configs(config_obj);
+        if (!set_basic_configs(config_obj)) {
+            return false;
+        }
         return reset_impl(config_obj);
+    }
+
+    bool appender_base::is_valid_file_name(const bq::property_value& config_obj)
+    {
+        const auto& file_name_obj = config_obj["file_name"];
+        // the loader drops an empty value, but a value of blanks survives the parse
+        return file_name_obj.is_string() && !((bq::string)file_name_obj).trim().is_empty();
+    }
+
+    appender_base::config_check_result appender_base::check_config(const bq::property_value& config_obj)
+    {
+        const auto& type_obj = config_obj["type"];
+        if (!type_obj.is_string()) {
+            return config_check_result::ignore;
+        }
+        const bq::string type_str = ((bq::string)type_obj).trim();
+        for (int32_t i = 0; i < (int32_t)appender_type::type_count; ++i) {
+            if (!type_str.equals_ignore_case(get_config_name_by_type((appender_type)i))) {
+                continue;
+            }
+            const appender_type type = static_cast<appender_type>(i);
+            if ((type == appender_type::text_file || type == appender_type::compressed_file) && !is_valid_file_name(config_obj)) {
+                return config_check_result::reject;
+            }
+            return config_check_result::ok;
+        }
+        // raw_file was removed, and an appender from another version may be named anything
+        return config_check_result::ignore;
     }
 
     bool appender_base::log_recovery_error(const log_entry_handle& handle)
@@ -81,7 +114,7 @@ namespace bq {
         return appenders_enable && log_impl(handle);
     }
 
-    void appender_base::set_basic_configs(const bq::property_value& config_obj)
+    bool appender_base::set_basic_configs(const bq::property_value& config_obj)
     {
         const auto& levels_array = config_obj["levels"];
         if (!bq::log_utils::get_log_level_bitmap_by_config(levels_array, log_level_bitmap_)) {
@@ -143,5 +176,6 @@ namespace bq {
         } else {
             layout_ptr_ = const_cast<layout*>(&(parent_log_->get_layout()));
         }
+        return true;
     }
 }

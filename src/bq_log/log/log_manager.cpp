@@ -117,7 +117,10 @@ namespace bq {
                 if (categories_changed) {
                     assert(false && "categories can not been changed during runtime, please check the generated categories file for all the wrappers");
                 }
-                (*exist_iter)->reset_config(config_obj);
+                if (!(*exist_iter)->reset_config(config_obj)) {
+                    // the log that already exists keeps its previous config and appenders
+                    return 0;
+                }
                 return (*exist_iter).get()->id();
             }
         }
@@ -177,10 +180,12 @@ namespace bq {
         }
         for (decltype(log_imp_list_)::iterator it = log_imp_list_.begin(); it != log_imp_list_.end(); ++it) {
             if ((*it) && (*it)->get_name() == log_name) {
-                if ((*it)->reset_config(config_obj)) {
+                // a rejected config leaves the log as it was, so report what reset_config() decided
+                const bool reset_ok = (*it)->reset_config(config_obj);
+                if (reset_ok) {
                     (*it)->set_config(config_content);
                 }
-                return true;
+                return reset_ok;
             }
         }
         return false;
