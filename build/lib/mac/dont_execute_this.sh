@@ -185,7 +185,7 @@ echo "  GENERATOR:         $(determine_generator)"
 
 # Always build universal binaries (arm64 + x86_64)
 typeset -a ARCH_ARGS
-ARCH_ARGS=("-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64")
+ARCH_ARGS=("-DCMAKE_OSX_ARCHITECTURES=x86_64;arm64" "-DCMAKE_OSX_DEPLOYMENT_TARGET=${BQ_MACOS_DEPLOYMENT_TARGET:-12.0}")
 
 # Build one (libtype, format) across all configs
 build_one_pair() {

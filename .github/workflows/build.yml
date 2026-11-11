@@ -899,6 +899,7 @@ jobs:
         run: |
           bash .github/scripts/check_go_bridge_exports.sh dist
           bash .github/scripts/check_pack_layout.sh dist
+          python3 .github/scripts/check_apple_symbols.py mac-libs dist
 
   build_mac_tools:
     runs-on: macos-latest
@@ -4120,6 +4121,9 @@ jobs:
           chmod +x *.sh
           ./build_all_and_pack.sh
 
+      - name: Check iOS symbols
+        run: python3 .github/scripts/check_apple_symbols.py ios-libs dist
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:
@@ -6909,7 +6913,7 @@ jobs:
             local base="$1"
             local version="$2"
             local result
-            result=$(find "$base" -type f -path "*dynamic_lib*/libBqLog.${VERSION}.dylib" 2>/dev/null | head -n1 || true)
+            result=$(find "$base" -type f -path "*dynamic_lib*/libBqLog.${VERSION}.dylib" -not -path "*.dSYM/*" 2>/dev/null | head -n1 || true)
             if [[ -z "$result" ]]; then
               result=$(find_preferred "$base" libBqLog.dylib "RelWithDebInfo" "dynamic_lib")
             fi
@@ -6990,7 +6994,7 @@ jobs:
           LINUX_X64_SO=$(find_linux_so "$LINUX_X64_BASE" "$VERSION")
           LINUX_ARM64_SO=$(find_linux_so "$LINUX_ARM64_BASE" "$VERSION")
           MAC_DYLIB=$(find_mac_dylib "$MAC_BASE" "$VERSION")
-          IOS_XCFRAMEWORK=$(find "$IOS_BASE" -type d -path "*dynamic_lib*/BqLog.xcframework" -print -quit)
+          IOS_XCFRAMEWORK=$(find "$IOS_BASE" -type d -path "*/dynamic_lib/lib/RelWithDebInfo/BqLog.xcframework" -print -quit)
 
           ANDROID_AAR=$(find "$ANDROID_BASE" -type f -name "*bqlog-release.aar" -print -quit)
           if [[ -z "$ANDROID_AAR" ]]; then
@@ -7344,6 +7348,18 @@ jobs:
             exit 1
           fi
 
+          # The editor does not import a directory ending with "~"; npm pack keeps it
+          IOS_DSYMS="$(dirname "${ios_fw[0]}")/dSYMs"
+          IOS_DEV_DSYM="$IOS_DSYMS/ios-arm64/BqLog.framework.dSYM"
+          if [[ ! -f "$IOS_DEV_DSYM/Contents/Resources/DWARF/BqLog" ]]; then
+            echo "ERROR: iOS device dSYM missing or empty: $IOS_DEV_DSYM" >&2
+            exit 1
+          fi
+          rm -rf "$IOS_DIR/Symbols~"
+          mkdir -p "$IOS_DIR/Symbols~/ios-arm64"
+          cp -a "$IOS_DEV_DSYM" "$IOS_DIR/Symbols~/ios-arm64/"
+          grep ' ios-arm64/' "$IOS_DSYMS/UUIDs.txt" > "$IOS_DIR/Symbols~/UUIDs.txt"
+
           # macOS universal (libBqLog.dylib) - prefer exact versioned real .dylib (libBqLog.${VERSION}.dylib) and copy as libBqLog.dylib
           mapfile -t macos_real_dylib < <(find "$BASE" -type f -path "*/macos_universal_binary_libs_${VERSION}/*/dynamic_lib/lib/RelWithDebInfo/libBqLog.${VERSION}.dylib" | sort)
           if (( ${#macos_real_dylib[@]} )); then
@@ -7362,6 +7378,15 @@ jobs:
           mkdir -p "$MACOS_DIR"
           # -L to dereference symlink if any; final name must be libBqLog.dylib
           cp -Lf "$REAL_DYLIB" "$MACOS_DIR/libBqLog.dylib"
+
+          MAC_DSYM="$(dirname "$REAL_DYLIB")/$(basename "$(readlink -f "$REAL_DYLIB")").dSYM"
+          if ! compgen -G "$MAC_DSYM/Contents/Resources/DWARF/*" >/dev/null; then
+            echo "ERROR: macOS dSYM missing or empty: $MAC_DSYM" >&2
+            exit 1
+          fi
+          rm -rf "$MACOS_DIR/Symbols~"
+          mkdir -p "$MACOS_DIR/Symbols~"
+          cp -a "$MAC_DSYM" "$MACOS_DIR/Symbols~/libBqLog.dylib.dSYM"
 
           echo "Staged files/directories (Plugins subtree, up to depth 6):"
           /usr/bin/find "${PLUGIN_DIR}/Runtime/Plugins" -maxdepth 6 -print | sort
@@ -7391,6 +7416,17 @@ jobs:
           echo "::endgroup::"
           mkdir -p ../../dist/plugins/${ENGINE}
           npm pack --pack-destination ../../dist/plugins/${ENGINE}
+
+      - name: Check Apple binaries and symbols in the package
+        env:
+          ENGINE: ${{ matrix.engine }}
+        run: |
+          set -euo pipefail
+          tgz=$(ls dist/plugins/${ENGINE}/*.tgz)
+          chk="$RUNNER_TEMP/pkg_check"
+          rm -rf "$chk" && mkdir -p "$chk"
+          tar xzf "$tgz" -C "$chk"
+          python3 .github/scripts/check_apple_symbols.py engine-pkg "$chk/package"
 
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
