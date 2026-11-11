@@ -267,9 +267,10 @@ namespace bq {
             for (const auto& name_key : appender_names) {
                 const auto& appender_config = all_apenders_config[name_key];
                 if (appender_base::check_config(appender_config) == appender_base::config_check_result::reject) {
+                    const bq::string type_str = ((bq::string)appender_config["type"]).trim();
                     util::log_device_console(bq::log_level::error,
                         "reset log \"%s\" failed: appender \"%s\" of type \"%s\" needs a non-empty \"file_name\" config",
-                        name_.c_str(), name_key.c_str(), ((string)appender_config["type"]).trim().c_str());
+                        name_.c_str(), name_key.c_str(), type_str.c_str());
                     return false;
                 }
             }
