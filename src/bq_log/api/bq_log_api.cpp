@@ -713,6 +713,9 @@ namespace bq {
 
         BQ_API void __api_take_snapshot_string(uint64_t log_id, const char* time_zone_config_utf8, bq::_api_string_def* out_snapshot_string)
         {
+            // An empty string when the log does not exist; callers read str and len unconditionally.
+            out_snapshot_string->str = "";
+            out_snapshot_string->len = 0;
             bq::log_manager::instance().force_flush(log_id);
             bq::log_imp* log = bq::log_manager::get_log_by_id(log_id);
             if (!log) {
@@ -766,5 +769,15 @@ namespace bq {
             return true;
         }
 #endif
+
+        BQ_API void __api_set_secure_random_source(bq::type_func_ptr_secure_random_source fn)
+        {
+            bq::encryption::set_secure_random_source(fn);
+        }
+
+        BQ_API bool __api_has_secure_random_source()
+        {
+            return bq::encryption::has_secure_random_source();
+        }
     }
 }

@@ -20,7 +20,15 @@ namespace bq {
         friend class appender_decoder_base;
 
     protected:
-        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = vernam::DEFAULT_BUFFER_ALIGNMENT;
+        // Part of the recovery mmap layout through sizeof(mmap_head).
+        static constexpr size_t DEFAULT_BUFFER_ALIGNMENT = 32;
+        static_assert((DEFAULT_BUFFER_ALIGNMENT & (DEFAULT_BUFFER_ALIGNMENT - static_cast<size_t>(1))) == 0, "DEFAULT_BUFFER_ALIGNMENT must be power of two");
+
+        // Whether the write cache is plaintext. Any value other than flush_idle reads as transforming.
+        enum flush_state : uint32_t {
+            flush_idle = 0,
+            flush_transforming = 1,
+        };
 
         struct parse_file_context {
         private:
@@ -74,8 +82,30 @@ namespace bq {
         // flush appender file to physical disk.
         void flush_write_io();
 
+#if defined(BQ_UNIT_TEST)
+        // Test-only: lets crash tests snapshot the files at a fixed instant of a flush.
+        enum class flush_hook_point : int32_t {
+            after_transform = 0, // buffer encrypted in place, write() not issued yet
+            after_write = 1, // write() returned, cursors and file size not updated yet
+        };
+        typedef void (*flush_hook_fn)(const appender_file_base* sender, flush_hook_point point, void* user);
+
+        static void set_flush_hook(flush_hook_fn fn, void* user);
+
+        static size_t test_flush_state_offset();
+
+        // Appends bytes past the finished cursor, as a producer does while a flush is in flight.
+        void test_append_write_cache_tail(const void* data, size_t size);
+
+        uint32_t test_read_flush_state() const;
+#endif
+
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
+
+#if defined(BQ_UNIT_TEST)
+        void invoke_flush_hook(flush_hook_point point) const;
+#endif
 
         virtual bool reset_impl(const bq::property_value& config_obj) override;
 
@@ -98,7 +128,13 @@ namespace bq {
 
         virtual void on_file_open(bool is_new_created);
 
-        virtual bool seek_read_file_absolute(size_t pos);
+        // In-place, self-inverse transform of bytes that will sit at file_pos. Only called when transform_enabled_.
+        virtual void on_flush_transform(uint8_t* data, size_t size, uint64_t file_pos);
+
+        // Returning false skips this flush and keeps the bytes pending.
+        virtual bool on_flush_before_transform(size_t pending_size, uint64_t file_pos);
+
+        virtual bool seek_read_file_absolute(uint64_t pos);
 
         virtual void seek_read_file_offset(int32_t offset);
 
@@ -108,7 +144,7 @@ namespace bq {
 
         virtual bool on_log_item_new_begin(bq::log_entry_handle& read_handle) override;
 
-        size_t get_current_file_size() const { return current_file_size_; }
+        uint64_t get_current_file_size() const { return current_file_size_; }
 
         file_handle& get_file_handle() { return file_; }
 
@@ -155,13 +191,13 @@ namespace bq {
             cache_write_head_->cache_write_finished_cursor_ = cache_write_cursor_;
         }
 
-        void set_cache_write_padding(uint8_t new_padding);
-
         virtual bool on_appender_file_recovery_begin();
 
         virtual void on_appender_file_recovery_end();
 
         void set_flush_when_destruct(bool flush);
+
+        bool get_flush_when_destruct() const;
 
         void open_new_indexed_file_by_name();
 #ifdef BQ_UNIT_TEST
@@ -169,11 +205,22 @@ namespace bq {
 #else
     private:
 #endif
-        void set_basic_configs(const bq::property_value& config_obj);
+        bool set_basic_configs(const bq::property_value& config_obj);
 
         void refresh_cache_write_head_size(bool need_recovery, const bq::string& mmap_file_abs_path);
 
+        void set_flush_state_transforming();
+
+        void set_flush_state_idle();
+
+        bool read_flush_state_is_transforming() const;
+
+        void clear_flush_state();
+
         bool try_recover();
+
+        // Every failed recovery exits through this and leaves the appender as before the attempt.
+        bool discard_recovery_cache();
 
         bq_forceinline bool is_file_oversize() const
         {
@@ -215,17 +262,21 @@ namespace bq {
             return cache_write_head_size_ + static_cast<size_t>(cache_write_padding_) + cache_write_cursor_;
         }
 
+    protected:
+        // Also the initial value of write_cache_target_size_, which a failed parse leaves unassigned.
+        static constexpr size_t DEFAULT_WRITE_CACHE_SIZE = 64 * 1024;
+
     private:
         bq::string config_file_name_;
         bool always_create_new_file_;
-        size_t max_file_size_;
-        size_t current_file_size_;
+        uint64_t max_file_size_;
+        uint64_t current_file_size_;
         bq::file_handle file_;
         int32_t base_dir_type_;
         bool enable_rolling_log_file_;
         uint64_t expire_time_ms_;
         uint64_t capacity_limit_;
-        size_t write_cache_target_size_;
+        size_t write_cache_target_size_ = DEFAULT_WRITE_CACHE_SIZE;
         uint64_t current_file_expire_time_epoch_ms_;
         bool flush_when_destruct_ = true;
         bool disk_full_drop_ = false;
@@ -235,12 +286,14 @@ namespace bq {
         struct mmap_head {
             uint64_t write_cache_size_;
             uint64_t cache_write_finished_cursor_;
-            char padding0_[sizeof(uint32_t)];
+            uint32_t flush_state_;
             uint32_t file_path_size_;
             char file_path_[1];
             char padding1_[DEFAULT_BUFFER_ALIGNMENT - sizeof(uint64_t) * 3 - sizeof(file_path_)];
         } BQ_PACK_END
         static_assert(sizeof(mmap_head) == DEFAULT_BUFFER_ALIGNMENT, "Invalid appender_file_base::mmap_head size");
+        static_assert(offsetof(mmap_head, flush_state_) == sizeof(uint64_t) * 2, "flush state moved out of the reserved slot");
+        static_assert(offsetof(mmap_head, file_path_size_) == sizeof(uint64_t) * 2 + sizeof(uint32_t), "file path size moved");
         bq::unique_ptr<bq::normal_buffer> cache_write_entity_;
         mmap_head* cache_write_head_ = nullptr;
         size_t cache_write_head_size_ = sizeof(mmap_head);
@@ -258,8 +311,11 @@ namespace bq {
 #endif
         bq::array<uint8_t> cache_read_;
         size_t cache_read_cursor_ = 0;
-        size_t read_file_pos_ = 0;
+        uint64_t read_file_pos_ = 0;
         bool cache_read_eof_ = false;
+
+        // A flag rather than a virtual call, so a plaintext flush pays one branch.
+        bool transform_enabled_ = false;
 
         bq_forceinline size_t get_pendding_flush_written_size() const
         {
@@ -301,7 +357,7 @@ namespace bq {
             return cache_read_cursor_;
         }
 
-        bq_forceinline size_t get_read_file_pos() const
+        bq_forceinline uint64_t get_read_file_pos() const
         {
             return read_file_pos_;
         }

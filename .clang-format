@@ -11,7 +11,10 @@ ColumnLimit:                0
 ReflowComments:             false
 PointerAlignment:           Left
 BreakBeforeBraces:          WebKit
-# The tree writes an empty body as '{}' far more often than as '{ }'.
+# The tree writes an empty body as '{}' far more often than as '{ }'. Two keys because the option
+# was renamed: clang-format 18 to 21 read SpaceInEmptyBlock, 22 and later read SpaceInEmptyBraces
+# (Never, Always). Both are kept so an older binary still produces the newer one's output.
+SpaceInEmptyBlock:          false
 SpaceInEmptyBraces:         Never
 # Macros clang-format cannot see through. BQ_PACK_END already carries the ';', so never write one
 # after it, and put a BQ_PACK_BEGIN that opens a class in a namespace on its own line.

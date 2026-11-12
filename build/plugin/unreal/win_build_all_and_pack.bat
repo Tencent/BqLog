@@ -33,7 +33,7 @@ if exist "..\..\..\install" rmdir /s /q "..\..\..\install"
 
 echo Parsed VERSION=%VERSION%
 
-for %%T in (ue4 ue5) do (
+for %%T in (ue4 ue5 ue6) do (
     if exist "%TMP_DIR%" rmdir /s /q "%TMP_DIR%"
     mkdir "%TARGET_DIR%" >nul
     mkdir "%PUBLIC_DIR%" >nul
@@ -75,16 +75,22 @@ for %%T in (ue4 ue5) do (
     if exist "%PUBLIC_DIR%\BqLog_h_%%T.txt" move /Y "%PUBLIC_DIR%\BqLog_h_%%T.txt" "%PUBLIC_DIR%\BqLog.h" >nul
     pushd "%PUBLIC_DIR%" && del /q /f *.txt >nul 2>&1 & popd
 
-    REM Replace version in .uplugin
+    REM BqLogVerse (the Verse API) needs UE6's Verse, so only the ue6 package carries it.
+    if "%%T"=="ue6" (
+        robocopy "%ROOT_DIR%\plugin\unreal\BqLogVerse" "%TMP_DIR%\BqLogVerse" /E /XD Binaries Intermediate >nul
+        if errorlevel 8 exit /b 8
+    )
+
+    REM Replace version in every .uplugin
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "$v='%VERSION%'; $ue='%%T'; $parts=$v.Split('.'); $vint=[int]$parts[0]*10000+[int]$parts[1]*100+[int]$parts[2]; $f='%TARGET_DIR%\BqLog.uplugin'; $c=Get-Content $f -Raw; $c=$c -replace '\"Version\": 1', ('\"Version\": '+$vint); $c=$c -replace '\"VersionName\": \"1.0\"', ('\"VersionName\": \"'+$v+'\"'); if($ue -eq 'ue4'){ $c=$c -replace '\"EngineVersion\": \"5.8\"', '\"EngineVersion\": \"4.27\"'; $c=$c -replace '\"PlatformAllowList\"', '\"WhitelistPlatforms\"'; $c=$c -replace '\"PlatformDenyList\"', '\"BlacklistPlatforms\"'; $c=$c -replace '\"LinuxArm64\"', '\"LinuxAArch64\"'; $c=$c -replace ', \"PS5\"', '' }; Set-Content $f $c -NoNewline"
+      "$v='%VERSION%'; $ue='%%T'; $parts=$v.Split('.'); $vint=[int]$parts[0]*10000+[int]$parts[1]*100+[int]$parts[2]; foreach($f in (Get-ChildItem '%TMP_DIR%\*\*.uplugin').FullName){ $c=Get-Content $f -Raw; $c=$c -replace '\"Version\": 1', ('\"Version\": '+$vint); $c=$c -replace '\"VersionName\": \"1.0\"', ('\"VersionName\": \"'+$v+'\"'); if($ue -eq 'ue4'){ $c=$c -replace '\"EngineVersion\": \"5.8\"', '\"EngineVersion\": \"4.27\"'; $c=$c -replace '\"PlatformAllowList\"', '\"WhitelistPlatforms\"'; $c=$c -replace '\"PlatformDenyList\"', '\"BlacklistPlatforms\"'; $c=$c -replace '\"LinuxArm64\"', '\"LinuxAArch64\"'; $c=$c -replace ', \"PS5\"', '' }; Set-Content $f $c -NoNewline }"
 
     REM Remove .gitkeep files before zipping
-    powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path '%TARGET_DIR%' -Recurse -Filter '.gitkeep' | Remove-Item -Force"
+    powershell -NoProfile -ExecutionPolicy Bypass -Command "Get-ChildItem -Path '%TMP_DIR%' -Recurse -Filter '.gitkeep' | Remove-Item -Force"
 
     if exist "%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip" del /q "%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip"
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
-      "Compress-Archive -Path '%TARGET_DIR%' -DestinationPath '%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip' -Force"
+      "Compress-Archive -Path '%TMP_DIR%\*' -DestinationPath '%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip' -Force"
     powershell -NoProfile -ExecutionPolicy Bypass -Command ^
       "$zipPath = '%DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip'; if (-not (Test-Path -LiteralPath $zipPath)) { throw \"Missing file: $zipPath\" }; $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $zipPath; $line = $hash.Hash.ToLowerInvariant() + '  ' + [System.IO.Path]::GetFileName($zipPath); [System.IO.File]::WriteAllText($zipPath + '.sha256', $line, [System.Text.Encoding]::ASCII)"
     echo Created %DIST_DIR%\bqlog-unreal-plugin-%VERSION%-%%T.zip

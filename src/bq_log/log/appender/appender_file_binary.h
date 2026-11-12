@@ -25,7 +25,7 @@
  * 1. File Header (Fixed 8 bytes at file offset 0)
  *    Offset  Size  Field
  *    ------  ----  -----------------------------------------------------------
- *    0x0000     4  uint32_t version                      (appender_file_header)
+ *    0x0000     4  uint32_t version                      (format_version)
  *    0x0004     1  appender_format_type format           (2=compressed)
  *    0x0005     3  char padding[3]
  *
@@ -41,13 +41,14 @@
  *       +0x09      1  appender_encryption_type enc_type
  *       +0x0A      2  char padding[2]
  *
- *    B. Encryption Metadata (Present only if enc_type == rsa_aes_xor)
- *       Offset  Size       Field
- *       ------  ---------  ---------------------------------------------------
- *       +0x000  8          64-bit hash of RSA public modulus and exponent
- *       +0x008  256        RSA-2048 ciphertext of AES_256 key
- *       +0x108  16         AES IV in plaintext
- *       +0x118  32768      AES-encrypted XOR key blob (32 KiB)
+ *    B. Encryption Metadata (268 bytes, present only if enc_type == rsa_kem_chacha)
+ *       Offset  Size  Field
+ *       ------  ----  -------------------------------------------------------
+ *       +0x00      8  uint64_t rsa_key_fingerprint
+ *       +0x08      1  uint8_t  chacha_rounds         (written as 8; 8/12/20 accepted on read)
+ *       +0x09      3  char     reserved[3]           (written as 0)
+ *       +0x0C    256  uint8_t  kem_ciphertext[256]   (I2OSP(r^e mod n, 256), big endian)
+ *       The payload starts at segment +0x118 and is ChaCha ciphertext addressed by its offset from there.
  *
  *    C. Segment Payload (Optional, The content depends on whether it is the First Segment or a subsequent one.)
  *
@@ -87,12 +88,15 @@
 namespace bq {
     class appender_file_binary : public appender_file_base {
     public:
+        virtual ~appender_file_binary();
+
         enum class appender_format_type : uint8_t {
             compressed = 2
         };
         enum class appender_encryption_type : uint8_t {
             plaintext = 1,
-            rsa_aes_xor
+            rsa_aes_xor = 2, // read only by the standalone decoder
+            rsa_kem_chacha = 3
         };
         enum class appender_segment_type : uint8_t {
             normal = 1,
@@ -116,6 +120,41 @@ namespace bq {
             char padding[2];
         } BQ_PACK_END
         static_assert(sizeof(appender_file_segment_head) == 12, "appender_file_segment_head size error");
+
+        static constexpr uint8_t default_chacha_rounds = 8;
+        static constexpr size_t kem_ciphertext_size = 256;
+
+        // 2^32 ChaCha blocks of 64 bytes; one byte more would reuse keystream.
+        bq_forceinline static constexpr uint64_t max_segment_payload_size()
+        {
+            return static_cast<uint64_t>(1) << 38;
+        }
+
+        // Written into the file header and bound into the segment key derivation.
+        static constexpr uint32_t format_version = 11;
+
+        bq_forceinline static constexpr bool is_supported_chacha_rounds(uint8_t rounds)
+        {
+            return rounds == 8 || rounds == 12 || rounds == 20;
+        }
+
+        // Follows appender_file_segment_head when enc_type == rsa_kem_chacha.
+        BQ_PACK_BEGIN
+        struct appender_segment_encryption_head {
+            uint64_t rsa_key_fingerprint;
+            uint8_t chacha_rounds;
+            char reserved[3];
+            uint8_t kem_ciphertext[kem_ciphertext_size];
+        } BQ_PACK_END
+        static_assert(sizeof(appender_segment_encryption_head) == 268, "appender_segment_encryption_head size error");
+        static_assert(offsetof(appender_segment_encryption_head, rsa_key_fingerprint) == 0x00, "rsa_key_fingerprint must sit at segment +0x0C");
+        static_assert(offsetof(appender_segment_encryption_head, chacha_rounds) == 0x08, "chacha_rounds must sit at segment +0x14");
+        static_assert(offsetof(appender_segment_encryption_head, reserved) == 0x09, "reserved must sit at segment +0x15");
+        static_assert(offsetof(appender_segment_encryption_head, kem_ciphertext) == 0x0C, "kem_ciphertext must sit at segment +0x18");
+
+        static constexpr size_t encrypted_payload_base_offset = sizeof(appender_file_segment_head) + sizeof(appender_segment_encryption_head);
+        static constexpr size_t plaintext_payload_base_offset = sizeof(appender_file_segment_head);
+        static_assert(encrypted_payload_base_offset == 280, "encrypted payload must start at segment +0x118");
 
         // Only exist in first segment
         BQ_PACK_BEGIN
@@ -144,26 +183,39 @@ namespace bq {
         };
 
     public:
-        bq_forceinline static constexpr size_t get_xor_key_blob_size()
-        {
-            return 32 * 1024; // 32 KiB
-        }
+        struct segment_key {
+            uint8_t key[chacha20::key_size];
+            uint8_t nonce[chacha20::nonce_size];
+        };
 
-        bq_forceinline static constexpr size_t get_encryption_keys_size()
-        {
-            return sizeof(uint64_t) // size of RSA public-key fingerprint
-                + 256 // size of RSA-2048 ciphertext of AES key
-                + 16 // size of AES IV in plaintext
-                + get_xor_key_blob_size(); // size of AES-encrypted XOR key blob
-        }
+        /// <summary>
+        /// HKDF-SHA256 over the KEM shared secret, bound to every field of the encryption head.
+        /// next_seg_pos and seg_type are left out because they are rewritten after the segment is created.
+        /// </summary>
+        static bool derive_segment_key(const appender_segment_encryption_head& head,
+            const uint8_t* shared_secret, size_t shared_secret_size, segment_key& out);
+
+        /// <summary>
+        /// Checks the key fingerprint, decapsulates the KEM ciphertext and derives the segment key.
+        /// </summary>
+        static bool derive_segment_key_from_head(const appender_segment_encryption_head& head,
+            const rsa::private_key& key, segment_key& out, uint8_t& rounds);
+
+        /// <summary>
+        /// XORs the keystream into the payload in place; payload_offset counts from the payload start.
+        /// Applying it twice restores the input.
+        /// </summary>
+        static void transform_segment_payload(uint8_t* data, size_t size, uint64_t payload_offset,
+            const segment_key& key, uint8_t rounds);
 
     protected:
         virtual bool init_impl(const bq::property_value& config_obj) override;
         virtual bool reset_impl(const bq::property_value& config_obj) override;
         virtual bool parse_exist_log_file(parse_file_context& context) override;
         virtual void on_file_open(bool is_new_created) override;
-        virtual void flush_write_cache() override;
-        virtual bool seek_read_file_absolute(size_t pos) override;
+        virtual void on_flush_transform(uint8_t* data, size_t size, uint64_t file_pos) override;
+        virtual bool on_flush_before_transform(size_t pending_size, uint64_t file_pos) override;
+        virtual bool seek_read_file_absolute(uint64_t pos) override;
         virtual void seek_read_file_offset(int32_t offset) override;
         virtual appender_format_type get_appender_format() const = 0;
         virtual uint32_t get_binary_format_version() const = 0;
@@ -179,7 +231,6 @@ namespace bq {
         bool read_to_next_segment();
         bool scan_segment_topology(segment_topology_info& result);
         bool append_new_segment(appender_segment_type type);
-        void update_write_cache_padding();
 
     private:
         bq::rsa::public_key rsa_pub_key_;
@@ -187,6 +238,11 @@ namespace bq {
         seg_info cur_read_seg_;
         appender_encryption_type enc_type_;
         bool current_file_is_new_created_ = false;
-        bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> xor_key_blob_;
+        // File size right after a fresh file's metadata, UINT64_MAX otherwise.
+        uint64_t fresh_file_metadata_end_pos_ = UINT64_MAX;
+        bool warned_weak_key_source_ = false;
+        segment_key cur_seg_key_ {};
+        uint64_t cur_seg_payload_base_ = 0;
+        uint8_t cur_seg_rounds_ = 0;
     };
 }

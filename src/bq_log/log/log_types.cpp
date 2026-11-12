@@ -151,6 +151,9 @@ namespace bq {
             if (static_cast<uint64_t>(ext_off) + sizeof(_log_entry_ext_head_def) + ext.thread_name_len_ > data_len) {
                 return false;
             }
+            if (ext.thread_name_len_ > MAX_THREAD_NAME_LEN) {
+                return false;
+            }
             args_end = ext_off;
         }
 

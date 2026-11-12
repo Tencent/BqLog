@@ -51,7 +51,7 @@ log.info("Hello from Unity! value:{}", 42);
 >
 > **UE 4.22 与 4.23 的 Mac / iOS 支持：** 由于 Fab 构建机的限制，Fab 上针对 UE 4.22 与 4.23 的 zip **未包含** Mac 与 iOS 版本。如果在这两个引擎版本下需要 Mac 或 iOS 支持，请前往 [GitHub Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 **源码版** 或 **预编译版** 手动引入。
 >
-> **使用 UE6？** 请从 [GitHub Releases 页面](https://github.com/Tencent/BqLog/releases)手动下载 `ue6` 源码版或预编译版插件。这些包目前与 UE5 使用相同的插件实现，并已在当前 UE6 开发版中验证可用。UE6 仍在开发，后续可能需要随引擎变化调整兼容性。由于 Epic 官方的 Fab 引擎支持目前只到 UE 5.8，Fab 暂时无法分发 UE6 插件。
+> **使用 UE6？** 请从 [GitHub Releases 页面](https://github.com/Tencent/BqLog/releases)手动下载 `ue6` 源码版或预编译版插件。包里有两个插件：`BqLog`，与 UE5 是同一份插件，加上 UE6 需要的代码分支；以及可选的 `BqLogVerse`，提供 Verse 接口（见[在 Verse 中使用 BqLog](#4在-verse-中使用-bqlogue6)）。两者都已在当前 UE6 开发版中验证可用。UE6 仍在开发，后续可能需要随引擎变化调整兼容性。由于 Epic 官方的 Fab 引擎支持目前只到 UE 5.8，Fab 暂时无法分发 UE6 插件。
 >
 > **PS4 / PS5 / Switch？** 请使用**源码版**：预编译版不含主机平台的库。主机平台宏由插件传入，两个 base dir 也由插件设置。平台相关准备见[接入指南 — 主机平台](./INTEGRATION_GUIDE_CHS.md#主机平台)。
 
@@ -113,7 +113,7 @@ PublicDependencyModuleNames.Add("BqLog");
 #include "BqLog.h"
 ```
 
-> **不要**手动添加 include 目录，`BqLog` 模块会导出所需路径。蓝图节点模块 `BqLogBPNodes` 是编辑器专用模块，也**不需要**加入依赖。修改 `.uproject` 或 `.Build.cs` 后，如果 IDE 没有自动刷新，请重新生成项目文件，然后重新编译 Editor Target。
+> **在 Unreal Engine 中请包含 `"BqLog.h"`，不要用 `"bq_log/bq_log.h"`**——后者不包含 Unreal Engine 适配。**也不要**手动添加 include 目录，`BqLog` 模块会导出所需路径。蓝图节点模块 `BqLogBPNodes` 是编辑器专用模块，同样**不需要**加入依赖。修改 `.uproject` 或 `.Build.cs` 后，如果 IDE 没有自动刷新，请重新生成项目文件，再重新编译 Editor Target。
 
 ### 1）对 `FName` / `FString` / `FText` 的支持
 
@@ -178,6 +178,70 @@ Unreal 插件会自动将所有 BqLog 输出转接到 Unreal 的 Output Log，�
      ```text
      LogBqLog: Display: [Bussiness_Log_Obj] UTC+7 2025-11-27 14:49:19.381[tid-27732 ] [I] [Factory.People.Manager] Test Log Arg0:String Arg, Arg1:TRUE, Arg2:1.000000,0.000000,0.000000|2.999996,0.00[...]
      ```
+
+### 4）在 Verse 中使用 BqLog（UE6）
+
+`ue6` 包里还有一个 `BqLogVerse` 插件，把 BqLog 带到 Verse，接口和其他语言一致：名字沿用 C++（`bq.log` 对应 `bq::log`，`bq.create_log` 对应 `bq::log::create_log`），分类日志写作 `MyLog.info(MyLog.cat.Shop.Seller, "...")`。Verse 可以自己创建、配置日志，也可以使用 C++、蓝图或 BqLog Data Asset 创建的日志。它目前是实验性的，默认不启用，不用 Verse 的工程不受影响。
+
+1. **启用插件**：让 `<你的项目>/Plugins/BqLogVerse/BqLogVerse.uplugin` 与 `Plugins/BqLog` 放在一起，并在 `.uproject` 中加上：
+
+   ```json
+   "Plugins": [
+       { "Name": "BqLog", "Enabled": true },
+       { "Name": "BqLogVerse", "Enabled": true }
+   ]
+   ```
+
+   存放 Verse 代码的插件，需要在自己的 `Plugins` 依赖里列出 `BqLogVerse`。`BqLogVerse` 本身依赖引擎的 `Verse` 和 `Solaris` 插件。
+
+2. **在 Verse 中写日志**：`bq.create_log` 用和 `bq::log::create_log` 相同的配置文本创建日志，`bq.get_log_by_name` 按名字取得日志，不管是谁创建的。
+
+   ```verse
+   using { /Tencent.com/BqLog }
+
+   game_logic := class:
+       Start()<transacts>:void =
+           Config := "appenders_config.file.type=compressed_file\nappenders_config.file.file_name=Game\n"
+           if (GameLog := bq.create_log["Game", Config]):
+               GameLog.info("game started")
+
+       OnJoin(Name:string)<transacts>:void =
+           # 任何代码都可以按名字取得日志，不管是 Verse、C++、蓝图还是 BqLog Data Asset 创建的。
+           if (GameLog := bq.get_log_by_name["Game"]):
+               GameLog.debug("player {Name} joined")
+   ```
+
+3. **Category 日志**：`BqLog_CategoryLogGenerator` 还会生成 `<ClassName>.verse`（见 [Category 日志类生成](ADVANCED_USAGE_CHS.md#category-日志类生成)）。把它放进项目或插件的 Verse 目录，就会在那里定义模块 `<ClassName>`，分类和 C++ 的同名类一致，用法也和其他语言一样：
+
+   ```verse
+   if (MyLog := business_log.create_log["MyLog", Config]):
+       MyLog.info("in the default category")
+       MyLog.info(MyLog.cat.Shop.Seller, "in category Shop.Seller")
+
+   # 在别处取得同一个日志，不管是 Verse、C++ 的 business_log::create_log、蓝图还是 BqLog Data Asset 创建的。
+   if (MyLog := business_log.get_log_by_name["MyLog"]):
+       MyLog.warning(MyLog.cat.Shop, "found it")
+   ```
+
+   `business_log.log` 继承自 `bq.category_log`，`bq.category_log` 又继承自 `bq.log`，所以凡是需要 `bq.log` 的地方都能直接传。日志的分类和这个类不一致时，`business_log.get_log_by_name` 失败。分类名如果和 Verse 中已有的名字重复，比如关键字、`/Verse.org/Verse` 里的 `Log`，或生成模块自己的定义 `log`，生成的字段名末尾会加 `_`（`MyLog.cat.Log_`），字段旁的注释写明对应的分类。
+
+| Verse | 含义 |
+|---|---|
+| `bq.create_log[Name, Config]` | 用 `Config` 创建名为 `Name` 的日志，等同于 `bq::log::create_log`。同名日志已存在时，改为把 `Config` 应用到它上面；`Name` 为空时会自动生成名字，用返回值的 `get_name()` 读取。`Config` 解析失败，或已有的同名日志带分类时，调用失败 |
+| `bq.get_log_by_name[Name]` | 名为 `Name` 的日志，不论由谁创建。带分类的日志也能取到，写在它的默认分类下。没有这个日志时失败 |
+| `<ClassName>.create_log[Name, Config]`、`<ClassName>.get_log_by_name[Name]` | Category 日志类的对应函数。同名日志的分类与该类不同时，两者都失败 |
+| `verbose(Message)` … `fatal(Message)` | 以对应级别在默认分类下写入 `Message` |
+| `verbose(Category, Message)` … `fatal(Category, Message)` | Category 日志：在 `Category`（如 `MyLog.cat.Shop.Seller`）下写入 `Message` |
+| `is_valid[]`、`get_name()`、`get_id()` | 等同于 C++ 的 `is_valid`、`get_name`、`get_id`；`get_id()` 与 C++ 看到的 id 相同 |
+| `reset_config[Config]`、`set_appender_enable(AppenderName, Enable)`、`force_flush()`、`take_snapshot(TimeZone)` | 等同于 C++ 的同名函数。`Config` 解析失败时 `reset_config` 失败 |
+| `get_categories_count()`、`get_categories_name_array()` | Category 日志：分类个数，以及按序号排列的分类名，默认分类 `""` 在最前 |
+| `bq.force_flush_all_logs()`、`bq.get_version()` | 等同于 `bq::log::force_flush_all_logs` 和 `bq::log::get_version` |
+
+需要了解的行为：
+
+- **消息不是格式串**。Verse 自己的插值（`"{Name}"`）已经生成了最终文本，传到 BqLog 的花括号会原样写出。
+- **这些操作都不参与事务**。各级别函数带 `<computes>`，`create_log`、`reset_config`、`set_appender_enable` 带 `<transacts>`，Verse 允许在事务代码中调用它们；但调用会立即生效，外层 Verse 事务回滚时不会撤销。
+- **Verse 路径**。接口位于 `/Tencent.com/BqLog`。它所在的包是 `InternalUser`，因为 Verse 只允许在这类包里声明 `<native>`；你自己的 Verse 包保持 `PublicUser`，像使用其他模块一样使用它即可。
 
 ---
 

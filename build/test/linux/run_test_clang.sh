@@ -54,6 +54,17 @@ else
     exit 1
 fi
 
+# The keystream kernel a release build actually reaches is the accelerated one, so it is its own
+# step with a hard requirement: on x86_64 this job fails if AVX2 is missing instead of passing on
+# the SSE2 path alone, and on arm64 the same step is what proves the NEON kernel.
+if [ "$(uname -m)" = "x86_64" ]; then
+    export BQ_REQUIRE_AVX2=1
+fi
+if ! ./BqLogUnitTest --crypto-only; then
+    echo "Accelerated keystream check failed."
+    exit 1
+fi
+
 if [ "${BQ_ENABLE_ASAN,,}" = "true" ]; then
     # ASan roughly doubles the Debug pass; one pass keeps the job inside the 6 hour limit.
     cd ..

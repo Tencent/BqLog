@@ -386,10 +386,13 @@
 #define BQ_HW_CRC_TARGET __attribute__((target("sse4.2")))
 #define BQ_HW_SIMD_TARGET __attribute__((target("avx2")))
 #define BQ_HW_SIMD_SSE_TARGET __attribute__((target("sse4.1")))
+// For kernels that run without a CPU check, so they may use only the x86 baseline.
+#define BQ_HW_SIMD_SSE2_TARGET __attribute__((target("sse2")))
 #else
 #define BQ_HW_CRC_TARGET
 #define BQ_HW_SIMD_TARGET
 #define BQ_HW_SIMD_SSE_TARGET
+#define BQ_HW_SIMD_SSE2_TARGET
 #endif
 #define BQ_CRC_HW_INLINE inline
 #define BQ_SIMD_HW_INLINE inline
@@ -397,6 +400,7 @@
 #define BQ_HW_CRC_TARGET
 #define BQ_HW_SIMD_TARGET
 #define BQ_HW_SIMD_SSE_TARGET
+#define BQ_HW_SIMD_SSE2_TARGET
 #define BQ_CRC_HW_INLINE bq_forceinline
 #define BQ_SIMD_HW_INLINE bq_forceinline
 #endif

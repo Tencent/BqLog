@@ -12,6 +12,7 @@
 
 #include "test_layout.h"
 #include "bq_log/log/layout.h"
+#include "bq_log/log/log_types.h"
 #include "bq_common/bq_common.h"
 #include <vector>
 #include <string>
@@ -27,8 +28,56 @@ namespace bq {
 
             result = result + test_find_brace_and_copy();
             result = result + test_find_brace_and_convert_u16();
+            result = result + test_validate_thread_name_bound();
             result = result + test_throughput();
 
+            return result;
+        }
+
+        test_result test_layout::test_validate_thread_name_bound()
+        {
+            test_result result;
+
+            // A record can describe itself consistently and still not be readable. The ext head sits
+            // inside the record, and the length it carries can point at bytes that are all there, so
+            // every "does it fit the record" question answers yes while the number itself is larger
+            // than the fixed-size buffer the formatters copy the name into. This is the shape a
+            // damaged segment takes after a crash, so validate() has to be the one that rejects it.
+            struct forged_record {
+                alignas(8) uint8_t bytes[sizeof(_log_entry_head_def) + 512];
+                uint32_t size;
+
+                explicit forged_record(uint8_t name_len)
+                {
+                    constexpr uint32_t fmt_len = 3;
+                    constexpr uint32_t args_offset = static_cast<uint32_t>(sizeof(_log_entry_head_def)) + 4;
+                    memset(bytes, 0, sizeof(bytes));
+                    size = args_offset + static_cast<uint32_t>(sizeof(_log_entry_ext_head_def)) + name_len;
+
+                    auto& head = *reinterpret_cast<_log_entry_head_def*>(bytes);
+                    head.log_format_str_type = static_cast<uint8_t>(log_arg_type_enum::string_utf8_type);
+                    head.log_format_data_len = fmt_len;
+                    head.ext_info_offset = args_offset;
+                    memcpy(bytes + sizeof(_log_entry_head_def), "abc", fmt_len);
+
+                    auto& ext = *reinterpret_cast<_log_entry_ext_head_def*>(bytes + args_offset);
+                    ext.thread_name_len_ = name_len;
+                    memset(bytes + args_offset + sizeof(_log_entry_ext_head_def), 'n', name_len);
+                }
+
+                bool validates() const
+                {
+                    log_entry_handle entry(bytes, size);
+                    return entry.validate();
+                }
+            };
+
+            result.add_result(forged_record(MAX_THREAD_NAME_LEN).validates(),
+                "a record naming its thread with the longest allowed name validates");
+            result.add_result(!forged_record(MAX_THREAD_NAME_LEN + 1).validates(),
+                "a record whose thread name is one byte too long is rejected");
+            result.add_result(!forged_record(255).validates(),
+                "a record whose thread name fills the whole length byte is rejected");
             return result;
         }
 

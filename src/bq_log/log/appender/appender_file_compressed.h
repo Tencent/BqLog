@@ -65,7 +65,7 @@ namespace bq {
         };
 
     public:
-        static constexpr uint32_t format_version = 10;
+        static constexpr uint32_t format_version = appender_file_binary::format_version;
         static constexpr uint32_t DEFAULT_FORMAT_TEMPLATE_CACHE_MAX_ENTRIES = 100000;
         static constexpr uint32_t DEFAULT_THREAD_INFO_CACHE_MAX_ENTRIES = 2048;
 

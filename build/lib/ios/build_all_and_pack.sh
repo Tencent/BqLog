@@ -4,22 +4,37 @@ rm -rf XCodeProj
 mkdir -p XCodeProj
 pushd "XCodeProj" >/dev/null
 
+REPO_ROOT="${PWD:A}/../../../.."
+REPO_ROOT="${REPO_ROOT:A}"
+
 BUILD_LIB_TYPES=(dynamic_lib static_lib)
 APPLE_LIB_FORMATS=(framework framework)
 BUILD_CONFIGS=(Debug MinSizeRel Release RelWithDebInfo)
 TARGET_PLATFORMS=(OS64 SIMULATOR64COMBINED TVOS SIMULATORARM64_TVOS VISIONOS SIMULATOR_VISIONOS WATCHOS SIMULATOR_WATCHOSCOMBINED)
 
-rm -rf "../../../artifacts"
-rm -rf "../../../install"
+typeset -A SLICE_ID=(
+  OS64                      ios-arm64
+  SIMULATOR64COMBINED       ios-arm64_x86_64-simulator
+  TVOS                      tvos-arm64
+  SIMULATORARM64_TVOS       tvos-arm64-simulator
+  VISIONOS                  xros-arm64
+  SIMULATOR_VISIONOS        xros-arm64-simulator
+  WATCHOS                   watchos-arm64_32_armv7k
+  SIMULATOR_WATCHOSCOMBINED watchos-arm64_x86_64-simulator
+)
+
+rm -rf "${REPO_ROOT}/artifacts"
 
 for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
   BUILD_LIB_TYPE=${BUILD_LIB_TYPES[i]}
   APPLE_LIB_FORMAT=${APPLE_LIB_FORMATS[i]}
-  rm -rf "../../../../install/${BUILD_LIB_TYPE}"
+  rm -rf "${REPO_ROOT}/install/${BUILD_LIB_TYPE}"
   for TARGET_PLATFORM in ${TARGET_PLATFORMS[@]}; do
       echo "== Configure/Build for PLATFORM=${TARGET_PLATFORM} =="
       rm -f CMakeCache.txt
       rm -rf CMakeFiles *.xcodeproj(N)
+      # dsymutil keeps the files of the previous platform in an existing .dSYM
+      rm -rf "${REPO_ROOT}/artifacts/${BUILD_LIB_TYPE}"
       case ${TARGET_PLATFORM} in
         VISIONOS|SIMULATOR_VISIONOS) DEPLOYMENT_TARGET_ARG=() ;;
         *) DEPLOYMENT_TARGET_ARG=(-DDEPLOYMENT_TARGET=9.0) ;;
@@ -57,39 +72,27 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
 
   for build_config in ${BUILD_CONFIGS[@]}; do
     XCFRAMEWORK_ARGS=()
+    OUT_DIR="../../../../install/${BUILD_LIB_TYPE}/lib/${build_config}"
+    DSYM_OUT="${OUT_DIR}/dSYMs"
+    rm -rf "${DSYM_OUT}"
     for TARGET_PLATFORM in ${TARGET_PLATFORMS[@]}; do
       FRAMEWORK_PATH="../../../../install/${BUILD_LIB_TYPE}/stage/${TARGET_PLATFORM}/lib/${build_config}/BqLog.framework"
       if [ ! -d "${FRAMEWORK_PATH}" ]; then
         # It may be that some platforms were not built for this config, which is acceptable.
         continue
       fi
+      # No -debug-symbols: Xcode fails the build when a declared DebugSymbolsPath is missing
       XCFRAMEWORK_ARGS+=("-framework" "${FRAMEWORK_PATH}")
 
-      # Deduce SDK name from platform to find the dSYM path inside the build directory (XCodeProj)
-      SDK_NAME=""
-      case ${TARGET_PLATFORM} in
-        OS64) SDK_NAME="iphoneos" ;;
-        SIMULATOR64COMBINED) SDK_NAME="iphonesimulator" ;;
-        TVOS) SDK_NAME="appletvos" ;;
-        SIMULATORARM64_TVOS) SDK_NAME="appletvsimulator" ;;
-        VISIONOS) SDK_NAME="xros" ;;
-        SIMULATOR_VISIONOS) SDK_NAME="xrsimulator" ;;
-        WATCHOS) SDK_NAME="watchos" ;;
-        SIMULATOR_WATCHOSCOMBINED) SDK_NAME="watchsimulator" ;;
-      esac
-
-      if [[ -n "${SDK_NAME}" ]]; then
-        DSYM_PATH="${FRAMEWORK_PATH}.dSYM"
-        if [[ -d "${DSYM_PATH}" ]]; then
-          DSYM_PATH_ABS=${DSYM_PATH:A}
-          echo "Found dSYM at ${DSYM_PATH} -> ${DSYM_PATH_ABS}"
-          XCFRAMEWORK_ARGS+=("-debug-symbols" "${DSYM_PATH_ABS}")
-        else
-          # Don't warn for Release/MinSizeRel as they don't produce dSYMs
-          if [[ "${build_config}" != "Release" && "${build_config}" != "MinSizeRel" ]]; then
-            echo "Warning: dSYM not found at ${DSYM_PATH}"
-          fi
-        fi
+      [[ "${BUILD_LIB_TYPE}" == "dynamic_lib" ]] || continue
+      DSYM_PATH="${FRAMEWORK_PATH}.dSYM"
+      DWARF_FILES=( "${DSYM_PATH}"/Contents/Resources/DWARF/*(N) )
+      if (( ${#DWARF_FILES} )); then
+        mkdir -p "${DSYM_OUT}/${SLICE_ID[$TARGET_PLATFORM]}"
+        ditto "${DSYM_PATH}" "${DSYM_OUT}/${SLICE_ID[$TARGET_PLATFORM]}/BqLog.framework.dSYM"
+      elif [[ "${build_config}" == "Debug" || "${build_config}" == "RelWithDebInfo" ]]; then
+        echo "ERROR: dSYM missing or empty for ${TARGET_PLATFORM}/${build_config}: ${DSYM_PATH}"
+        exit 1
       fi
     done
 
@@ -98,14 +101,19 @@ for (( i=1; i<=${#BUILD_LIB_TYPES[@]}; i++ )); do
         continue
     fi
 
-    OUTPUT_PATH="../../../../install/${BUILD_LIB_TYPE}/lib/${build_config}/BqLog.xcframework"
+    OUTPUT_PATH="${OUT_DIR}/BqLog.xcframework"
     rm -rf "${OUTPUT_PATH}"
     echo "Creating XCFramework for configuration: ${build_config}:"
     xcodebuild -create-xcframework "${XCFRAMEWORK_ARGS[@]}" -output "${OUTPUT_PATH}"
+
+    if [[ -d "${DSYM_OUT}" ]]; then
+      ( cd "${DSYM_OUT}" && for d in */BqLog.framework.dSYM; do dwarfdump --uuid "$d"; done > UUIDs.txt )
+    fi
   done
   rm -rf ../../../../install/${BUILD_LIB_TYPE}/stage
 done
 
+python3 "${REPO_ROOT}/.github/scripts/check_apple_symbols.py" ios-libs "${REPO_ROOT}/install"
 
 
 

@@ -104,6 +104,8 @@ snapshot.categories_mask=[ModuleA.SystemA.ClassA,ModuleB]
 | `enable_rolling_log_file`    | ✘       | `true` / `false`                        | `true`            | ✘               | ✔                | ✔                      |
 | `pub_key`                   | ✘       | RSA2048 公钥（OpenSSH `ssh-rsa` 文本）  | 空（不加密）            | ✘               | ✘                | ✔（启用混合加密）      |
 
+必填项缺失或为空属于配置错误，不是警告：`create_log` 与 `reset_config` 会返回失败，已存在的 log 保留原有配置与 appender。本版本不认识的 `type`（`raw_file` 已被移除）只打印警告并跳过该 appender，其它版本写的配置仍然可以创建 log。
+
 #### `appenders_config.xxx.type`
 
 指定 Appender 类型：

@@ -19,4 +19,4 @@
  */
 
 
-//This is just a place holder file, and should be replaced with BqLog_h_ue4.txt or BqLog_h_ue5.txt during build process.
+//This is just a place holder file, and should be replaced with BqLog_h_ue4.txt, BqLog_h_ue5.txt or BqLog_h_ue6.txt during build process.

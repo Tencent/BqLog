@@ -163,7 +163,7 @@ namespace bq {
         // return 0 if file is not found.
         static uint64_t get_file_last_modified_epoch_ms(const bq::string& path);
 
-        static size_t get_file_size(const bq::string& path);
+        static uint64_t get_file_size(const bq::string& path);
 
         static string read_all_text(const bq::string& path);
 
@@ -213,7 +213,7 @@ namespace bq {
         /// <param name="handle">file handle</param>
         /// <param name="offset">truncat offset, 0 will clear the content of file</param>
         /// <returns>true : success, false : failed</returns>
-        bool truncate_file(const file_handle& handle, size_t offset);
+        bool truncate_file(const file_handle& handle, uint64_t offset);
 
         /// <summary>
         /// read data from file from current seek position, please make sure there is enough space in target data.
@@ -274,7 +274,7 @@ namespace bq {
         /// </summary>
         /// <param name="handle">file handle</param>
         /// <returns>file size. if return 0, it means file is empty, or file not exist, or file handle is closed</returns>
-        size_t get_file_size(const file_handle& handle) const;
+        uint64_t get_file_size(const file_handle& handle) const;
 
     private:
         int32_t get_file_descriptor_index_by_handle(const file_handle& handle) const;

@@ -358,3 +358,14 @@ BQ_API_DEF(bool, __api_test_get_storage_report, (uint64_t log_id, uint32_t* out_
 /// What the linked library was built with, so a bug report describes the binary and not the caller's headers.
 /// </summary>
 BQ_API_DEF(uint32_t, __api_get_platform_capabilities, (void), ());
+
+/// <summary>
+/// Installs the CSPRNG used for segment keys where the platform has none, or removes it with null.
+/// A callback that returns false is treated as "no source".
+/// </summary>
+BQ_API_DEF(void, __api_set_secure_random_source, (BQ_LOG_API_TYPE(bq::type_func_ptr_secure_random_source, bq_secure_random_source_fn) fn), (fn));
+
+/// <summary>
+/// Whether key material will come from a CSPRNG here, from the platform or from an injected callback.
+/// </summary>
+BQ_API_DEF(bool, __api_has_secure_random_source, (void), ());

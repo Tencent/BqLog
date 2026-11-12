@@ -51,7 +51,7 @@ Pick any one of the following ways to integrate.
 >
 > **Mac / iOS on UE 4.22 and 4.23:** Due to Fab build-machine limitations, the Fab zips for UE 4.22 and 4.23 do **not** include Mac or iOS binaries. If you need Mac or iOS support on these two engine versions, please download the **Source** or **Prebuilt** package from the [GitHub Releases page](https://github.com/Tencent/BqLog/releases) and integrate it manually.
 >
-> **Using UE6?** Download the `ue6` Source or Prebuilt plugin manually from the [GitHub Releases page](https://github.com/Tencent/BqLog/releases). These packages currently use the same plugin implementation as UE5 and have been verified with current UE6 development builds. UE6 is still under development, so compatibility may be adjusted as the engine changes. Fab cannot distribute the UE6 package yet because Epic's official Fab engine support currently ends at UE 5.8.
+> **Using UE6?** Download the `ue6` Source or Prebuilt plugin manually from the [GitHub Releases page](https://github.com/Tencent/BqLog/releases). The package holds two plugins: `BqLog`, the same plugin as for UE5 with the code paths UE6 needs, and the optional `BqLogVerse`, which adds a Verse API (see [Using BqLog in Verse](#4-using-bqlog-in-verse-ue6)). Both have been verified with current UE6 development builds. UE6 is still under development, so compatibility may be adjusted as the engine changes. Fab cannot distribute the UE6 package yet because Epic's official Fab engine support currently ends at UE 5.8.
 >
 > **On PS4 / PS5 / Switch?** Use the **Source** package: the prebuilt one ships no console binaries. The plugin injects the console platform macros and sets both base dirs itself. Platform setup is in [Integration Guide — console platforms](./INTEGRATION_GUIDE.md#console-platforms).
 
@@ -113,7 +113,7 @@ You can then include the Unreal adapter from C++:
 #include "BqLog.h"
 ```
 
-> Do **not** add include directories manually. The `BqLog` module exports the required paths. The Blueprint node module `BqLogBPNodes` is editor-only and does **not** need to be added to your dependencies. After changing `.uproject` or `.Build.cs`, regenerate project files if your IDE does not refresh automatically, then rebuild the Editor target.
+> **Inside Unreal Engine, include `"BqLog.h"`, not `"bq_log/bq_log.h"`** — the latter carries no Unreal adapter. **Also do not** add include directories manually: the `BqLog` module exports the required paths. The Blueprint node module `BqLogBPNodes` is editor-only and does **not** need to be added to your dependencies. After changing `.uproject` or `.Build.cs`, regenerate project files if your IDE does not refresh automatically, then rebuild the Editor target.
 
 ### 1) Support for `FName` / `FString` / `FText`
 
@@ -181,6 +181,70 @@ After importing the Unreal plugin, BqLog can be called directly in Blueprint:
      ```text
      LogBqLog: Display: [Bussiness_Log_Obj] UTC+7 2025-11-27 14:49:19.381[tid-27732 ] [I] [Factory.People.Manager] Test Log Arg0:String Arg, Arg1:TRUE, Arg2:1.000000,0.000000,0.000000|2.999996,0.00[...]
      ```
+
+### 4) Using BqLog in Verse (UE6)
+
+The `ue6` package also contains `BqLogVerse`, a plugin that brings BqLog to Verse with the API of the other languages: the names are those of C++ (`bq.log` is `bq::log`, `bq.create_log` is `bq::log::create_log`), and a category log is written to as `MyLog.info(MyLog.cat.Shop.Seller, "...")`. Verse can create and configure logs, and use the ones C++, Blueprint or a BqLog Data Asset created. It is experimental and disabled by default, so a project that does not use Verse is not affected by it.
+
+1. **Enable it**: keep `<YourProject>/Plugins/BqLogVerse/BqLogVerse.uplugin` next to `Plugins/BqLog`, and add it to the `.uproject`:
+
+   ```json
+   "Plugins": [
+       { "Name": "BqLog", "Enabled": true },
+       { "Name": "BqLogVerse", "Enabled": true }
+   ]
+   ```
+
+   A plugin that holds your Verse code lists `BqLogVerse` among its own `Plugins` dependencies. `BqLogVerse` itself depends on the engine's `Verse` and `Solaris` plugins.
+
+2. **Write from Verse**: `bq.create_log` creates a log from the same configuration text as `bq::log::create_log`, and `bq.get_log_by_name` finds a log by name, whoever created it.
+
+   ```verse
+   using { /Tencent.com/BqLog }
+
+   game_logic := class:
+       Start()<transacts>:void =
+           Config := "appenders_config.file.type=compressed_file\nappenders_config.file.file_name=Game\n"
+           if (GameLog := bq.create_log["Game", Config]):
+               GameLog.info("game started")
+
+       OnJoin(Name:string)<transacts>:void =
+           # Any code can find a log by name, whoever created it: Verse, C++, Blueprint or a BqLog Data Asset.
+           if (GameLog := bq.get_log_by_name["Game"]):
+               GameLog.debug("player {Name} joined")
+   ```
+
+3. **Category logs**: `BqLog_CategoryLogGenerator` also writes `<ClassName>.verse` (see [Category log class generation](ADVANCED_USAGE.md#category-log-class-generation)). Put it in a Verse folder of your project or plugin; it defines the module `<ClassName>` there, with the same categories as the C++ class, used as in the other languages:
+
+   ```verse
+   if (MyLog := business_log.create_log["MyLog", Config]):
+       MyLog.info("in the default category")
+       MyLog.info(MyLog.cat.Shop.Seller, "in category Shop.Seller")
+
+   # Elsewhere: the same log, whoever created it (Verse, business_log::create_log in C++, Blueprint or a BqLog Data Asset).
+   if (MyLog := business_log.get_log_by_name["MyLog"]):
+       MyLog.warning(MyLog.cat.Shop, "found it")
+   ```
+
+   `business_log.log` derives from `bq.category_log`, which derives from `bq.log`, so it goes wherever a `bq.log` is expected. `business_log.get_log_by_name` fails if the log's categories are not those of the class. A category whose name Verse already uses, such as a keyword, a name of `/Verse.org/Verse` like `Log`, or a definition of the generated module like `log`, becomes a field ending in `_` (`MyLog.cat.Log_`), and the comment beside the field gives the category.
+
+| Verse | Meaning |
+|---|---|
+| `bq.create_log[Name, Config]` | Creates the log named `Name` from `Config`, like `bq::log::create_log`. If a log of that name exists, `Config` is applied to it instead; an empty `Name` gets a generated one, which `get_name()` of the result returns. Fails if `Config` cannot be parsed, or if the existing log has categories |
+| `bq.get_log_by_name[Name]` | The log named `Name`, whoever created it. A log with categories is found too, and written to in its default category. Fails if there is none |
+| `<ClassName>.create_log[Name, Config]`, `<ClassName>.get_log_by_name[Name]` | The same for a category log class. Both fail if the log of that name has other categories |
+| `verbose(Message)` … `fatal(Message)` | Writes `Message` at that level, in the default category |
+| `verbose(Category, Message)` … `fatal(Category, Message)` | Category log: writes `Message` in `Category`, such as `MyLog.cat.Shop.Seller` |
+| `is_valid[]`, `get_name()`, `get_id()` | Like `is_valid`, `get_name` and `get_id` in C++; `get_id()` returns the id C++ sees |
+| `reset_config[Config]`, `set_appender_enable(AppenderName, Enable)`, `force_flush()`, `take_snapshot(TimeZone)` | Like the C++ functions of the same names. `reset_config` fails if `Config` cannot be parsed |
+| `get_categories_count()`, `get_categories_name_array()` | Category log: the number of categories, and their names in index order with the default category `""` first |
+| `bq.force_flush_all_logs()`, `bq.get_version()` | Like `bq::log::force_flush_all_logs` and `bq::log::get_version` |
+
+Behaviour to know about:
+
+- **The message is not a format string.** Verse's own interpolation (`"{Name}"`) has already produced the text, so braces that reach BqLog are written as they are.
+- **Nothing here is transactional.** The level functions are `<computes>`, and `create_log`, `reset_config` and `set_appender_enable` are `<transacts>`, so Verse lets you call them from transactional code, but each takes effect at once and stays if the enclosing Verse transaction is rolled back.
+- **Verse paths.** The API lives at `/Tencent.com/BqLog`. Its package is an `InternalUser` package because Verse accepts `<native>` declarations only there; your own Verse packages stay `PublicUser` and use it like any other module.
 
 ---
 

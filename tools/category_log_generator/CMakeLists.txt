@@ -14,6 +14,7 @@ project(BqLog_CategoryLogGenerator VERSION ${BQ_VERSION} LANGUAGES CXX)
 include(GNUInstallDirs)
 
 # A driver script or a package manager passes TARGET_PLATFORM; detect it otherwise.
+bq_require_large_file_support()
 bq_default_target_platform()
 
 # Packagers turn this off so a new compiler warning cannot fail a package build.
@@ -103,7 +104,7 @@ add_executable(BqLog_CategoryLogGenerator
 if(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLog_CategoryLogGenerator PRIVATE -ldbghelp)
+        target_link_libraries(BqLog_CategoryLogGenerator PRIVATE -ldbghelp -lbcrypt)
     endif()
    set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLog_CategoryLogGenerator)
 elseif(TARGET_PLATFORM STREQUAL "linux")

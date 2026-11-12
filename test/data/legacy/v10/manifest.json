@@ -1,0 +1,101 @@
+{
+  "format_version": 10,
+  "source_tag": "Release_2.7.3",
+  "source_commit": "86e52321",
+  "build_command": "cmake <tag>/tools/legacy_gen -DTARGET_PLATFORM:STRING=mac -DBQ_WERROR=OFF && make -j8",
+  "key": "legacy_key.pem / legacy_pub.txt (the pair the unit tests already carry)",
+  "samples": [
+    {
+      "id": "plain",
+      "file": "plain.logcompr",
+      "expected": "plain.expected.txt",
+      "description": "clean run, plaintext",
+      "size": 2215,
+      "segments": [
+        "normal",
+        "normal"
+      ],
+      "enc_types": [
+        1
+      ],
+      "sha256_file": "0e5e0dd0d63fbac32ce16bf6569a756698937d5536c55a434736e27cacf3c850",
+      "sha256_expected": "7cb1f9ad1e2ed79b8b52141ea63c510040eabdc301ed6cd355a63bfa70c60f51"
+    },
+    {
+      "id": "enc",
+      "file": "enc.logcompr",
+      "expected": "enc.expected.txt",
+      "description": "clean run, encrypted",
+      "size": 68311,
+      "segments": [
+        "normal",
+        "normal"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "90412bdf778713820c34e0b715647b5977a58b575af72bed416eedcafaf24028",
+      "sha256_expected": "0d49570c3893e631709e420bedd241c6f28bf2baaeeaccbc7db72fe5971058dc"
+    },
+    {
+      "id": "enc_recover_buffer",
+      "file": "enc_recover_buffer.logcompr",
+      "expected": "enc_recover_buffer.expected.txt",
+      "description": "crashed with a dirty log_buffer",
+      "size": 105260,
+      "segments": [
+        "normal",
+        "recovery_by_log_buffer",
+        "normal"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "690544a18862ab973d6e89134bc449dd2131139fa44372c94541749f05f61125",
+      "sha256_expected": "5aa9889bfc08b49aa3ecfdd6e6b3836d890c824d098f8a9701bafd7fc6d0717f"
+    },
+    {
+      "id": "enc_recover_appender",
+      "file": "enc_recover_appender.logcompr",
+      "expected": "enc_recover_appender.expected.txt",
+      "description": "crashed with a dirty appender",
+      "size": 109172,
+      "segments": [
+        "normal",
+        "normal",
+        "recovery_by_appender"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "ed77f55e500771e5cb1f19976813e6e2b6e62b56e633bff253126e98c1b988bb",
+      "sha256_expected": "6ba14ed36dc275fc32a7655233743f81a4f5773fcd20ba2b5f694d7be658a119"
+    },
+    {
+      "id": "enc_260",
+      "file": "enc_260.logcompr",
+      "expected": "enc_260.expected.txt",
+      "description": "clean encrypted run from 2.6.0, a v10 writer two minor versions back",
+      "size": 68311,
+      "segments": [
+        "normal",
+        "normal"
+      ],
+      "enc_types": [
+        2
+      ],
+      "sha256_file": "7d3107cfc89ef747774569e4bb583661ce8eac94a1a2c7d4e5d383d719d7e98d",
+      "sha256_expected": "f472316d3ff1211655958756decb85766f916dcba5f9681a8c4d3d577e41de17"
+    }
+  ],
+  "extra_sources": [
+    {
+      "tag": "Release_2.6.0",
+      "commit": "77d796bc",
+      "samples": [
+        "enc_260"
+      ],
+      "build_command": "cmake <tag>/tools/legacy_gen -DTARGET_PLATFORM:STRING=mac -DBQ_WERROR=OFF && make -j8"
+    }
+  ]
+}

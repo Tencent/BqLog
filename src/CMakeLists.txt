@@ -51,6 +51,7 @@ bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../src/bq_log/global/vers
 project(BqLog VERSION ${BQ_VERSION} LANGUAGES CXX)
 BQ_DETECT_ARCH(DETECTED_ARCH)
 
+bq_require_large_file_support()
 bq_default_target_platform()
 
 if(TARGET_PLATFORM MATCHES "^(switch|ps4|ps5)$" AND NOT BUILD_LIB_TYPE STREQUAL "static_lib")
@@ -399,7 +400,7 @@ elseif(TARGET_PLATFORM STREQUAL "ios")
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLog PRIVATE -ldbghelp)
+        target_link_libraries(BqLog PRIVATE -ldbghelp -lbcrypt)
     endif()
     if(NODE_API_SUPPORT)
         #find node.lib
@@ -478,7 +479,7 @@ if(BUILD_LIB_TYPE STREQUAL "both")
         target_link_libraries(BqLogStatic PRIVATE ${ACE_NAPI_LIB} ${HILOG_LIB} dl)
     elseif(TARGET_PLATFORM STREQUAL "win64")
         if(NOT MSVC)
-            target_link_libraries(BqLogStatic PRIVATE -ldbghelp)
+            target_link_libraries(BqLogStatic PRIVATE -ldbghelp -lbcrypt)
         endif()
     endif()
 endif()
@@ -544,7 +545,7 @@ install(TARGETS ${_bq_lib_targets}
 
 install(DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/"
     DESTINATION "${CMAKE_INSTALL_LIBDIR}"
-    FILES_MATCHING PATTERN "*.dSYM"
+    FILES_MATCHING REGEX "\\.dSYM/.*"
 )
 
 install(FILES "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}/BqLog.pdb"

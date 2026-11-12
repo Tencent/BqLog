@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <time.h>
+#include <errno.h>
+#include <stdlib.h>
 #if BQ_HAS_CROSS_PROCESS_FILE_LOCK
 #include <sys/file.h>
 #endif
@@ -33,6 +35,12 @@ namespace bq {
 }
 #endif
 #include "bq_common/bq_common.h"
+
+#if defined(__has_include)
+#if __has_include(<sys/random.h>)
+#include <sys/random.h>
+#endif
+#endif
 
 namespace bq {
     namespace platform {
@@ -86,7 +94,7 @@ namespace bq {
         }
 #endif
 
-        int32_t get_file_size(const char* file_path, size_t& size_ref)
+        int32_t get_file_size(const char* file_path, uint64_t& size_ref)
         {
             struct stat buf;
             size_ref = 0;
@@ -95,13 +103,13 @@ namespace bq {
                 if (!S_ISREG(buf.st_mode)) {
                     return EISDIR;
                 }
-                size_ref = static_cast<size_t>(buf.st_size);
+                size_ref = static_cast<uint64_t>(buf.st_size);
                 return 0;
             }
             return errno;
         }
 
-        int32_t get_file_size(const platform_file_handle& file_handle, size_t& size_ref)
+        int32_t get_file_size(const platform_file_handle& file_handle, uint64_t& size_ref)
         {
             struct stat buf;
             size_ref = 0;
@@ -110,10 +118,19 @@ namespace bq {
                 if (!S_ISREG(buf.st_mode)) {
                     return EISDIR;
                 }
-                size_ref = static_cast<size_t>(buf.st_size);
+                size_ref = static_cast<uint64_t>(buf.st_size);
                 return 0;
             }
             return errno;
+        }
+
+        int64_t get_max_supported_file_size()
+        {
+            // The margin keeps the last write cache flush below 2 GiB.
+            if (sizeof(off_t) >= sizeof(int64_t)) {
+                return 0;
+            }
+            return (static_cast<int64_t>(1) << 31) - (static_cast<int64_t>(16) << 20);
         }
 
         bool is_dir(const char* path)
@@ -369,9 +386,9 @@ namespace bq {
             return false;
         }
 
-        int32_t truncate_file(const platform_file_handle& file_handle, size_t offset)
+        int32_t truncate_file(const platform_file_handle& file_handle, uint64_t offset)
         {
-            auto result = ftruncate(file_handle, (off_t)offset);
+            auto result = ftruncate(file_handle, static_cast<off_t>(offset));
             if (result == 0) {
                 return result;
             }
@@ -502,6 +519,20 @@ namespace bq {
             }
         }
 
+#if defined(BQ_ANDROID)
+        // Some Android ROMs (vivo on Android 16) hide a file in app-specific external storage from the
+        // system file manager unless its group can write it; the app sandbox keeps other apps out.
+        // The creation mode is cut by the umask and never reaches an existing file, hence the fchmod.
+        static void make_group_writable(const platform_file_handle& file_handle)
+        {
+            constexpr mode_t group_rw = S_IRGRP | S_IWGRP;
+            struct stat file_info;
+            if (fstat(file_handle, &file_info) == 0 && (file_info.st_mode & group_rw) != group_rw) {
+                (void)fchmod(file_handle, (file_info.st_mode & 07777) | group_rw);
+            }
+        }
+#endif
+
         int32_t open_file(const char* path, file_open_mode_enum mode, platform_file_handle& out_file_handle)
         {
 #if defined(BQ_UNIT_TEST)
@@ -526,7 +557,12 @@ namespace bq {
             // then execs would hold the file locked after this process is gone.
             flags |= O_CLOEXEC;
 
-            out_file_handle = open(path, flags, S_IRUSR | S_IWUSR | S_IRGRP);
+#if defined(BQ_ANDROID)
+            constexpr mode_t create_mode = S_IRUSR | S_IWUSR | S_IRGRP | S_IWGRP;
+#else
+            constexpr mode_t create_mode = S_IRUSR | S_IWUSR | S_IRGRP;
+#endif
+            out_file_handle = open(path, flags, create_mode);
 
             if (!is_platform_handle_valid(out_file_handle)) {
                 return errno;
@@ -536,6 +572,11 @@ namespace bq {
                 out_file_handle = invalid_platform_file_handle;
                 return EACCES;
             }
+#if defined(BQ_ANDROID)
+            if ((int32_t)(mode & file_open_mode_enum::write)) {
+                make_group_writable(out_file_handle);
+            }
+#endif
             return 0;
         }
 
@@ -579,6 +620,13 @@ namespace bq {
                 // tests should scope by clearing the fault before/after the targeted op.
                 return ENOSPC;
             }
+            size_t short_write_limit = 0;
+            bool is_short_write = test_inject::get_short_write_limit(short_write_limit);
+            if (is_short_write && write_size > short_write_limit) {
+                write_size = short_write_limit;
+            } else {
+                is_short_write = false;
+            }
 #endif
             const char* current_src = static_cast<const char*>(src_addr);
             size_t remaining = write_size;
@@ -601,6 +649,11 @@ namespace bq {
                     break;
                 }
             }
+#if defined(BQ_UNIT_TEST)
+            if (is_short_write) {
+                return ENOSPC;
+            }
+#endif
             return 0;
         }
 
@@ -799,6 +852,84 @@ namespace bq {
         void aligned_free(void* ptr)
         {
             free(ptr);
+        }
+
+        namespace {
+            // SFINAE probe for a getrandom() declaration: the dependent call is looked up at instantiation.
+            template <typename T>
+            auto detects_getrandom(int) -> decltype(getrandom(static_cast<T*>(nullptr), static_cast<size_t>(0), 0U), bq::true_type());
+            template <typename>
+            auto detects_getrandom(...) -> bq::false_type;
+
+            template <typename T>
+            bool fill_from_getrandom(T* out, size_t size)
+            {
+                size_t done = 0;
+                while (done < size) {
+                    const ssize_t got = getrandom(out + done, size - done, 0U);
+                    if (got > 0) {
+                        done += static_cast<size_t>(got);
+                    } else if (got < 0 && errno == EINTR) {
+                        continue;
+                    } else {
+                        return false;
+                    }
+                }
+                return true;
+            }
+
+            template <typename T>
+            bool fill_from_system(T* out, size_t size, bq::true_type)
+            {
+                return fill_from_getrandom(out, size);
+            }
+
+            template <typename T>
+            bool fill_from_system(T*, size_t, bq::false_type)
+            {
+                return false;
+            }
+        }
+
+        // Consoles have neither tier and return false. No getentropy(): devkitA64 declares it but it does not link.
+        bool secure_random_bytes(void* buf, size_t size)
+        {
+            if (!buf || size == 0) {
+                return true;
+            }
+#if defined(BQ_UNIT_TEST)
+            if (test_inject::get_disable_secure_random()) {
+                return false;
+            }
+#endif
+            uint8_t* out = static_cast<uint8_t*>(buf);
+            typedef decltype(detects_getrandom<uint8_t>(0)) has_getrandom_t;
+            if (fill_from_system(out, size, has_getrandom_t())) {
+                return true;
+            }
+            const int fd = open("/dev/urandom", O_RDONLY
+#if defined(O_CLOEXEC)
+                    | O_CLOEXEC
+#endif
+            );
+            if (fd < 0) {
+                return false;
+            }
+            size_t done = 0;
+            bool ok = true;
+            while (done < size) {
+                const ssize_t n = read(fd, out + done, size - done);
+                if (n > 0) {
+                    done += static_cast<size_t>(n);
+                } else if (n < 0 && errno == EINTR) {
+                    continue;
+                } else {
+                    ok = false;
+                    break;
+                }
+            }
+            close(fd);
+            return ok;
         }
     }
 }

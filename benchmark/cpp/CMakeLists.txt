@@ -7,6 +7,10 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
 endif()
 
 project(BqLogBenchmark)
+
+# File positions wider than 32 bits where the platform can offer them, the same as every other target
+# of this project; the benchmark links the library, which is built with it either way.
+bq_require_large_file_support()
 if(NOT DEFINED CPP_VER)
     set(CMAKE_CXX_STANDARD 17)
     message("Use default C++ 17")
@@ -90,7 +94,7 @@ elseif(TARGET_PLATFORM STREQUAL "unix")
 elseif(TARGET_PLATFORM STREQUAL "win64")
     if (MSVC)
     else()
-        target_link_libraries(BqLogBenchmark PRIVATE -ldbghelp)
+        target_link_libraries(BqLogBenchmark PRIVATE -ldbghelp -lbcrypt)
     endif()
     set_property(DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT BqLogBenchmark)
 	target_link_libraries(BqLogBenchmark PRIVATE BqLog)

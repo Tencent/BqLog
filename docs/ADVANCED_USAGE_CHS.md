@@ -149,10 +149,14 @@ const bq::array<bq::string>& get_categories_name_array() const;
   - `business_log.cppm`（C++20 模块单元，用 `import bq.business_log;` 代替 include 头文件）
   - `business_log.java`（Java wrapper）
   - `business_log.cs`（C# wrapper）
-  - `business_log.ts`（TypeScript wrapper）
+  - `business_log_nodejs.ts`（Node.js 的 TypeScript wrapper，ESM 和 CommonJS 都支持）
+  - `business_log_ohos.ts`（鸿蒙 HarmonyOS 的 ArkTS wrapper）
+  - `business_log.py`（Python wrapper）
+  - `business_log.go`（Go wrapper）
   - `business_log_for_UE.h`（配合 UE 工程，可在蓝图中引用 Category）
+  - `business_log.verse`（Verse 模块，用于装了 BqLogVerse 插件的 UE6，见[在 Verse 中使用 BqLog](ENGINE_INTEGRATION_CHS.md#4在-verse-中使用-bqlogue6)）
 
-  模块名就是类名加 `bq.` 前缀：`bq::business_log` 对应 `import bq.business_log;`。
+  C++20 模块名就是类名加 `bq.` 前缀：`bq::business_log` 对应 `import bq.business_log;`。
 
 4. 在工程中引入这些文件，即可使用带 Category 的日志类。
    例如 C++：
@@ -443,24 +447,20 @@ void CallThisOnYourGameStart()
 
 对于外发客户端（尤其是互联网游戏和 App），日志加密是重要需求。
 在 1.x 版本中，BqLog 的二进制日志中仍有大量明文。自 2.x 起，引入了完整的日志加密方案。
-当前格式采用下述自定义 `rsa_aes_xor` 方案，运行成本与安全性质应分别评估。
+自 2.8.0 起，段格式为 `rsa_kem_chacha`；旧的 `rsa_aes_xor` 方案不再使用。
 
 ### 1）加密算法说明
 
-BqLog 当前组合使用 **RSA-2048、AES-256-CBC 和循环 XOR 载荷变换**：
-
 - 仅适用于 `CompressedFileAppender`；
-- 使用 `ssh-keygen` 生成的 RSA2048 密钥对：
-  - 公钥：OpenSSH `ssh-rsa ...` 文本；
-  - 与下面示例配套的 PEM RSA 私钥可通过 `ssh-keygen -m PEM` 生成；可接受的私钥容器以解码器说明为准；
-- 日志写入时：
-  - 每个加密段准备 AES-256 密钥和 IV，用 RSA-2048 保护 AES 密钥；
-  - AES-CBC 加密一个 32 KiB 掩码块，随段的密钥材料保存；
-  - payload 按文件位置与该掩码块循环异或，并非每条记录正文直接由 AES 加密。
+- 使用 `ssh-keygen` 生成的 2048 bit RSA 密钥对；其他长度或指数的密钥会在创建 appender 时被拒绝。
 
-这个自定义格式没有 AEAD 认证标签。重复使用的掩码不具备一次一密条件，也不能从 RSA/AES 名称推导出标准认证加密的保证。不要据此宣称防篡改或所有负载下开销都可忽略。精确布局与执行路径见[当前文件格式文章](<文章1_为何BqLog如此快 - 高性能实时压缩日志格式.MD>)和 `appender_file_binary.cpp`。
+### 2）这套方案提供什么、不提供什么
 
-### 2）配置加密
+- **更强的安全性。** 从 2.8.0 开始，可以抵抗已知明文攻击。
+- **恢复缓存里是明文。** 两次刷盘之间，恢复映射文件（`<日志目录>/appenders/<名字>.mmap`）里是未加密的待写记录，在文件系统上它就是一个磁盘文件，不过明文存在时间也就100ms左右。如果要求明文完全不落盘，请对该 appender 关掉 recovery。
+- **主机平台需要注入随机源。** PS4/PS5/Switch 没有 BqLog 能调用的 CSPRNG，需先调用 `bq::log::set_secure_random_source()`（见 [API 参考 — 加密日志的随机源](./API_REFERENCE_CHS.md#11-加密日志的随机源)）。没有随机源时 appender 仍然加密，只是密钥来自软件混合而非 CSPRNG，安全性较低，创建时会打一条 warning。
+
+### 3）配置加密
 
 在终端执行：
 
@@ -479,7 +479,9 @@ ssh-keygen -t rsa -b 2048 -m PEM -N "" -f "你的密钥文件路径"
 appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCwv3QtDXB/fQN+Fo........rest of your rsa2048 public key...... user@hostname
 ```
 
-### 3）解密日志
+这会让该 appender 使用上面描述的 `rsa_kem_chacha` 段格式。
+
+### 4）解密日志
 
 解密加密日志时，需要私钥文件。推荐使用 BqLog 自带命令行工具 `BqLog_LogDecoder`：
 
@@ -496,6 +498,10 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 - `要解码的文件`：压缩加密日志文件路径；
 - `-o 输出文件`：可选，指定解码后的文本保存路径，不填则输出到标准输出；
 - `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
+
+### 5）从老版本迁移
+
+库本身只解自己写出的文件。`BqLog_LogDecoder` 能解 2.x 以来所有版本的压缩日志，2.8.0 之前写的文件不需要再装一份旧工具。
 
 ## 7. 多进程与 fork
 

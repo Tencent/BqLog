@@ -44,7 +44,6 @@ appenders_config.appender_3409.expire_time_days=10
 appenders_config.appender_3409.capacity_limit=8000000000
 
 log.buffer_size=65535
-log.reliable_level=normal
 `
 
 	demo_log_config := `
@@ -76,7 +75,6 @@ appenders_config.appender_3409.expire_time_days=10
 appenders_config.appender_3409.capacity_limit=8000000000
 
 log.buffer_size=65535
-log.reliable_level=normal
 `
 
 	base_log := bq.Create_log("MyLog", log_config, nil)

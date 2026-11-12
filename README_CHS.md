@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.7.3
+# BqLog (扁鹊日志) V 2.8.0
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.7.3-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.7.3-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.8.0-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.8.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -25,7 +25,7 @@
 [![npm](https://img.shields.io/npm/v/@pippocao/bqlog?logo=npm&label=npm&style=flat)](https://www.npmjs.com/package/@pippocao/bqlog)
 [![ohpm](https://img.shields.io/badge/ohpm-bqlog-blue?style=flat)](https://ohpm.openharmony.cn/#/cn/detail/bqlog)
 [![Go](https://img.shields.io/badge/Go-go%2Fv2-00ADD8?logo=go&logoColor=white&style=flat)](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2)
-[![vcpkg](https://img.shields.io/badge/vcpkg-2.7.3-blue?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
+[![vcpkg](https://img.shields.io/vcpkg/v/bqlog?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
 [![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
 [![Unreal](https://img.shields.io/badge/Unreal-Fab-0E1128?logo=unrealengine&style=flat)](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)
 
@@ -54,19 +54,26 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.7.3-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.8.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+
+## 📋 v2.8.x 更新亮点
+
+- **新的加密日志格式**：加密方案升级，可以抵抗已知明文攻击和 AI 分析。
+- **工具兼容性**：`BqLog_LogDecoder` 可以解码 2.x 全系列版本写出的压缩日志。
+- **Unreal Engine 6**：实验性支持 UE6 的 Verse 脚本，提供对应的 Wrapper 和 Category Log Wrapper 生成，详见[引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)。
+- **快速模式代码尺寸**：无宏接口 `log.fast_info<"...">()` 的慢路径改为按参数类型共享，生成的代码体积明显变小（GCC/Clang 实测减少 50%~65%，MSVC 约 25%），调用点指令与运行时开销不变。
 
 ## 📋 v2.7.x 更新亮点
 
-- **主机平台（实验性）**：支持 PlayStation 4、PlayStation 5 与 Nintendo Switch，以源码方式接入。详见[接入指南 — 主机平台](docs/INTEGRATION_GUIDE_CHS.md#主机平台)。
-- **C++20 模块**：`import bq.log;`，可替代 `#include "bq_log/bq_log.h"`，写日志的代码无需改动。
-- **无宏的快速模式（C++20）**：`log.fast_info<"...">(args...)`，性能与 `BQ_LOG_FAST_INFO` 相同，IDE 提示完整，任何日志对象都能用。见 [API 参考：快速模式](docs/API_REFERENCE_CHS.md#fast-info)。
-- **包管理器**：支持 Homebrew、vcpkg、NuGet，见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)。
-- **多进程**：多个进程可以共用同一个日志目录，各自拥有独立的崩溃恢复数据。
-- **问题修复**：修复了快速模式、恢复、格式化、配置解析与解码器等多处问题。
+- **C++20 模块**：支持 `import bq.log;`，并在模块模式下提供无宏的快速模式接口。
+- **主机平台**：实验性支持 PlayStation 4、PlayStation 5 与 Nintendo Switch。
+- **多进程**：多个进程可以写同一个日志目录，各自拥有独立的恢复数据。
+- **软件包仓库**：支持 Homebrew、vcpkg、NuGet。
 
-> [!WARNING]
-> **ABI 变更发生在 2.7.x 与 2.6.x 及更早版本之间。** 跨过这条界线时，头文件（或各语言 wrapper）和库需要一起升级；2.7.x 内部彼此 ABI 兼容。
+## 📋 v2.6.x 更新亮点
+
+- **快速模式**：新增 C++ 专用的 `BQ_LOG_FAST_*` 宏，把级别判断、时间戳和参数写入内联到调用点，大幅降低调用线程的延迟。
+- **整体性能提升**：同一 benchmark 下，文本输出快 14%～30%，压缩输出最多快约 40%，详见 [Benchmark](docs/BENCHMARK_CHS.md)。
 
 > 完整更新日志 → [CHANGELOG_CHS.md](CHANGELOG_CHS.md)
 

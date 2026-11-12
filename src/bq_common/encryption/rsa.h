@@ -65,10 +65,15 @@ namespace bq {
         // Parse OpenSSH public key text (bq::string)
         static bool parse_public_key_ssh(const bq::string& ssh_pub_text, public_key& out);
 
+        // Exactly 2048 bits (the segment head has a fixed 256-byte field), odd exponent >= 65537.
+        static bool validate_public_key(const public_key& key);
+
         // Parse PKCS#1 PEM private key text (bq::string)
         static bool parse_private_key_pem(const bq::string& pem, private_key& out);
 
         static uint64_t get_public_key_fingerprint(const public_key& key);
+
+        static uint64_t get_public_key_fingerprint(const bq::array<uint8_t>& n, const bq::array<uint8_t>& e);
 
         // Encrypt: output ciphertext is k bytes, plaintext must be integer < modulus
         static bool encrypt(const public_key& pub,
@@ -79,6 +84,44 @@ namespace bq {
         static bool decrypt(const private_key& pri,
             const bq::array<uint8_t>& ciphertext,
             bq::array<uint8_t>& out_plaintext);
+
+        // RSA-KEM (ISO/IEC 18033-2): both outputs are exactly modulus-sized, unlike encrypt/decrypt,
+        // which would drop a leading zero byte of the secret.
+        static bool kem_encapsulate(const public_key& pub,
+            bq::array<uint8_t>& out_ciphertext,
+            bq::array<uint8_t>& out_shared_secret);
+        static bool kem_decapsulate(const private_key& pri,
+            const bq::array<uint8_t>& ciphertext,
+            bq::array<uint8_t>& out_shared_secret);
+
+#if defined(BQ_UNIT_TEST)
+        // Test-only reference modexp.
+        static bool test_mod_pow_reference(const bq::array<uint8_t>& a,
+            const bq::array<uint8_t>& e,
+            const bq::array<uint8_t>& n,
+            bq::array<uint8_t>& out);
+
+        // Test-only Montgomery modexp, which unlike encrypt accepts a == 0 and a == 1.
+        static bool test_mod_pow_mont(const bq::array<uint8_t>& a,
+            const bq::array<uint8_t>& e,
+            const bq::array<uint8_t>& n,
+            bq::array<uint8_t>& out);
+
+        // Test-only fixed-window modexp, the private-key path.
+        static bool test_mod_pow_mont_secret(const bq::array<uint8_t>& a,
+            const bq::array<uint8_t>& e,
+            const bq::array<uint8_t>& n,
+            bq::array<uint8_t>& out);
+
+        // Test-only a mod n, by the Montgomery reduction and by the bit-by-bit reference.
+        static bool test_mod_reduce(const bq::array<uint8_t>& a,
+            const bq::array<uint8_t>& n,
+            bq::array<uint8_t>& out_mont,
+            bq::array<uint8_t>& out_ref);
+
+        // Test-only: the CRT path on its own gives c^d mod n.
+        static bool test_crt_agrees_with_d(const private_key& pri, const bq::array<uint8_t>& ciphertext);
+#endif
     };
 
 }

@@ -23,7 +23,7 @@ namespace bq {
     void init_log_thread_info(log_thread_info& info)
     {
         bq::string thread_name = bq::platform::thread::get_current_thread_name();
-        info.thread_name_len_ = static_cast<uint8_t>(bq::min_value(static_cast<size_t>(log_thread_info::MAX_THREAD_NAME_LEN), thread_name.size()));
+        info.thread_name_len_ = static_cast<uint8_t>(bq::min_value(static_cast<size_t>(MAX_THREAD_NAME_LEN), thread_name.size()));
         if (info.thread_name_len_ > 0) {
             memcpy(info.thread_name_, thread_name.c_str(), info.thread_name_len_);
         }
@@ -1389,7 +1389,7 @@ namespace bq {
                     config_.storage->remove(full_path);
                     continue;
                 }
-                size_t file_size = bq::file_manager::get_file_size(full_path);
+                uint64_t file_size = bq::file_manager::get_file_size(full_path);
                 uint32_t default_buffer_size = static_cast<uint32_t>(BQ_CACHE_LINE_SIZE);
                 while (default_buffer_size < UINT32_MAX) {
                     uint32_t map_size = oversize_buffer::calculate_size_of_memory(default_buffer_size);

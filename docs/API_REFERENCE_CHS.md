@@ -799,7 +799,8 @@ snapshot := logObj.Take_snapshot("UTC+8")
 
 ## 10. 解码二进制日志文件
 
-运行时解码 CompressedFileAppender 日志：
+运行时解码 CompressedFileAppender 日志。它只解库自己写的那个格式版本，下面的各语言 wrapper
+暴露的是同一个解码器，限制相同：
 
 ```cpp
 bq::tools::log_decoder decoder("path/to/file.logcompr", "optional_private_key");
@@ -833,8 +834,44 @@ bq.Decode_file("input.logcompr", "output.txt", "optional_key")
 ./BqLog_LogDecoder 要解码的文件 [-o 输出文件] [-k 私钥文件]
 ```
 
-> **注意：** 不同版本的 BqLog 之间二进制格式可能不兼容，请使用匹配版本的解码器。
+> **注意：** 该工具能解 2.x 以来所有版本的压缩日志，解旧版本写出的文件不需要再装一份旧工具；
+> 上一节里库内嵌的解码器只解当前版本写出的文件。
 > 另见：[高级用法 — 日志加密和解密](./ADVANCED_USAGE_CHS.md#6-日志加密和解密)
+
+---
+
+## 11. 加密日志的随机源
+
+加密 appender 的段密钥来自操作系统的 CSPRNG。主机平台（PS4、PS5、Switch）没有 BqLog 能直接调用的
+CSPRNG，其 SDK 的实现又在 NDA 之下，因此需要应用在创建 log 之前注入一个。**没有随机源时加密
+appender 仍然工作**，但段密钥来自时钟、线程 id 与地址的软件混合，创建时会打一条 warning 说明这一点。
+建议在这些平台注入：不是来自 CSPRNG 的密钥材料，任何拿到日志文件的人都能离线搜索。明文 log 不受影响。
+
+有系统 CSPRNG 的平台（Windows、macOS、iOS、Linux、Android、鸿蒙）会无视用户注入的版本而调用系统自带的。
+
+同一个随机源也负责提供每段的 KEM 种子（每段 256 字节），因此注入的回调必须是真正的
+CSPRNG，不能是带种子的 PRNG —— 见[高级用法 — 日志加密和解密](./ADVANCED_USAGE_CHS.md#6-日志加密和解密)。
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+// 用 size 字节密码学安全的随机数据填满 buf；无法提供时返回 false。
+static bool my_random(void* buf, size_t size);
+
+// 启动时调用一次，且在创建任何加密 log 之前。
+bq::log::set_secure_random_source(&my_random);
+
+// 可选：平台或注入的回调能否提供密钥材料。
+bool ok = bq::log::has_secure_random_source();
+
+// 传 nullptr 可以撤掉注入的随机源。
+bq::log::set_secure_random_source(nullptr);
+```
+</details>
+
+> 这个接口只提供 C++ 版本：主机平台没有语言 wrapper。另见：
+> [高级用法 — 日志加密和解密](./ADVANCED_USAGE_CHS.md#6-日志加密和解密)
 
 ---
 

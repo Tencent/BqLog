@@ -70,6 +70,12 @@ namespace bq {
 #if defined(BQ_UNIT_TEST)
         // Destroys the log without consuming its buffer, leaving the memory maps as a crash would.
         void test_crash_log(uint64_t log_id);
+
+        // Destroys the log's appenders without flushing them first, as instance teardown does.
+        void test_teardown_appenders(uint64_t log_id);
+
+        // force_flush skips sync logs; a test that needs one flushed at a known instant calls this.
+        void test_force_flush(uint64_t log_id);
 #endif
 
         bq_forceinline log_worker& get_public_worker()

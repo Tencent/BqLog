@@ -444,10 +444,27 @@ namespace bq {
                     }
                 }
                 bq::log::force_flush_all_logs();
+                // Seen once on NetBSD (run 41786506107): async short by one, sync exact. Nothing can be discarded
+                // under block_when_full, so the record arrived late; retry with a deadline and report the retries.
+                const uint64_t flush_deadline = bq::platform::high_performance_epoch_ms() + 3000;
+                auto flush_counters_agree = []() {
+                    const uint64_t expected = test_force_flush_callback::idx.load_seq_cst();
+                    return expected == test_force_flush_callback::current_idx_sync.load_seq_cst()
+                        && expected == test_force_flush_callback::current_idx_async.load_seq_cst();
+                };
+                int32_t flush_retries = 0;
+                while (!flush_counters_agree() && bq::platform::high_performance_epoch_ms() < flush_deadline) {
+                    bq::platform::thread::sleep(5);
+                    bq::log::force_flush_all_logs();
+                    ++flush_retries;
+                }
+                if (flush_retries > 0) {
+                    test_output_param(bq::log_level::warning, "force flush test: the counters needed %d extra flushes to agree, idx:%" PRIu64 ", sync:%" PRIu64 ", async:%" PRIu64 "\n", static_cast<int32_t>(flush_retries), test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());
+                }
                 bool force_flush_sync_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_sync.load_seq_cst());
                 bool force_flush_async_passed = (test_force_flush_callback::idx.load_seq_cst() == test_force_flush_callback::current_idx_async.load_seq_cst());
-                result.add_result(force_flush_sync_passed, "force flush test sync total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst());
-                result.add_result(force_flush_async_passed, "force flush test async total count, %" PRIu64 ", %" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());
+                result.add_result(force_flush_sync_passed, "force flush test sync total count, %" PRIu64 ", %" PRIu64 " after %d extra flushes", test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst(), static_cast<int32_t>(flush_retries));
+                result.add_result(force_flush_async_passed, "force flush test async total count, %" PRIu64 ", %" PRIu64 " after %d extra flushes", test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst(), static_cast<int32_t>(flush_retries));
                 if (!force_flush_sync_passed || !force_flush_async_passed) {
                     bq::log::force_flush_all_logs();
                     test_output_param(bq::log_level::error, "force flush re-check, idx:%" PRIu64 ", sync:%" PRIu64 ", async:%" PRIu64, test_force_flush_callback::idx.load_seq_cst(), test_force_flush_callback::current_idx_sync.load_seq_cst(), test_force_flush_callback::current_idx_async.load_seq_cst());

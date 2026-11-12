@@ -6,6 +6,10 @@ elseif(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
 endif()
 
 project(BqLogDemo)
+
+# File positions wider than 32 bits where the platform can offer them, the same as every other target
+# of this project; the demo links the library, which is built with it either way.
+bq_require_large_file_support()
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)

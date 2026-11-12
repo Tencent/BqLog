@@ -446,13 +446,15 @@ namespace bq {
             auto iter = thread_names_cache_.find(thread_id);
             if (iter == thread_names_cache_.end()) {
                 const auto& ext_info = log_entry.get_ext_head();
-                char tmp[256];
+                // "[tid-" + up to 20 digits + " " + name + "]\t" + terminator.
+                char tmp[MAX_THREAD_NAME_LEN + 32];
                 uint32_t cursor = static_cast<uint32_t>(snprintf(tmp, sizeof(tmp), "[tid-%" PRIu64 " ", thread_id));
-                memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), ext_info.thread_name_len_);
-                cursor += ext_info.thread_name_len_;
+                const uint32_t name_len = bq::min_value(static_cast<uint32_t>(ext_info.thread_name_len_), static_cast<uint32_t>(MAX_THREAD_NAME_LEN));
+                memcpy(tmp + cursor, (const uint8_t*)&ext_info + sizeof(_log_entry_ext_head_def), name_len);
+                cursor += name_len;
                 tmp[cursor++] = ']';
                 tmp[cursor++] = '\t';
-                assert(cursor < 256);
+                assert(cursor < sizeof(tmp));
                 tmp[cursor] = '\0';
                 bq::string thread_name = tmp;
                 iter = thread_names_cache_.add(thread_id, bq::move(thread_name));
@@ -790,11 +792,8 @@ namespace bq {
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
-                            {
-                                const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args.value());
-                                insert_pointer(arg_data_ptr);
-                                args.skip_value(static_cast<uint32_t>(sizeof(uint64_t))); // use 64bit pointer for serialize
-                            }
+                            insert_pointer(*reinterpret_cast<const uint64_t*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint64_t))); // use 64bit pointer for serialize
                             break;
                         case bq::log_arg_type_enum::bool_type:
                             insert_bool(*reinterpret_cast<const bool*>(args.small_value()));
@@ -1036,11 +1035,8 @@ namespace bq {
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
-                            {
-                                const void* ptr_data = *reinterpret_cast<const void* const*>(args.value());
-                                insert_pointer(ptr_data);
-                                args.skip_value(static_cast<uint32_t>(sizeof(uint64_t)));
-                            }
+                            insert_pointer(*reinterpret_cast<const uint64_t*>(args.value()));
+                            args.skip_value(static_cast<uint32_t>(sizeof(uint64_t)));
                             break;
                         case bq::log_arg_type_enum::bool_type:
                             insert_bool(*reinterpret_cast<const bool*>(args.small_value()));
@@ -1158,14 +1154,14 @@ namespace bq {
         return write_size;
     }
 
-    void layout::insert_pointer(const void* ptr)
+    void layout::insert_pointer(uint64_t ptr_value)
     {
-        if (ptr) {
+        if (ptr_value) {
             uint32_t len = (uint32_t)sizeof("0x") - 1;
             expand_format_content_buff_size(format_content_cursor + len);
             memcpy(&format_content[format_content_cursor], "0x", len);
             format_content_cursor += len;
-            insert_integral_unsigned((uint64_t)ptr, 16);
+            insert_integral_unsigned(ptr_value, 16);
         } else {
             uint32_t len = (uint32_t)sizeof("null") - 1;
             expand_format_content_buff_size(format_content_cursor + len);
@@ -1732,11 +1728,8 @@ namespace bq {
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
-                            {
-                                const void* arg_data_ptr = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
-                                insert_pointer(arg_data_ptr);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
-                            }
+                            insert_pointer(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             break;
                         case bq::log_arg_type_enum::bool_type:
                             insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));
@@ -1948,11 +1941,8 @@ namespace bq {
                             break;
                         case bq::log_arg_type_enum::pointer_type:
                             assert(sizeof(void*) >= 4);
-                            {
-                                const void* ptr_data = *reinterpret_cast<const void* const*>(args_data_ptr + args_data_cursor + 4);
-                                insert_pointer(ptr_data);
-                                args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
-                            }
+                            insert_pointer(*reinterpret_cast<const uint64_t*>(args_data_ptr + args_data_cursor + 4));
+                            args_data_cursor += static_cast<uint32_t>(4 + sizeof(uint64_t));
                             break;
                         case bq::log_arg_type_enum::bool_type:
                             insert_bool(*reinterpret_cast<const bool*>(args_data_ptr + args_data_cursor + 2));

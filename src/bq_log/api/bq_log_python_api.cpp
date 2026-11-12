@@ -42,6 +42,15 @@
 
 // ----------------------------- console callback -----------------------------
 
+// Builds a str from len bytes of UTF-8, for log text, which can hold a '\0':
+// PyUnicode_FromString and the "s" format of Py_BuildValue stop at the first one.
+// Bytes that are not valid UTF-8 become U+FFFD rather than raising, as in the C# and
+// Node.js wrappers.
+static PyObject* py_str_from_utf8(const char* str, size_t len)
+{
+    return PyUnicode_DecodeUTF8(str ? str : "", str ? static_cast<Py_ssize_t>(len) : 0, "replace");
+}
+
 static PyObject* py_console_callback = nullptr;
 
 // Called from C++ worker thread. Must acquire GIL before accessing any Python state.
@@ -61,19 +70,21 @@ static void BQ_STDCALL on_console_callback(uint64_t log_id, int32_t category_idx
     // unregisters it while we are executing (after we release the GIL or
     // if __api_unregister_console_callbacks doesn't provide a barrier).
     Py_INCREF(cb);
-    PyObject* args = Py_BuildValue("(Kiisi)",
-        (unsigned long long)log_id,
-        (int)category_idx,
-        (int)log_level,
-        content,
-        (int)length);
+    PyObject* text = py_str_from_utf8(content, static_cast<size_t>(length > 0 ? length : 0));
+    PyObject* args = text ? Py_BuildValue("(KiiNi)",
+                                (unsigned long long)log_id,
+                                (int)category_idx,
+                                (int)log_level,
+                                text,
+                                (int)length)
+                          : nullptr;
     if (args) {
         PyObject* ret = PyObject_CallObject(cb, args);
         Py_XDECREF(ret);
-        if (PyErr_Occurred()) {
-            PyErr_Clear();
-        }
         Py_DECREF(args);
+    }
+    if (PyErr_Occurred()) {
+        PyErr_Clear();
     }
     Py_DECREF(cb);
     PyGILState_Release(gstate);
@@ -718,8 +729,12 @@ static PyObject* py_log_decoder_decode(PyObject* self, PyObject* args)
     Py_BEGIN_ALLOW_THREADS
         result = bq::api::__api_log_decoder_decode(handle, &text);
     Py_END_ALLOW_THREADS
-    const char* text_str = (result == bq::appender_decode_result::success && text.str) ? text.str : "";
-    return Py_BuildValue("(is)", static_cast<int>(result), text_str);
+    const bool decoded = (result == bq::appender_decode_result::success && text.str);
+    PyObject* text_obj = py_str_from_utf8(decoded ? text.str : "", decoded ? text.len : 0);
+    if (!text_obj) {
+        return nullptr;
+    }
+    return Py_BuildValue("(iN)", static_cast<int>(result), text_obj);
 }
 
 // log_decoder_destroy(handle: int) -> None
@@ -828,19 +843,21 @@ static void BQ_STDCALL py_console_buffer_fetch_callback(
     if (!ctx || !ctx->py_callback)
         return;
 
-    PyObject* cb_args = Py_BuildValue("(Kiisi)",
-        (unsigned long long)log_id,
-        (int)category_idx,
-        (int)log_level,
-        content,
-        (int)length);
+    PyObject* text = py_str_from_utf8(content, static_cast<size_t>(length > 0 ? length : 0));
+    PyObject* cb_args = text ? Py_BuildValue("(KiiNi)",
+                                   (unsigned long long)log_id,
+                                   (int)category_idx,
+                                   (int)log_level,
+                                   text,
+                                   (int)length)
+                             : nullptr;
     if (cb_args) {
         PyObject* ret = PyObject_CallObject(ctx->py_callback, cb_args);
         Py_XDECREF(ret);
-        if (PyErr_Occurred()) {
-            PyErr_Clear();
-        }
         Py_DECREF(cb_args);
+    }
+    if (PyErr_Occurred()) {
+        PyErr_Clear();
     }
 }
 
@@ -878,7 +895,7 @@ static PyObject* py_take_snapshot_string(PyObject* self, PyObject* args)
     Py_BEGIN_ALLOW_THREADS
         bq::api::__api_take_snapshot_string(log_id, tz_config, &snapshot_def);
     Py_END_ALLOW_THREADS
-    PyObject* result = PyUnicode_FromString(snapshot_def.str ? snapshot_def.str : "");
+    PyObject* result = py_str_from_utf8(snapshot_def.str, snapshot_def.len);
     bq::api::__api_release_snapshot_string(log_id, &snapshot_def);
     return result;
 }

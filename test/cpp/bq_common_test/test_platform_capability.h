@@ -94,6 +94,30 @@ namespace bq {
 #endif
             }
 
+            static void test_max_file_size_cap(test_result& result)
+            {
+                const int64_t no_limit = 0;
+                result.add_result(bq::platform::cap_max_file_size(0, no_limit) == 0, "an unbounded file stays unbounded where the platform has no limit");
+                result.add_result(bq::platform::cap_max_file_size(1234, no_limit) == 1234, "a configured size is kept where the platform has no limit");
+
+                const int64_t limit = static_cast<int64_t>(100);
+                result.add_result(bq::platform::cap_max_file_size(0, limit) == limit, "an unbounded file is capped where the platform is bounded");
+                result.add_result(bq::platform::cap_max_file_size(50, limit) == 50, "a size below the platform limit is kept");
+                result.add_result(bq::platform::cap_max_file_size(200, limit) == limit, "a size above the platform limit is lowered to it");
+                result.add_result(bq::platform::cap_max_file_size(limit, limit) == limit, "capping is idempotent");
+
+                // A limit exists exactly where a file position does not fit in off_t, which is the
+                // whole reason an appender has to stop one file short of that size.
+#if defined(BQ_POSIX)
+                const bool has_64_bit_positions = sizeof(off_t) >= sizeof(int64_t);
+#else
+                const bool has_64_bit_positions = true;
+#endif
+                const int64_t reported = bq::platform::get_max_supported_file_size();
+                result.add_result((reported == 0) == has_64_bit_positions,
+                    "the file size limit follows off_t: %" PRId64, reported);
+            }
+
         public:
             virtual test_result test() override
             {
@@ -104,6 +128,7 @@ namespace bq {
                 test_epoch_clock(result);
                 test_thread_name(result);
                 test_remove_without_dirent(result);
+                test_max_file_size_cap(result);
                 return result;
             }
         };

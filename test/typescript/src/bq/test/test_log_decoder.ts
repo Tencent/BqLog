@@ -4,7 +4,7 @@ import { bq } from "@pippocao/bqlog";
 import * as fs from "fs";
 import * as path from "path";
 
-function find_compressed_file(folder_path: string, file_prefix: string): string | null {
+export function find_compressed_file(folder_path: string, file_prefix: string): string | null {
     if (!fs.existsSync(folder_path)) {
         return null;
     }

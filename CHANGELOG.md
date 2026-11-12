@@ -2,6 +2,20 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.8.0] - 2026-11-05
+- **Encrypted log format v11**: the encryption layer was rebuilt, so it resists known-plaintext attacks and AI-assisted analysis; the decoder's private-key operation no longer branches on or indexes memory by key values, and every result is checked against the public key.
+- **BqLog_LogDecoder**: decodes compressed log files written by every release since 2.x, and decodes encrypted files noticeably faster (a small one about 6x).
+- **Unreal Engine 6 — Verse**: experimental Verse support, provided by the optional `BqLogVerse` plugin in the `ue6` package. See [Engine Integration — Verse](docs/ENGINE_INTEGRATION.md#4-using-bqlog-in-verse-ue6).
+- **Code size**: the slow path behind `log.fast_info<"...">()` is shared by argument types instead of duplicated per format, so the code it generates shrinks noticeably (50%~65% measured with GCC and Clang, about 25% with MSVC) while the call site's instructions and runtime cost stay the same.
+- **Behavior change**: on console platforms (PS4, PS5, Switch) an encrypted appender keeps working when the application has not injected a random source with `bq::log::set_secure_random_source()`, but the segment keys then come from a software mix of clocks, thread ids and addresses, and one warning says so at creation. Inject a source there: key material that does not come from a CSPRNG can be searched offline by anyone who reads the file. Plaintext loggers are unaffected.
+- **Behavior change**: a public key is validated before an encrypted appender is created - the modulus must be exactly 2048 bits and the exponent odd and at least 65537. A 1024-bit or 4096-bit key used to produce files that could not be decoded (the segment head reserves a fixed 256-byte field for the wrapped key).
+- **Behavior change**: on Android, files BqLog writes are now group writable (`0660` instead of `0640`), including a file left narrower by an earlier version once it is opened for writing again. Some ROMs (seen on vivo, Android 16) hide a file in app-specific external storage from the system file manager unless the group can write it; the app sandbox still keeps other apps out. Other platforms are unchanged ([#93](https://github.com/Tencent/BqLog/issues/93)).
+- **Bug fixes**:
+  - Java, Node.js, Python: log text handed back to the wrapper (snapshot, `log_decoder`, console buffer, and the Java and Python console callbacks) was cut off at the first `\0`. On desktop JVMs (HotSpot), Java also turned a character outside the BMP, such as an emoji, into four wrong ones, and lost three characters from the end of the text for each.
+  - console callback: a message BqLog prints itself could arrive with the length of an earlier log entry, and be read past its end.
+  - Unreal Engine: an `FName` argument lost its number suffix (`Actor_12` came out as `Actor`), and on UE 4.x–5.1 an ANSI `FName` was read from a buffer that had already been freed.
+  - iOS: the Unity plugin left `BqLog.framework` out of Embedded Binaries, so an app linking the dynamic library crashed at launch; the dSYM packaging location is fixed as well.
+
 ## [v2.7.3] - 2026-10-29
 - **Bug fix**: removed the `fork()` handling. BqLog is multi-threaded, so it supports only a `fork()` that is followed immediately by `exec()` of a new process; a child must not keep using what it inherited.
 

@@ -205,6 +205,9 @@ namespace bq {
         bool validate() const;
     };
 
+    // The length byte of a damaged record can claim up to 255; readers bound it by this.
+    static constexpr uint8_t MAX_THREAD_NAME_LEN = 16;
+
     BQ_PACK_BEGIN
     struct _log_entry_ext_head_def {
         uint8_t thread_name_len_;

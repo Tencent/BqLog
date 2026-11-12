@@ -73,14 +73,23 @@ namespace bq {
                     std::chrono::steady_clock::now().time_since_epoch()).count());
             }
 
-            // Did the wall clock move by something other than the time that really passed? 20 ms is far
-            // above the wall clock's resolution and a sleep's overshoot, and far below a correction.
-            static bool wall_clock_stepped(uint64_t wall_from, uint64_t mono_from, uint64_t wall_to, uint64_t mono_to)
+            // 20 ms is far above the wall clock's resolution and a sleep's overshoot, and far below a
+            // correction.
+            static constexpr uint64_t wall_clock_step_ms() { return 20; }
+
+            // How far the wall clock moved by something other than the time that really passed.
+            static uint64_t wall_clock_gap_ms(uint64_t wall_from, uint64_t mono_from, uint64_t wall_to, uint64_t mono_to)
             {
                 const int64_t really_passed = static_cast<int64_t>(mono_to - mono_from);
                 const int64_t wall_moved = static_cast<int64_t>(wall_to) - static_cast<int64_t>(wall_from);
                 const int64_t gap = wall_moved > really_passed ? wall_moved - really_passed : really_passed - wall_moved;
-                return gap > 20;
+                return static_cast<uint64_t>(gap);
+            }
+
+            // Did the wall clock move by something other than the time that really passed?
+            static bool wall_clock_stepped(uint64_t wall_from, uint64_t mono_from, uint64_t wall_to, uint64_t mono_to)
+            {
+                return wall_clock_gap_ms(wall_from, mono_from, wall_to, mono_to) > wall_clock_step_ms();
             }
 
             static constexpr uint64_t error_tolerance_ms() { return 5; }
@@ -289,20 +298,44 @@ namespace bq {
                 }
             };
 
+            // A reader compares its reading against the wall clock, so a step of the platform's clock inside
+            // the measurement reads exactly like drift: a cache re-anchors to the new wall clock only at its
+            // next resync. test_accuracy voids such a round; here the unit is the whole measurement, so it is
+            // measured again, and a second step is reported instead of passing.
             static void test_threads(test_result& result)
             {
-                bq::platform::atomic<bool> stop(false);
-                reader_thread readers[4];
-                for (auto& r : readers) {
-                    r.stop_ = &stop;
-                    r.start();
-                }
-                bq::platform::thread::sleep(BQ_FAST_CLOCK_RESYNC_INTERVAL_MS + 500);
-                stop.store_release(true);
-                for (auto& r : readers) {
-                    r.join();
-                    result.add_result(r.monotonic_, "per-thread time is monotonic (%" PRIu64 " reads)", r.reads_);
-                    result.add_result(r.max_error_ms_ <= 20, "per-thread time error %" PRIu64 " ms", r.max_error_ms_);
+                uint64_t voided_gap_ms = 0;
+                for (uint32_t attempt = 0; attempt < 2; ++attempt) {
+                    bq::platform::atomic<bool> stop(false);
+                    reader_thread readers[4];
+                    const uint64_t wall_from = precise_epoch_ms();
+                    const uint64_t mono_from = monotonic_ms();
+                    for (auto& r : readers) {
+                        r.stop_ = &stop;
+                        r.start();
+                    }
+                    bq::platform::thread::sleep(BQ_FAST_CLOCK_RESYNC_INTERVAL_MS + 500);
+                    stop.store_release(true);
+                    for (auto& r : readers) {
+                        r.join();
+                    }
+                    const uint64_t wall_to = precise_epoch_ms();
+                    const uint64_t mono_to = monotonic_ms();
+                    const uint64_t gap_ms = wall_clock_gap_ms(wall_from, mono_from, wall_to, mono_to);
+                    if (gap_ms > wall_clock_step_ms() && attempt == 0) {
+                        voided_gap_ms = gap_ms;
+                        // let every cache re-anchor to the new wall clock before measuring again
+                        bq::platform::thread::sleep(BQ_FAST_CLOCK_RESYNC_INTERVAL_MS + 100);
+                        continue;
+                    }
+                    for (auto& r : readers) {
+                        result.add_result(r.monotonic_, "per-thread time is monotonic (%" PRIu64 " reads)", r.reads_);
+                        result.add_result(r.max_error_ms_ <= 20, "per-thread time error %" PRIu64 " ms", r.max_error_ms_);
+                    }
+                    result.add_result(gap_ms <= wall_clock_step_ms(),
+                        "the platform's clock did not move during the per-thread measurement (%" PRIu64 " ms in this measurement, %" PRIu64 " ms voided)",
+                        gap_ms, voided_gap_ms);
+                    return;
                 }
             }
 

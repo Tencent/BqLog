@@ -12,8 +12,10 @@
 #include "bq_common/bq_common.h"
 #include "bq_log/bq_log.h"
 #include "bq_log/log/appender/appender_file_compressed.h"
+#include "bq_log/log/decoder/appender_decoder_manager.h"
+#include "legacy/legacy_decoders.h"
 #include "common_header.h"
-#if defined(WIN32)
+#if defined(BQ_WIN)
 #include "Windows.h"
 #include <shellapi.h> // for CommandLineToArgvW
 #endif // WIN
@@ -35,8 +37,17 @@ struct Options {
 
 static void print_version()
 {
-    CONSOLE_OUTPUT(bq::log_level::debug, "Supported appender format versions:");
-    CONSOLE_OUTPUT(bq::log_level::debug, "  compressed file format version:        %" PRIu32 "", bq::appender_file_compressed::format_version);
+    bq::string versions;
+    const bq::array<uint32_t> supported = bq::appender_decoder_manager::instance().get_supported_format_versions();
+    for (size_t i = 0; i < supported.size(); ++i) {
+        if (i > 0) {
+            versions += ", ";
+        }
+        char number[16];
+        snprintf(number, sizeof(number), "%" PRIu32, supported[i]);
+        versions += number;
+    }
+    CONSOLE_OUTPUT(bq::log_level::debug, "Supported log format versions: %s", versions.c_str());
 }
 
 static void print_help(const char* prog)
@@ -126,7 +137,7 @@ static bool looks_like_pem_pkcs1(const bq::string& key)
     return key.find("BEGIN RSA PRIVATE KEY") != bq::string::npos;
 }
 
-#if defined(WIN32)
+#if defined(BQ_WIN)
 // Convert wide string to UTF-8
 static bq::string wchar_to_utf8(const wchar_t* wstr)
 {
@@ -162,7 +173,7 @@ static bool write_stdout(const bq::string& text)
 
 int32_t main(int32_t argc, char* argv[])
 {
-#if defined(WIN32)
+#if defined(BQ_WIN)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 
@@ -188,6 +199,13 @@ int32_t main(int32_t argc, char* argv[])
     }
 #endif
     Options opt;
+    // Older formats are decoded only by this tool.
+    bq::appender_decoder_manager::instance().register_decoder_factory(9, []() -> bq::unique_ptr<bq::appender_decoder_base> {
+        return bq::make_unique<bq::appender_decoder_legacy_v9>();
+    });
+    bq::appender_decoder_manager::instance().register_decoder_factory(10, []() -> bq::unique_ptr<bq::appender_decoder_base> {
+        return bq::make_unique<bq::appender_decoder_legacy_v10>();
+    });
     if (!parse_args(argc, argv, opt)) {
         print_help(argv[0]);
         return 2; // bad usage

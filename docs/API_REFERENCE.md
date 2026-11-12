@@ -800,7 +800,9 @@ snapshot := logObj.Take_snapshot("UTC+8")
 
 ## 10. Decode binary log files
 
-For decoding CompressedFileAppender logs at runtime:
+For decoding CompressedFileAppender logs at runtime. This reads the format version the library
+writes and nothing else; every language wrapper below exposes the same decoder and inherits that
+limit:
 
 ```cpp
 bq::tools::log_decoder decoder("path/to/file.logcompr", "optional_private_key");
@@ -834,8 +836,47 @@ Download `{os}_{arch}_tools_{version}` from Releases, or install it with a packa
 ./BqLog_LogDecoder FileToDecode [-o OutputFile] [-k PrivateKeyFile]
 ```
 
-> **Note:** Binary format may be incompatible between BqLog versions. Use the matching decoder version.
+> **Note:** This tool decodes the compressed files of every 2.x release, so a file written by an
+> older release does not need the older tool. The in-library decoder above reads only files the current release writes.
 > See also: [Advanced Usage — Log encryption and decryption](./ADVANCED_USAGE.md#6-log-encryption-and-decryption)
+
+---
+
+## 11. Secure random source for encrypted logs
+
+Encrypted appenders take their segment keys from the operating system CSPRNG. Console platforms
+(PS4, PS5, Switch) have none that BqLog can call, and their SDK's is under NDA, so the application
+supplies one before creating a log. **Without a source an encrypted appender still works**, but the
+segment keys then come from a software mix of clocks, thread ids and addresses, and one warning says
+so when the appender is created. Inject a source there: key material that does not come from a
+CSPRNG can be searched offline by anyone who reads the log file. Plaintext loggers are unaffected.
+
+Hosts with an OS CSPRNG (Windows, macOS, iOS, Linux, Android, HarmonyOS) use the system one and ignore an injected source.
+
+The same source supplies the per-segment KEM seed (256 bytes per segment), so an
+injected callback must be a real CSPRNG and not a seeded PRNG — see
+[Advanced Usage — Log encryption and decryption](./ADVANCED_USAGE.md#6-log-encryption-and-decryption).
+
+<details open>
+<summary><b>C++</b></summary>
+
+```cpp
+// Fills buf with size bytes of cryptographically secure random data; return false when it cannot.
+static bool my_random(void* buf, size_t size);
+
+// Call once at startup, before creating any encrypted log.
+bq::log::set_secure_random_source(&my_random);
+
+// Optional: true when the platform or an injected callback can supply key material.
+bool ok = bq::log::has_secure_random_source();
+
+// Passing nullptr removes the injected source again.
+bq::log::set_secure_random_source(nullptr);
+```
+</details>
+
+> This API is C++ only: consoles have no language wrapper. See also:
+> [Advanced Usage — Log encryption and decryption](./ADVANCED_USAGE.md#6-log-encryption-and-decryption)
 
 ---
 
