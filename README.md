@@ -62,6 +62,7 @@
 - **New encrypted log format**: an upgraded encryption scheme that resists known-plaintext attacks and AI-assisted analysis.
 - **Tool compatibility**: `BqLog_LogDecoder` now decodes compressed logs written by every 2.x release.
 - **Unreal Engine 6**: experimental support for Verse scripting on UE6, with generated wrappers and category log wrappers. See the [engine integration guide](docs/ENGINE_INTEGRATION.md).
+- **Fast mode code size**: the slow path behind `log.fast_info<"...">()` is now shared by argument types, shrinking the generated code noticeably (50%–65% less with GCC and Clang, about 25% with MSVC) with no change to the call site's instructions or runtime cost.
 
 ## 📋 What's New in v2.7.x
 

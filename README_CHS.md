@@ -61,6 +61,7 @@
 - **新的加密日志格式**：加密方案升级，可以抵抗已知明文攻击和 AI 分析。
 - **工具兼容性**：`BqLog_LogDecoder` 可以解码 2.x 全系列版本写出的压缩日志。
 - **Unreal Engine 6**：实验性支持 UE6 的 Verse 脚本，提供对应的 Wrapper 和 Category Log Wrapper 生成，详见[引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)。
+- **快速模式代码尺寸**：无宏接口 `log.fast_info<"...">()` 的慢路径改为按参数类型共享，生成的代码体积明显变小（GCC/Clang 实测减少 50%~65%，MSVC 约 25%），调用点指令与运行时开销不变。
 
 ## 📋 v2.7.x 更新亮点
 
