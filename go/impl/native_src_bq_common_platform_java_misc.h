@@ -36,6 +36,12 @@ namespace bq {
 
         jobject create_new_direct_byte_buffer(JNIEnv* env, const void* address, size_t capacity, bool is_big_endian);
 
+        // Makes len bytes of UTF-8 fit for NewStringUTF(), which takes modified UTF-8 and stops at the first
+        // '\0': a '\0' becomes C0 80 and, except on Android, whose runtime reads 4-byte sequences, a 4-byte
+        // sequence becomes its surrogate pair. Returns utf8 itself when there is nothing to change, which is
+        // almost always, or else the converted copy in buffer.
+        const char* utf8_to_modified_utf8(const char* utf8, size_t len, bq::array<char>& buffer);
+
         jint jni_init(JavaVM* vm, void* reserved);
 
         void try_to_detach_thread();

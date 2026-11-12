@@ -150,6 +150,19 @@ namespace bq {
         static void force_flush_all_logs();
 
         /// <summary>
+        /// Supplies the CSPRNG for log encryption keys on platforms that have none the library can call
+        /// (PS4, PS5, Switch). Elsewhere the system CSPRNG is used and this is ignored. Without a source
+        /// an encrypted appender still works on weak, searchable keys and warns once when created.
+        /// </summary>
+        /// <param name="fn">Callback filling buf with size bytes of cryptographically secure random data, or null to remove it</param>
+        static void set_secure_random_source(bq::type_func_ptr_secure_random_source fn);
+
+        /// <summary>
+        /// True when the platform, or an injected callback, can supply key material from a CSPRNG.
+        /// </summary>
+        static bool has_secure_random_source();
+
+        /// <summary>
         /// Register a callback that will be invoked whenever a console log message is output.
         /// This can be used for an external system to monitor console log output.
         /// </summary>

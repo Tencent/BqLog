@@ -105,6 +105,7 @@ namespace bq {
             static bq::platform::spin_lock_zero_init s_filter_lock;
             static bq::string s_path_filter;
             static bq::platform::atomic<int32_t> s_normal_buffer_alloc_fail(0);
+            static bq::platform::atomic<uint64_t> s_short_write_limit(static_cast<uint64_t>(-1));
 
             void set_fault(fault_kind kind)
             {
@@ -137,6 +138,25 @@ namespace bq {
             bool get_normal_buffer_alloc_fail()
             {
                 return s_normal_buffer_alloc_fail.load(bq::platform::memory_order::acquire) != 0;
+            }
+            void set_short_write_limit(size_t bytes)
+            {
+                s_short_write_limit.store(static_cast<uint64_t>(bytes), bq::platform::memory_order::seq_cst);
+            }
+            bool get_short_write_limit(size_t& out_bytes)
+            {
+                const uint64_t limit = s_short_write_limit.load(bq::platform::memory_order::acquire);
+                out_bytes = static_cast<size_t>(limit);
+                return limit != static_cast<uint64_t>(-1);
+            }
+            static bq::platform::atomic<int32_t> s_disable_secure_random(0);
+            void set_disable_secure_random(bool disable)
+            {
+                s_disable_secure_random.store(disable ? 1 : 0, bq::platform::memory_order::seq_cst);
+            }
+            bool get_disable_secure_random()
+            {
+                return s_disable_secure_random.load(bq::platform::memory_order::acquire) != 0;
             }
             void set_base_dir_unset(bool unset)
             {

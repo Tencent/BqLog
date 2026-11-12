@@ -788,7 +788,8 @@ BQ_NAPI_DEF(log_decoder_decode, napi_env, env, napi_callback_info, info)
     napi_value obj = NULL;
     napi_create_object(env, &obj);
     napi_value v_code = bq::make_napi_i32(env, (int32_t)result);
-    napi_value v_text = bq::make_napi_str_utf8(env, (result == bq::appender_decode_result::success) ? text.str : "");
+    const bool decoded = (result == bq::appender_decode_result::success);
+    napi_value v_text = bq::make_napi_str_utf8(env, decoded ? text.str : "", decoded ? text.len : 0);
     napi_set_named_property(env, obj, "code", v_code);
     napi_set_named_property(env, obj, "text", v_text);
     return obj;
@@ -830,7 +831,7 @@ BQ_NAPI_DEF(take_snapshot_string, napi_env, env, napi_callback_info, info)
 
     bq::_api_string_def snapshot_str_def = { NULL, 0 };
     bq::api::__api_take_snapshot_string(id, time_zone_config_str.c_str(), &snapshot_str_def);
-    napi_value out = bq::make_napi_str_utf8(env, snapshot_str_def.str);
+    napi_value out = bq::make_napi_str_utf8(env, snapshot_str_def.str, snapshot_str_def.len);
     bq::api::__api_release_snapshot_string(id, &snapshot_str_def);
     return out;
 }
@@ -903,7 +904,6 @@ static void BQ_STDCALL _napi_console_buffer_fetch_callback(
     const char* content,
     int32_t length)
 {
-    (void)length;
     _napi_fetch_ctx* ctx = (_napi_fetch_ctx*)pass_through_param;
     if (!ctx || !ctx->env || !ctx->js_cb)
         return;
@@ -912,7 +912,7 @@ static void BQ_STDCALL _napi_console_buffer_fetch_callback(
     argv2[0] = bq::make_napi_u64(ctx->env, log_id);
     argv2[1] = bq::make_napi_i32(ctx->env, category_idx);
     argv2[2] = bq::make_napi_i32(ctx->env, static_cast<int32_t>(log_level));
-    argv2[3] = bq::make_napi_str_utf8(ctx->env, content ? content : "");
+    argv2[3] = bq::make_napi_str_utf8(ctx->env, content, static_cast<size_t>(length > 0 ? length : 0));
     napi_value undefined = bq::make_napi_undefined(ctx->env);
     napi_call_function(ctx->env, undefined, ctx->js_cb, 4, argv2, NULL);
 }

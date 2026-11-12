@@ -25,6 +25,18 @@ namespace bq {
         static appender_decoder_manager& instance();
 
         /// <summary>
+        /// Adds a decoder for a format version other than the one this runtime writes.
+        /// The runtime registers none; the standalone tool registers the older ones.
+        /// </summary>
+        typedef bq::unique_ptr<appender_decoder_base> (*decoder_factory_fn)();
+        void register_decoder_factory(uint32_t format_version, decoder_factory_fn factory);
+
+        /// <summary>
+        /// The format versions this build can decode, oldest first.
+        /// </summary>
+        bq::array<uint32_t> get_supported_format_versions();
+
+        /// <summary>
         /// create a file decoder
         /// </summary>
         /// <param name="path"></param>
@@ -48,11 +60,14 @@ namespace bq {
         appender_decode_result decode_single_item(uint32_t handle, const bq::string*& out_decoded_log_text);
 
     private:
+        decoder_factory_fn find_decoder_factory(uint32_t format_version);
+
 #if !defined(BQ_TOOLS)
         // tools are running in single thread, performance will benefit from removing mutex
         bq::platform::mutex mutex_;
 #endif
         bq::platform::atomic<uint32_t> idx_seq_;
         bq::hash_map<uint32_t, bq::unique_ptr<appender_decoder_base>> decoders_map_;
+        bq::hash_map<uint32_t, decoder_factory_fn> extra_factories_;
     };
 }

@@ -180,6 +180,14 @@ namespace bq {
     public:
         // While paused the worker leaves the buffer alone, so everything written stays for recovery.
         void test_pause_consumer(bool paused) { test_consumer_paused_.store_release(paused); }
+
+        // Destroys the appenders without flushing them first, as process teardown does.
+        void test_teardown_appenders()
+        {
+            appenders_list_.clear();
+            recovery_appenders_.clear();
+            recovery_appenders_need_begin_ = false;
+        }
 #endif
     };
 }

@@ -14,7 +14,7 @@ namespace bq {
     const log_thread_info* log_record_reader::get_block_thread_info(const log_buffer& buffer)
     {
         const log_thread_info* info = buffer.get_current_reading_thread_info();
-        return (info && info->thread_name_len_ <= log_thread_info::MAX_THREAD_NAME_LEN) ? info : nullptr;
+        return (info && info->thread_name_len_ <= MAX_THREAD_NAME_LEN) ? info : nullptr;
     }
 
     bool log_record_reader::is_fast_record(const uint8_t* data, uint32_t size)

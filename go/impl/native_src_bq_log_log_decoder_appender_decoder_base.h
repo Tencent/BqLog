@@ -41,7 +41,6 @@ namespace bq {
             uint64_t end_pos = 0;
             appender_file_binary::appender_segment_type seg_type = appender_file_binary::appender_segment_type::normal;
             appender_file_binary::appender_encryption_type enc_type = appender_file_binary::appender_encryption_type::plaintext;
-            bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> xor_key_blob;
         };
 
     public:
@@ -63,11 +62,30 @@ namespace bq {
 
         virtual uint32_t get_binary_format_version() const = 0;
 
-        bool seek_read_file_absolute(size_t pos);
+        // Segment layer: the only part of the decoder that knows an encryption scheme.
+        // All positions are absolute file positions.
+        virtual bool is_supported_enc_type(appender_file_binary::appender_encryption_type type) const = 0;
+
+        // Called after a segment header is read, before any payload. Returns false if the segment's key cannot be built.
+        virtual bool setup_segment(const appender_file_binary::appender_file_segment_head& head, uint64_t seg_start) = 0;
+
+        // Decrypts in place the chunk that starts at file_pos. Returns false if the file is corrupt.
+        virtual bool decrypt_segment_chunk(uint8_t* data, size_t size, uint64_t file_pos) = 0;
+
+        // Bytes to reserve in front of a chunk that starts at file_pos, for schemes that need the buffer aligned to it.
+        virtual size_t get_read_front_padding(uint64_t file_pos) const
+        {
+            (void)file_pos;
+            return 0;
+        }
+
+        static constexpr size_t buffer_alignment = appender_file_base::DEFAULT_BUFFER_ALIGNMENT;
+
+        bool seek_read_file_absolute(uint64_t pos);
 
         bool seek_read_file_offset(int32_t offset);
 
-        size_t get_current_file_size();
+        uint64_t get_current_file_size();
 
         // data() returned by read_with_cache_handle will be invalid after next calling of "read_with_cache"
         read_with_cache_handle read_with_cache(size_t size);
@@ -85,6 +103,7 @@ namespace bq {
     private:
         appender_decode_result read_to_next_segment();
 
+    protected:
         size_t read_from_file_directly(void* dst, size_t size);
 
     protected:
@@ -94,14 +113,14 @@ namespace bq {
         seg_info cur_read_seg_;
         bq::appender_file_binary::appender_payload_metadata payload_metadata_;
         bq::array<bq::string> category_names_;
+        bq::rsa::private_key private_key_;
 
     private:
         // built from payload_metadata_ once the header is read, so its time string cache spans entries
         bq::time_zone time_zone_;
         bq::file_handle file_;
-        size_t current_file_size_ = 0;
-        size_t current_file_cursor_ = BQ_SIZE_MAX;
-        bq::rsa::private_key private_key_;
+        uint64_t current_file_size_ = 0;
+        uint64_t current_file_cursor_ = UINT64_MAX;
 
         bq::array<uint8_t, bq::aligned_allocator<uint8_t, appender_file_base::DEFAULT_BUFFER_ALIGNMENT>> cache_read_;
         decltype(cache_read_)::size_type cache_read_cursor_ = 0;

@@ -50,11 +50,15 @@ namespace bq {
         constexpr uint32_t default_base_dir = 1u << 7;
         constexpr uint32_t user_counter = 1u << 8;
     }
+
+    // Fills buf with size bytes of cryptographically secure random data, or returns false when it cannot.
+    typedef bool (*type_func_ptr_secure_random_source)(void* buf, size_t size);
 #define BQ_LOG_ABI_TYPE(cpp_type, c_type) cpp_type
 #define BQ_LOG_ABI_CHAR16 char16_t
 #else
 #if !defined(BQ_MODULE_SYSTEM_HEADERS_PREINCLUDED)
 #include <stdbool.h>
+#include <stddef.h>
 #endif
 typedef int32_t bq_buffer_result_code;
 enum bq_buffer_result_code_value {
@@ -193,4 +197,6 @@ typedef struct bq_api_fast_log_site_handle bq_api_fast_log_site_handle;
 typedef struct bq_api_fast_log_layout bq_api_fast_log_layout;
 typedef struct bq_api_fast_log_thread_state bq_api_fast_log_thread_state;
 typedef struct bq_api_fast_log_write_handle bq_api_fast_log_write_handle;
+// Fills buf with size bytes of cryptographically secure random data, or returns false when it cannot.
+typedef bool (*bq_secure_random_source_fn)(void* buf, size_t size);
 #endif

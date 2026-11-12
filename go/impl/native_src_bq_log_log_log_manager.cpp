@@ -117,7 +117,10 @@ namespace bq {
                 if (categories_changed) {
                     assert(false && "categories can not been changed during runtime, please check the generated categories file for all the wrappers");
                 }
-                (*exist_iter)->reset_config(config_obj);
+                if (!(*exist_iter)->reset_config(config_obj)) {
+                    // the log that already exists keeps its previous config and appenders
+                    return 0;
+                }
                 return (*exist_iter).get()->id();
             }
         }
@@ -177,10 +180,12 @@ namespace bq {
         }
         for (decltype(log_imp_list_)::iterator it = log_imp_list_.begin(); it != log_imp_list_.end(); ++it) {
             if ((*it) && (*it)->get_name() == log_name) {
-                if ((*it)->reset_config(config_obj)) {
+                // a rejected config leaves the log as it was, so report what reset_config() decided
+                const bool reset_ok = (*it)->reset_config(config_obj);
+                if (reset_ok) {
                     (*it)->set_config(config_content);
                 }
-                return true;
+                return reset_ok;
             }
         }
         return false;
@@ -244,7 +249,7 @@ namespace bq {
         }
         switch (log->get_thread_mode()) {
         case log_thread_mode::sync:
-            // do nothing
+            // Nothing pending, for the reason given in force_flush_all.
             break;
         case log_thread_mode::async:
         case log_thread_mode::independent: {
@@ -276,6 +281,25 @@ namespace bq {
         }
     }
 
+    void log_manager::test_teardown_appenders(uint64_t log_id)
+    {
+        log_imp* log = get_log_by_id(log_id);
+        if (!log) {
+            return;
+        }
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        log->test_teardown_appenders();
+    }
+
+    void log_manager::test_force_flush(uint64_t log_id)
+    {
+        log_imp* log = get_log_by_id(log_id);
+        if (!log) {
+            return;
+        }
+        bq::platform::scoped_spin_lock_write_crazy scoped_lock(logs_lock_);
+        log->sync_process(true);
+    }
 #endif
     void log_manager::uninit()
     {
@@ -303,7 +327,6 @@ namespace bq {
         }
         bq::util::log_device_console(log_level::info, "BqLog is uninited!");
     }
-
 
     bq::layout& log_manager::get_public_layout()
     {

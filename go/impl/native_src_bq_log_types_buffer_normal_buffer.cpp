@@ -150,7 +150,7 @@ namespace bq {
         }
         size_t file_size = bq::memory_map::get_min_size_of_memory_map_file(0, size);
         create_memory_map_result result = create_memory_map_result::failed;
-        size_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
+        uint64_t current_file_size = bq::file_manager::instance().get_file_size(memory_map_file_);
         if (current_file_size != file_size) {
             if (!bq::file_manager::instance().truncate_file(memory_map_file_, file_size)) {
                 bq::util::log_device_console(log_level::warning, "normal buffer truncate memory map file \"%s\" failed, use memory instead.", memory_map_file_.abs_file_path().c_str());

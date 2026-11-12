@@ -75,6 +75,13 @@ namespace bq {
         napi_create_string_utf8(env, s ? s : "", NAPI_AUTO_LENGTH, &v);
         return v;
     }
+    // For text that has a length: the overload above reads up to the first '\0'.
+    inline napi_value make_napi_str_utf8(napi_env env, const char* s, size_t len)
+    {
+        napi_value v;
+        napi_create_string_utf8(env, s ? s : "", s ? len : 0, &v);
+        return v;
+    }
 
     inline bool get_napi_bool(napi_env env, napi_value v)
     {

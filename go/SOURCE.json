@@ -1,7 +1,7 @@
 {
-  "version": "2.7.3",
+  "version": "2.8.0",
   "module": "github.com/Tencent/BqLog/go/v2",
-  "source_commit": "86e523215af022d5b7098a8e7dc3b18e38179a5f",
+  "source_commit": "42a1068d784f152cd964ce3fcd19f70a975322c7",
   "sources": [
     {
       "path": "include/bq_common/bq_common_public_include.h",
@@ -49,7 +49,7 @@
     },
     {
       "path": "include/bq_common/platform/macros.h",
-      "sha256": "dc41807b364d263cafb61a88ee27ea5e1bc2ac6551a987188bbdb13d503c74f1"
+      "sha256": "b1b85910e70993982c07322f2cb2d0ca1bbbf440996f6b22390bf4c6e7dc6b41"
     },
     {
       "path": "include/bq_common/types/allocator.h",
@@ -109,7 +109,7 @@
     },
     {
       "path": "include/bq_log/adapters/adapter_unreal.h",
-      "sha256": "5b0f62452b5b946dc0e8217bc0c979b554f7d7a752315fc4fd0225a43f63e863"
+      "sha256": "85fc6e31740fc29adb60bad3ad7e4fe747d5faabf67d6fb6a79d03ca0e8951af"
     },
     {
       "path": "include/bq_log/adapters/adapters.h",
@@ -125,7 +125,7 @@
     },
     {
       "path": "include/bq_log/bq_log_entry.h",
-      "sha256": "4bfbd257be30e0f3440bf090ae2c88107c68930c771edd7e21b3f6c321391f02"
+      "sha256": "82e6fc84ddca7733802cf86922797a09697b1cf0fd9b464ea2b9503896d017c6"
     },
     {
       "path": "include/bq_log/misc/bq_log_c_api.h",
@@ -133,11 +133,11 @@
     },
     {
       "path": "include/bq_log/misc/bq_log_c_api.inc",
-      "sha256": "0e70dee67028bc975db0d4208934bbdf404d3076aba01136022446ac49650170"
+      "sha256": "421e029a9b5758e5f2e23ddd510fe4600e765551006996361dcea6383e8b0649"
     },
     {
       "path": "include/bq_log/misc/bq_log_c_types.h",
-      "sha256": "71a86be01efce3c2349e6c167994c37a0421f5ae694998185feccd3b03fc68bf"
+      "sha256": "1a2467dac56c96d7cdebabe85b992603041cf53ab3447ff36b67929b8f54ab4d"
     },
     {
       "path": "include/bq_log/misc/bq_log_def.h",
@@ -145,7 +145,7 @@
     },
     {
       "path": "include/bq_log/misc/bq_log_fast_info.h",
-      "sha256": "54fc2db5fac4965f5714a6b900ebd7b0bbd8c09295677d4d4cbd37ac26becaa0"
+      "sha256": "343e47e408b48d5499c2f1960ce19c5299506d05eb165af9b393b2e1a5586f17"
     },
     {
       "path": "include/bq_log/misc/bq_log_fast_inline.h",
@@ -157,7 +157,7 @@
     },
     {
       "path": "include/bq_log/misc/bq_log_impl.h",
-      "sha256": "4473274fbdbca3571716a1841979a046d0c8626161847b891d0625efc65926b0"
+      "sha256": "d7ca2fcc7fcf64e37d1e90f5154ed3132d478e75e7be27f34991243c0f2f6081"
     },
     {
       "path": "include/bq_log/misc/bq_log_wrapper_tools.h",
@@ -169,31 +169,47 @@
     },
     {
       "path": "src/bq_common/bq_common.h",
-      "sha256": "d7b94e0a0672f362cbdc01e3b032328da9f3342f7defcb8667bba4a1c39a75a3"
+      "sha256": "d07d4434204766dc89e15efb3de2a7813825d461287b32a1f91aab490caa484a"
     },
     {
-      "path": "src/bq_common/encryption/aes.cpp",
-      "sha256": "861121b36c7d4e2b7e5e7f89dbe0b9f73102a88a4ece3fc6e7e1e4ccc31a3c3e"
+      "path": "src/bq_common/encryption/chacha20.cpp",
+      "sha256": "10d5e16d28ba038acbfd298bbde08b233f85712e7cb3c1c27970aa0ece1450b4"
     },
     {
-      "path": "src/bq_common/encryption/aes.h",
-      "sha256": "cec22114acde0443e5cd716121a37212f9116ea0447381c72bf8ee910cff1808"
+      "path": "src/bq_common/encryption/chacha20.h",
+      "sha256": "85b2cf703030029e35fee133a8d592fd0e05a264107e522c973746d1947233cb"
+    },
+    {
+      "path": "src/bq_common/encryption/hkdf.cpp",
+      "sha256": "3b639d56febd0f000873ecd07c6716e14476b42abf1890a6d0b09fd584ce7b4a"
+    },
+    {
+      "path": "src/bq_common/encryption/hkdf.h",
+      "sha256": "652a02057493453b94b429dbbe743dda9c1be742fe38e50db6f49cace22408c4"
+    },
+    {
+      "path": "src/bq_common/encryption/random_bytes.cpp",
+      "sha256": "4d9c82cc4e9b5293211680ff84a1ccab63d344b6d2d825ae00f3e89e62a57c78"
+    },
+    {
+      "path": "src/bq_common/encryption/random_bytes.h",
+      "sha256": "1e04f689f9dcfdc38df1c0618698cb956625b77b79553cf995dc4037a9d627f7"
     },
     {
       "path": "src/bq_common/encryption/rsa.cpp",
-      "sha256": "e4a052765e1c135685da6186d7c504a6e61ead60d140c4008eea77a33219092a"
+      "sha256": "8260f7f538662dc6bf8b4f5509094986cf0ba437f2e4044b695ac7dce2bc2738"
     },
     {
       "path": "src/bq_common/encryption/rsa.h",
-      "sha256": "54260806a0ad648d2dc4f0aa3aebb843445d0a93d75e1614d3d1f04c7b07ba64"
+      "sha256": "5a20a1934bf8c87259236a163344083bd8632f64544a7589745f5a0af710ecde"
     },
     {
-      "path": "src/bq_common/encryption/vernam.cpp",
-      "sha256": "d0d8d9cd25de5d19129607cf0faf6bdaf8f5bed64170adbeeb1166b70d40de95"
+      "path": "src/bq_common/encryption/sha256.cpp",
+      "sha256": "9558115510a2240f7282abe83b21bb5be7e594db497e268dbca0ee3e051a9db6"
     },
     {
-      "path": "src/bq_common/encryption/vernam.h",
-      "sha256": "8b371c12ba6ad2061a3151495654256ec0e5e40069013eda54bb8ae0fac40d32"
+      "path": "src/bq_common/encryption/sha256.h",
+      "sha256": "cbfb2d4f96173f7dae1eac6f26dcd5694c477b61f097f363b889322ba6b0e9a2"
     },
     {
       "path": "src/bq_common/global/common_vars.cpp",
@@ -245,11 +261,11 @@
     },
     {
       "path": "src/bq_common/platform/java_misc.cpp",
-      "sha256": "7b860958e8f8f117f6189fcf78de06c62ccd94bcc838a299d6666bbc39acbd54"
+      "sha256": "3a0f5feeaab7924b473b7685be67beb63567f0f5883c35e71caff11bf3b6d636"
     },
     {
       "path": "src/bq_common/platform/java_misc.h",
-      "sha256": "c68c2b326618d6238d77e44027519dfc3a030ff0a189dd6b240d792bb7dd5332"
+      "sha256": "3db26402b1fc392e412b32e9f33f8e4d4c9c4bbfdcf0f8d1a5bd4dfafaaba3d1"
     },
     {
       "path": "src/bq_common/platform/linux_misc.cpp",
@@ -273,7 +289,7 @@
     },
     {
       "path": "src/bq_common/platform/napi_misc.h",
-      "sha256": "e1d6ec2c696c405bec018d06e888649021d8de61c5a5363c4a7d015d822d76a9"
+      "sha256": "b81d44097c8f280d34ca2822788240ed84a12d1ac82c0aec001913245a5f2382"
     },
     {
       "path": "src/bq_common/platform/no_lib_cpp_impl.cpp",
@@ -293,15 +309,15 @@
     },
     {
       "path": "src/bq_common/platform/platform_misc.cpp",
-      "sha256": "637786d0c23d6a8b6b14dcd1926b8103233f8c9141a8b68cfe74e47f2565a41c"
+      "sha256": "611da79bc54b95fed470f67bc0e97eed1cb7ed2984c6d1039baa9c139c064d5d"
     },
     {
       "path": "src/bq_common/platform/platform_misc.h",
-      "sha256": "f98c7e07306638ecbd46f255d7d0ee889a7f3c5f4d4dc68648bcb65ccb929d4c"
+      "sha256": "f1c622fe6505395448a1974554e49b7ec69d945894226d9e1ab64c8e94d3c7f8"
     },
     {
       "path": "src/bq_common/platform/posix_misc.cpp",
-      "sha256": "0f85e10e45f53cd3cc46b2804c61e96c73e4170679cab375bce71f2c04fa9073"
+      "sha256": "7545f562f1717cb2894ac34ad6dc7d4fa62c88bb6a44f13425bc3b6682cabc68"
     },
     {
       "path": "src/bq_common/platform/posix_misc.h",
@@ -413,7 +429,7 @@
     },
     {
       "path": "src/bq_common/platform/win64_misc.cpp",
-      "sha256": "052acdf538e472049da4216d60f0905a6401b626765ff6c9e62414369f377e75"
+      "sha256": "dfb8e732a92d4b844a722448e66977f5d1943a9ed3bb28f158619022537381e3"
     },
     {
       "path": "src/bq_common/platform/win64_misc.h",
@@ -429,11 +445,11 @@
     },
     {
       "path": "src/bq_common/utils/file_manager.cpp",
-      "sha256": "5a895e52872b772d72f02d43dc6b2b7af8ea080416689951f7c6d467fba681fd"
+      "sha256": "f1cdd2b0de3e77e39061abd142cd287dccbce68a8caf42017e79a4c33a026a3f"
     },
     {
       "path": "src/bq_common/utils/file_manager.h",
-      "sha256": "750cd9109eee9d201805f1971530180f36a35a2ac30b3b29228fbb95a864536d"
+      "sha256": "3e18304b0f4f673ffe1325b05904d27f2a67a33c706c9dad7dfb23fac2c940aa"
     },
     {
       "path": "src/bq_common/utils/property.cpp",
@@ -453,7 +469,7 @@
     },
     {
       "path": "src/bq_common/utils/util.cpp",
-      "sha256": "beb335220ef14ff2391dde8c60d115958fb53358188bdac6431369c63daf8c89"
+      "sha256": "1bebc5bcaf49da736c6869f076764c91b18dbdaa40a90a6d35c992e3c32f70b7"
     },
     {
       "path": "src/bq_common/utils/util.h",
@@ -469,7 +485,7 @@
     },
     {
       "path": "src/bq_log/api/bq_log_api.cpp",
-      "sha256": "5d11cb18cbfbd628e6b541c6629895e41750e9b18e9763978bb6eb1aa0767296"
+      "sha256": "35d9b3cb2d6edd9bb30e263b669e297fd3aebd7c3404b1bc3b0db8490795c96d"
     },
     {
       "path": "src/bq_log/api/bq_log_go.cpp",
@@ -481,7 +497,7 @@
     },
     {
       "path": "src/bq_log/api/bq_log_jni_api.cpp",
-      "sha256": "8f274e1803538c10c9b8382c674077d9ebc7f0b3281124b23b0446ab9309ac0b"
+      "sha256": "966af647fa2e3af53931f57d852c66dab41e711d6655514db79987cdd0b54085"
     },
     {
       "path": "src/bq_log/api/bq_log_jni_api.h",
@@ -489,7 +505,7 @@
     },
     {
       "path": "src/bq_log/api/bq_log_napi.cpp",
-      "sha256": "50a94aea3c2e2e51bb9e83e038cccebdc54a6b082877f5bcd6a2548b26d59a08"
+      "sha256": "c81b394e46f6aabccd36887fd2a78028db8372df4b4898d33949b781d5841b72"
     },
     {
       "path": "src/bq_log/api/bq_log_napi.h",
@@ -497,7 +513,7 @@
     },
     {
       "path": "src/bq_log/api/bq_log_python_api.cpp",
-      "sha256": "f88913bfc0a0ff3c9380e317f917e25ec1b8f6b8bf8b253abde5ab12a82c97ce"
+      "sha256": "49f22f7965150acaeddefc8f0f76259d66834ec1cbd7bd6d9766f7546db68c12"
     },
     {
       "path": "src/bq_log/api/bq_log_python_api.h",
@@ -513,7 +529,7 @@
     },
     {
       "path": "src/bq_log/global/version.cpp",
-      "sha256": "770a0421eb2e366539c083c5e506581ebce0fb453f541da0f1dbecf5d2e4cb24"
+      "sha256": "91812a82f65af2e92305b47811ab445a8a443afb3fc0cc76610e4deb9c5e8d6b"
     },
     {
       "path": "src/bq_log/global/version.h",
@@ -521,15 +537,15 @@
     },
     {
       "path": "src/bq_log/log/appender/appender_base.cpp",
-      "sha256": "ae53427cf094b2c3267574220662092f71cf25c91002a9c687a07c226c84ef03"
+      "sha256": "4c7ce27ae9a1d5e87ef1bc721abb50e5b1b4a7252da61cf8118883fd24ba626f"
     },
     {
       "path": "src/bq_log/log/appender/appender_base.h",
-      "sha256": "b6024d34692cd9febc834cb2a7d4c1d015a7bf6c67342ea99528575de6940d22"
+      "sha256": "70286221f6cc00b98ed165858adcc9a0c1c1ed50753466e533bb7d21185c9bda"
     },
     {
       "path": "src/bq_log/log/appender/appender_console.cpp",
-      "sha256": "22a1027fa929022606a434f438c1b3673d10cd538758ad47a253fd672c669de7"
+      "sha256": "6b69ae2f5b70b1f0591c8340d0379be0781929b8174433aa39aee580d19e95a0"
     },
     {
       "path": "src/bq_log/log/appender/appender_console.h",
@@ -537,19 +553,19 @@
     },
     {
       "path": "src/bq_log/log/appender/appender_file_base.cpp",
-      "sha256": "520103e81d03c4a36a2673556199b8617fe3fc14e0e528987a3b179bfe8e1add"
+      "sha256": "821993c73a709c2cd15b81a4afec193af400c0bbe6757dbad24325d90c26d5c9"
     },
     {
       "path": "src/bq_log/log/appender/appender_file_base.h",
-      "sha256": "5dbd2c6c9c2b6ada7b998da2f6ae1f3344b654ba7fc01a06858ee256687ec235"
+      "sha256": "2b83825cbbc3293387314d81ef6a91e032317a94039b6a38c09e3fed95aa2337"
     },
     {
       "path": "src/bq_log/log/appender/appender_file_binary.cpp",
-      "sha256": "b4a76b691f185feeb38bcd70f0b1ef4511e5470485197c2653afef779739ed8c"
+      "sha256": "d718db0eb8b2f13477a8d1c75e009186812b0a8cd4ef0af66ab0833c3881d2b3"
     },
     {
       "path": "src/bq_log/log/appender/appender_file_binary.h",
-      "sha256": "4b40c6969cf584cb61198d8aff2b4eac277896db8a151d802ca22efc7266a105"
+      "sha256": "34c6a5ef32771309eb805d13701471ab9e0c4ff20f1a7f0ea3c56df9da3f6746"
     },
     {
       "path": "src/bq_log/log/appender/appender_file_compressed.cpp",
@@ -557,7 +573,7 @@
     },
     {
       "path": "src/bq_log/log/appender/appender_file_compressed.h",
-      "sha256": "e4ebfd1ca1896dfa9b3e42cbebc4ac440af878bc2ed705c607ebdddc1b30b52b"
+      "sha256": "58101cdbc7c62f796fdb6bb8210eb898913fe2b9694e216641ac263f80c6002a"
     },
     {
       "path": "src/bq_log/log/appender/appender_file_text.cpp",
@@ -569,19 +585,19 @@
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_base.cpp",
-      "sha256": "0cf9bd4131d4e3cfd65983a62ba5bf5df7b5bbcabe11c07da192a71842ec3726"
+      "sha256": "7660b68da8ddef12c282c0bc1a8417c3564bb73d5f88da04e35e1aa19e37a262"
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_base.h",
-      "sha256": "00b04f8802d9c3aebeb20ee2e05a5087984655a12ccf9f6f04e31166b36f93cf"
+      "sha256": "dfecc8c958533871da8f06ada1dacfcea6bc61bfd419688b1684f4f4d76cc136"
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_compressed.cpp",
-      "sha256": "b42a78b18a2d80a1684ed7ee512d25719796623ddc01e497d54e253d327a3cc0"
+      "sha256": "073f8386cc8d636e0bb17ad658449ce413d6123b25015653f13658ac4ec8eb4e"
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_compressed.h",
-      "sha256": "5ef756a3575a07db62363552c064109406c24a4c96bda478ff03cac262723d76"
+      "sha256": "bd78ffe29722fae39af9f88b896723dd7f3cafd67132534bcedbaf6e1ae6c98a"
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_helper.cpp",
@@ -593,27 +609,27 @@
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_manager.cpp",
-      "sha256": "b28a14196cf65d5f36e6d624f37f1cca990a48e2cd385ad9aa6b5262521889d7"
+      "sha256": "ca7f7f44b97a44048e7235d4b8c44100e8c9e966498614180c3c04d0c1e21f7c"
     },
     {
       "path": "src/bq_log/log/decoder/appender_decoder_manager.h",
-      "sha256": "27d70d0999cf7e541f9ebf42ba338c4e289a1de4499ee2773115af4842cedb92"
+      "sha256": "8328aa9facbe7ec0736b285efa1c4c2ddbb45693007a5600484333fa5fd02345"
     },
     {
       "path": "src/bq_log/log/layout.cpp",
-      "sha256": "f59efde94a077a13305a63bd1d2d1737707aaa8bcc4503f45eb1ddf6a023b96f"
+      "sha256": "af386217bb96adacdeb868418966b6e276569505d3cbd1a40f0047e52a7a7965"
     },
     {
       "path": "src/bq_log/log/layout.h",
-      "sha256": "d69282a98d89f92ba1e92bbe1032f85c007581f89881b89359d4815d81e3857a"
+      "sha256": "c9ceb1243e3121c8b0a5e1a7a9d08312ff7dcf6dfba26a1418afacb01b5d7b63"
     },
     {
       "path": "src/bq_log/log/log_imp.cpp",
-      "sha256": "9390a29c5000c23b08f6b1b6bf610b8972bea65de0fe07dfc39c9882ec40dd1d"
+      "sha256": "de20fa79b377d721ac59c643d869e260914033c033f723fbd71fbd199c00fe0c"
     },
     {
       "path": "src/bq_log/log/log_imp.h",
-      "sha256": "4e067bd03b65ebd78789b88325f5674a44e9d88a82882a28021a5e0c2c80a5f8"
+      "sha256": "7f88a85cd6bac89a71e4e8e8c361608b4df29c4ab60c185a19375c9be3ca9cfc"
     },
     {
       "path": "src/bq_log/log/log_level_bitmap.cpp",
@@ -625,15 +641,15 @@
     },
     {
       "path": "src/bq_log/log/log_manager.cpp",
-      "sha256": "08e791b63467e495c557d92aa632da3b6591285804e9db928ecceee11350e3d9"
+      "sha256": "05f2763140dc5e4af022fea1da8ad2214466f47e566045c08629af00ef70231f"
     },
     {
       "path": "src/bq_log/log/log_manager.h",
-      "sha256": "194c633c280ed93660f37627b8b6dd4f794d8477828b3765032c4c34ec558935"
+      "sha256": "0e114609c138c73bb580992f12cdf2ce1823c084be45b417ef7e22cb5da5907f"
     },
     {
       "path": "src/bq_log/log/log_record_reader.cpp",
-      "sha256": "4a75faadc2039bb55337978ef0e3e00c09ab90e958f6e503ae65dcf8392446a0"
+      "sha256": "dfe248d656f2ed9ad0dcce56a359480be31c0b953a2d481d64d46b4baec44f9d"
     },
     {
       "path": "src/bq_log/log/log_record_reader.h",
@@ -649,11 +665,11 @@
     },
     {
       "path": "src/bq_log/log/log_types.cpp",
-      "sha256": "9e580b3c6d80e56f536e63032e5642976def60263582e9d7c233fbf02036065b"
+      "sha256": "08816f9742b3ca1302c23a87a528485a8c0877a856f65f57bb834da2411dd919"
     },
     {
       "path": "src/bq_log/log/log_types.h",
-      "sha256": "0cffa3ffcfad22739e6b5121dc90c7edc1fc1af7b09ec7643675922ddc884a58"
+      "sha256": "645f6527c964e7f4a1ded03fe367864c4885eab65977a2112ab3bf751a7e36c2"
     },
     {
       "path": "src/bq_log/log/log_worker.cpp",
@@ -685,11 +701,11 @@
     },
     {
       "path": "src/bq_log/types/buffer/log_buffer.cpp",
-      "sha256": "618823be83f00a1d86f5cabb749d957b6c0dcaadcf0e48b59fe90002a60d0322"
+      "sha256": "8f328f82d6ff792ce42fc26b56a9a0a2230c9291a26d208c5485c563593933de"
     },
     {
       "path": "src/bq_log/types/buffer/log_buffer.h",
-      "sha256": "5387115e1e0c06cf122d8044fb6b679feaaadd63df4b302418ba3524d9fe90f3"
+      "sha256": "9cddc838a8bef6863501c7876075aa3a70b443a814fda8918c20020bf7b3a1d2"
     },
     {
       "path": "src/bq_log/types/buffer/log_buffer_defs.h",
@@ -713,7 +729,7 @@
     },
     {
       "path": "src/bq_log/types/buffer/normal_buffer.cpp",
-      "sha256": "b9ceb57d3633bd5cb26f19aca6ea0f0f5c476d8cc0d48cbfbba4edb570f98e15"
+      "sha256": "0b2a31b2f7804a3b69d14a69ad531a96295545d4dfdcbbf8ed3831e919a25679"
     },
     {
       "path": "src/bq_log/types/buffer/normal_buffer.h",
