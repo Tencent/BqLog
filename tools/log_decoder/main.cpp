@@ -15,7 +15,7 @@
 #include "bq_log/log/decoder/appender_decoder_manager.h"
 #include "legacy/legacy_decoders.h"
 #include "common_header.h"
-#if defined(WIN32)
+#if defined(BQ_WIN)
 #include "Windows.h"
 #include <shellapi.h> // for CommandLineToArgvW
 #endif // WIN
@@ -137,7 +137,7 @@ static bool looks_like_pem_pkcs1(const bq::string& key)
     return key.find("BEGIN RSA PRIVATE KEY") != bq::string::npos;
 }
 
-#if defined(WIN32)
+#if defined(BQ_WIN)
 // Convert wide string to UTF-8
 static bq::string wchar_to_utf8(const wchar_t* wstr)
 {
@@ -173,7 +173,7 @@ static bool write_stdout(const bq::string& text)
 
 int32_t main(int32_t argc, char* argv[])
 {
-#if defined(WIN32)
+#if defined(BQ_WIN)
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
 

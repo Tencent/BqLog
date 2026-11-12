@@ -1,4 +1,4 @@
-/* Copyright (C) 2025 Tencent.
+/* Copyright (C) 2026 Tencent.
  * BQLOG is licensed under the Apache License, Version 2.0.
  * You may obtain a copy of the License at
  *
