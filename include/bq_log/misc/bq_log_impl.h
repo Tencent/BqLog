@@ -387,22 +387,29 @@ namespace bq {
     template <typename... Args>
     struct fast_log_arg_types<bq::tuple<Args...>> {
         static constexpr uint16_t count = static_cast<uint16_t>(sizeof...(Args));
+        // constant data, so the site initialization taking it needs no copy per argument types
+        static constexpr uint8_t values[sizeof...(Args) + 1] = {
+            static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<Args>())..., 0
+        };
 
-        static const uint8_t* data(uint8_t (&types)[sizeof...(Args) + 1])
+        static const uint8_t* data()
         {
-            const uint8_t values[] = {
-                static_cast<uint8_t>(bq::tools::_get_log_param_type_enum<Args>())..., 0
-            };
-            memcpy(types, values, sizeof(values));
-            return count ? types : nullptr;
+            return count ? values : nullptr;
         }
     };
+#if !defined(BQ_CPP_17)
+    // before C++17 an odr-used static constexpr member still needs its definition
+    template <typename... Args>
+    constexpr uint8_t fast_log_arg_types<bq::tuple<Args...>>::values[sizeof...(Args) + 1];
+#endif
 
     constexpr uint64_t fast_log_refused_meta = ~UINT64_C(0);
 
-    template <typename ARGS, typename STR>
-    bq_noinline bool init_fast_log_site(bq::_api_fast_log_site_handle& site, const bq::log& log,
-        uint32_t category_index, bq::log_level level, const STR& format)
+    // One per format type: the argument types arrive as data, so sites that differ only in their
+    // argument types share this code.
+    template <typename STR>
+    bq_noinline bool init_fast_log_site_by_types(bq::_api_fast_log_site_handle& site, const bq::log& log,
+        uint32_t category_index, bq::log_level level, const STR& format, const uint8_t* arg_types, uint16_t arg_count)
     {
         const size_t format_size = bq::tools::_serialize_str_helper_by_type<STR>::get_storage_data_size(format);
         if (format_size > UINT32_MAX - sizeof(uint32_t)) {
@@ -417,13 +424,11 @@ namespace bq {
         bq::array<uint8_t> normalized;
         normalized.fill_uninitialized(format_size + sizeof(uint32_t));
         bq::tools::_type_copy<false>(format, &normalized[0], format_size + sizeof(uint32_t));
-        uint8_t arg_types[fast_log_arg_types<ARGS>::count + 1];
         bq::_api_fast_log_site_handle new_site = {};
         if (!bq::api::__api_fast_log_site_init(&new_site, log.get_id(), static_cast<uint8_t>(level),
                 category_index, static_cast<uint8_t>(bq::tools::_is_bq_log_format_type<STR>::arg_type),
                 reinterpret_cast<const char*>(&normalized[sizeof(uint32_t)]),
-                static_cast<uint32_t>(format_size), fast_log_arg_types<ARGS>::data(arg_types),
-                fast_log_arg_types<ARGS>::count)) {
+                static_cast<uint32_t>(format_size), arg_types, arg_count)) {
             site.format_meta_addr = fast_log_refused_meta;
             return false;
         }
@@ -438,25 +443,53 @@ namespace bq {
     }
 
     template <typename ARGS, typename STR>
-    bq_noinline bool fast_log_slow(bq::_api_fast_log_site_handle& site, const bq::log& log,
-        uint32_t category_index, bq::log_level level, STR format)
+    bq_forceinline bool init_fast_log_site(bq::_api_fast_log_site_handle& site, const bq::log& log,
+        uint32_t category_index, bq::log_level level, const STR& format)
+    {
+        return init_fast_log_site_by_types<STR>(site, log, category_index, level, format,
+            fast_log_arg_types<ARGS>::data(), fast_log_arg_types<ARGS>::count);
+    }
+
+    // What the macro slow path does next, decided without the arguments, so it exists once per
+    // format type instead of once per argument types.
+    enum class fast_log_slow_step : uint8_t {
+        skip, // the level or category is off: nothing to log
+        fallback, // log through do_log
+        write // the site is initialized: write a fast record
+    };
+
+    template <typename STR>
+    bq_noinline fast_log_slow_step fast_log_slow_prepare(bq::_api_fast_log_site_handle& site, const bq::log& log,
+        uint32_t category_index, bq::log_level level, const STR& format, const uint8_t* arg_types, uint16_t arg_count)
     {
         if (!log.is_enabled_for(category_index, level)) {
-            return false;
+            return fast_log_slow_step::skip;
         }
         const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
         if (site.format_meta_addr == fast_log_refused_meta) {
-            return log.do_log(category_index, level, format);
+            return fast_log_slow_step::fallback;
         }
         const bool inited = level_word != &bq::fast_inline::fast_inline_state<>::no_level;
-        if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
-            return log.do_log(category_index, level, format);
+        if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site_by_types(site, log, category_index, level, format, arg_types, arg_count))) {
+            return fast_log_slow_step::fallback;
         }
-        if (!bq::api::__api_fast_log_write_no_args(&site)) {
-            return log.do_log(category_index, level, format);
+        return fast_log_slow_step::write;
+    }
+
+    template <typename ARGS, typename STR>
+    bq_noinline bool fast_log_slow(bq::_api_fast_log_site_handle& site, const bq::log& log,
+        uint32_t category_index, bq::log_level level, STR format)
+    {
+        const fast_log_slow_step step = fast_log_slow_prepare(site, log, category_index, level, format,
+            fast_log_arg_types<ARGS>::data(), fast_log_arg_types<ARGS>::count);
+        if (step == fast_log_slow_step::skip) {
+            return false;
         }
-        bq::fast_inline::refresh_thread_slot();
-        return true;
+        if (step == fast_log_slow_step::write && bq::api::__api_fast_log_write_no_args(&site)) {
+            bq::fast_inline::refresh_thread_slot();
+            return true;
+        }
+        return log.do_log(category_index, level, format);
     }
 
     // by value, so the caller's scalars need not be spilled around the inlined fast path
@@ -465,34 +498,30 @@ namespace bq {
         typedef bq::condition_type_t<bq::tools::is_type_constexpr_size<bq::decay_t<T>>::value, bq::decay_t<T>, const T&> type;
     };
 
+    // Only what needs the arguments: one fast write and one do_log fallback.
     template <typename ARGS, typename STR, typename First, typename... Args>
     bq_noinline bool fast_log_slow(bq::_api_fast_log_site_handle& site, const bq::log& log,
         uint32_t category_index, bq::log_level level, STR format,
         typename fast_slow_arg<First>::type first, typename fast_slow_arg<Args>::type... args)
     {
-        if (!log.is_enabled_for(category_index, level)) {
+        const fast_log_slow_step step = fast_log_slow_prepare(site, log, category_index, level, format,
+            fast_log_arg_types<ARGS>::data(), fast_log_arg_types<ARGS>::count);
+        if (step == fast_log_slow_step::skip) {
             return false;
         }
-        const uint32_t* level_word = bq::fast_inline::load_level_word_acquire(site);
-        if (site.format_meta_addr == fast_log_refused_meta) {
-            return log.do_log(category_index, level, format, first, args...);
+        if (step == fast_log_slow_step::write) {
+            auto size_seq = bq::tools::make_size_seq<false>(first, args...);
+            if (size_seq.get_total() <= UINT32_MAX - sizeof(bq::log_head_fast_def)) {
+                auto handle = bq::api::__api_fast_log_write_begin(&site, static_cast<uint32_t>(size_seq.get_total()));
+                if (handle.result == bq::enum_buffer_result_code::success) {
+                    bq::impl::_do_log_args_fill<false>(handle.args_addr, size_seq, first, args...);
+                    bq::api::__api_fast_log_write_finish(&site, handle.args_addr);
+                    bq::fast_inline::refresh_thread_slot();
+                    return true;
+                }
+            }
         }
-        const bool inited = level_word != &bq::fast_inline::fast_inline_state<>::no_level;
-        if (log.is_stack_trace_enabled_for(level) || (!inited && !init_fast_log_site<ARGS>(site, log, category_index, level, format))) {
-            return log.do_log(category_index, level, format, first, args...);
-        }
-        auto size_seq = bq::tools::make_size_seq<false>(first, args...);
-        if (size_seq.get_total() > UINT32_MAX - sizeof(bq::log_head_fast_def)) {
-            return log.do_log(category_index, level, format, first, args...);
-        }
-        auto handle = bq::api::__api_fast_log_write_begin(&site, static_cast<uint32_t>(size_seq.get_total()));
-        if (handle.result != bq::enum_buffer_result_code::success) {
-            return log.do_log(category_index, level, format, first, args...);
-        }
-        bq::impl::_do_log_args_fill<false>(handle.args_addr, size_seq, first, args...);
-        bq::api::__api_fast_log_write_finish(&site, handle.args_addr);
-        bq::fast_inline::refresh_thread_slot();
-        return true;
+        return log.do_log(category_index, level, format, first, args...);
     }
 
     // A null terminated char array format decays to a pointer, so the slow path is shared per argument types.

@@ -65,20 +65,103 @@ namespace bq {
 
         constexpr uint64_t fast_site_refused = UINT64_C(1) << 63;
 
+        // What only the slow path of a site needs. Read-only, and with the category, the level and the
+        // literal here instead of in the slow path's template arguments, one slow path serves every
+        // format with the same argument types instead of one copy of it per format.
+        struct fast_info_site_desc {
+            uint32_t category;
+            // the literal's length the way an array format has it: N - 1 when NUL terminated, else N
+            uint32_t format_units;
+            uint8_t level;
+        };
+
+        template <typename CHAR, size_t N>
+        struct fast_info_site_desc_storage {
+            fast_info_site_desc head;
+            CHAR format[N];
+        };
+
+        // where the literal starts; the same for every N (checked in fast_info_site_holder)
+        template <typename CHAR>
+        constexpr size_t fast_info_site_desc_format_offset()
+        {
+            using probe = fast_info_site_desc_storage<CHAR, 1>;
+            return offsetof(probe, format);
+        }
+
+        // The site the inline path reads (`value`, at offset 0, so its address is the site's address as
+        // before) and, after it, where the slow path finds the rest. The inline path and the slow path
+        // keep receiving the same address.
+        struct alignas(8) fast_info_site_cell {
+            fast_info_site value;
+            const fast_info_site_desc* desc;
+        };
+
+        // The literal as the slow path hands it to do_log: a view carrying the array format's
+        // length, so a fallback record is byte for byte what do_log(CHAR[N]) wrote.
+        template <typename CHAR>
+        struct fast_format_view {
+            using value_type = CHAR;
+            using size_type = size_t;
+            const CHAR* chars;
+            size_t units;
+            const value_type* data() const { return chars; }
+            size_type size() const { return units; }
+        };
+
+        bq_forceinline const fast_info_site_desc& site_desc(const fast_info_site& site)
+        {
+            return *reinterpret_cast<const fast_info_site_cell*>(&site)->desc;
+        }
+
+        template <typename CHAR>
+        bq_forceinline fast_format_view<CHAR> desc_format(const fast_info_site_desc& desc)
+        {
+            return fast_format_view<CHAR> { reinterpret_cast<const CHAR*>(reinterpret_cast<const uint8_t*>(&desc) + fast_info_site_desc_format_offset<CHAR>()),
+                desc.format_units };
+        }
+
         template <fixed_format F, uint8_t LEVEL, uint32_t CAT, uint8_t... WIRE>
         struct BQ_FAST_INFO_HIDDEN fast_info_site_holder {
-            static fast_info_site site;
-        };
-        template <fixed_format F, uint8_t LEVEL, uint32_t CAT, uint8_t... WIRE>
-        fast_info_site fast_info_site_holder<F, LEVEL, CAT, WIRE...>::site = { 0 };
+            using char_type = typename decltype(F)::storage_type;
+            static constexpr size_t char_count = decltype(F)::length;
+            using desc_type = fast_info_site_desc_storage<char_type, char_count>;
+            static_assert(offsetof(desc_type, head) == 0 && offsetof(desc_type, format) == fast_info_site_desc_format_offset<char_type>(),
+                "fast_*: the descriptor layout must not depend on the literal's length");
+            static_assert(offsetof(fast_info_site_cell, value) == 0, "fast_*: the inline path reads the site at offset 0");
+            // the shared slow path registers and logs with these; they must be what the array had
+            static_assert(bq::tools::_is_bq_log_format_type<char_type[1]>::arg_type == fast_format_traits<F>::arg_type
+                    && bq::tools::_is_bq_log_format_type<fast_format_view<char_type>>::arg_type == fast_format_traits<F>::arg_type
+                    && bq::tools::_get_log_param_type_enum<fast_format_view<char_type>>() == bq::tools::_get_log_param_type_enum<typename fast_format_traits<F>::literal_type>(),
+                "fast_*: the shared slow path would not log this literal the way the array does");
 
-        template <fixed_format F, bq::log_level LEVEL, uint32_t CAT, typename... Args>
+            static constexpr desc_type make_desc()
+            {
+                desc_type d {};
+                d.head.category = CAT;
+                d.head.format_units = static_cast<uint32_t>(F.at(char_count - 1) == 0 ? char_count - 1 : char_count);
+                d.head.level = LEVEL;
+                for (size_t i = 0; i < char_count; ++i) {
+                    d.format[i] = F.at(i);
+                }
+                return d;
+            }
+            static constexpr desc_type desc = make_desc();
+            // still named `site`: the symbol the inline path refers to keeps its name
+            static fast_info_site_cell site;
+        };
+        // constant initialized, no dynamic initializer
+        template <fixed_format F, uint8_t LEVEL, uint32_t CAT, uint8_t... WIRE>
+        fast_info_site_cell fast_info_site_holder<F, LEVEL, CAT, WIRE...>::site = { { 0 }, &fast_info_site_holder<F, LEVEL, CAT, WIRE...>::desc.head };
+
+        // One per (character type, argument types), shared by every format: see fast_info_site_desc.
+        template <typename CHAR, typename... Args>
         BQ_FAST_INFO_HIDDEN bq_noinline bool fast_slow(fast_info_site& site, const bq::log& l, typename bq::fast_slow_arg<Args>::type... args);
 
         template <fixed_format F, bq::log_level LEVEL, uint32_t CAT, typename... Args>
         bq_forceinline bool fast_impl(const bq::log& l, const Args&... args)
         {
-            auto& site = fast_info_site_holder<F, static_cast<uint8_t>(LEVEL), CAT, fast_wire_of<Args>()...>::site;
+            auto& site = fast_info_site_holder<F, static_cast<uint8_t>(LEVEL), CAT, fast_wire_of<Args>()...>::site.value;
             // A registers the format and publishes the site, B writes a record through it, C reads
             // that record in the appender. With a relaxed read B has no edge from A, so C would
             // dereference an entry A may not have published to it; the acquire here orders B after
@@ -103,7 +186,7 @@ namespace bq {
                         return true;
                     }
                 }
-                return fast_slow<F, LEVEL, CAT>(site, l);
+                return fast_slow<typename decltype(F)::storage_type>(site, l);
             } else {
                 const auto size_seq = bq::tools::make_size_seq<false>(args...);
                 BQ_LIKELY_IF(static_cast<uint8_t>(word & v) != 0 && size_seq.get_total() <= UINT32_MAX - sizeof(bq::log_head_fast_def))
@@ -121,75 +204,109 @@ namespace bq {
                         return true;
                     }
                 }
-                return fast_slow<F, LEVEL, CAT, Args...>(site, l, typename bq::fast_slow_arg<Args>::type(args)...);
+                return fast_slow<typename decltype(F)::storage_type, Args...>(site, l, typename bq::fast_slow_arg<Args>::type(args)...);
             }
         }
 
-        template <fixed_format F, bq::log_level LEVEL, uint32_t CAT, typename... Args>
-        BQ_FAST_INFO_HIDDEN bq_noinline bool fast_slow(fast_info_site& site, const bq::log& l, typename bq::fast_slow_arg<Args>::type... args)
+        // First use of a site: register its literal and publish v. One per character type; the
+        // argument types arrive as data. The registry gets the bytes type_copy of the array would
+        // have produced: UTF-8 and UTF-16 as they are (the registry copies them, so they are passed
+        // in place), UTF-32 converted to UTF-16.
+        template <typename CHAR>
+        BQ_FAST_INFO_HIDDEN bq_noinline void fast_register(fast_info_site& site, const uint8_t* wire, uint16_t wire_count)
+        {
+            const fast_info_site_desc& desc = site_desc(site);
+            bq::fast_inline::site_init_guard guard(&site);
+            if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() != 0) {
+                return;
+            }
+            const fast_format_view<CHAR> format = desc_format<CHAR>(desc);
+            const char* format_bytes;
+            size_t format_size;
+            bq::array<uint8_t> converted;
+            if constexpr (sizeof(CHAR) == 4) {
+                format_size = bq::tools::_serialize_str_helper_by_encode<CHAR>::get_c_style_string_storage_size(format.chars, format.units);
+                converted.fill_uninitialized(format_size + 1);
+                bq::tools::_serialize_str_helper_by_encode<CHAR>::c_style_string_copy(&converted[0], format.chars, format_size);
+                format_bytes = reinterpret_cast<const char*>(&converted[0]);
+            } else {
+                format_size = static_cast<size_t>(format.units) * sizeof(CHAR);
+                format_bytes = reinterpret_cast<const char*>(format.chars);
+            }
+            const uint64_t meta = bq::api::__api_fast_meta_register(desc.level, desc.category,
+                static_cast<uint8_t>(bq::tools::_is_bq_log_format_type<CHAR[1]>::arg_type),
+                format_bytes, static_cast<uint32_t>(format_size), wire_count ? wire : nullptr, wire_count);
+            // one store publishes both the arena address and the enabled-level bit
+            BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).store_release(meta == 0 ? fast_site_refused : (meta | (UINT64_C(1) << static_cast<uint32_t>(desc.level))));
+        }
+
+        // What the slow path does next, decided without the arguments, so it exists once per character
+        // type instead of once per argument types:
+        //   0                   nothing to log: an invalid log, or the level/category is off
+        //   fast_slow_fallback  log through do_log
+        //   anything else       the meta address to write a fast record with (64-byte aligned)
+        constexpr uint64_t fast_slow_fallback = 1;
+
+        template <typename CHAR>
+        BQ_FAST_INFO_HIDDEN bq_noinline uint64_t fast_slow_prepare(fast_info_site& site, const bq::log& l, const uint8_t* wire, uint16_t wire_count)
         {
             // an invalid log has no bitmaps; never touch them
             if (log_access::log_id(l) == 0) {
-                return false;
+                return 0;
             }
-            if (!l.is_enabled_for(CAT, LEVEL)) {
-                return false;
+            const fast_info_site_desc& desc = site_desc(site);
+            const bq::log_level level = static_cast<bq::log_level>(desc.level);
+            if (!l.is_enabled_for(desc.category, level)) {
+                return 0;
             }
-            using traits = fast_format_traits<F>;
-            const typename traits::char_type(&format)[traits::char_count] = fixed_format_chars<F>::data.value;
             if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() == fast_site_refused) {
-                return l.do_log(CAT, LEVEL, format, args...);
+                return fast_slow_fallback;
             }
-            if (log_access::buffer_id(l) == 0 || l.is_stack_trace_enabled_for(LEVEL)) {
-                return l.do_log(CAT, LEVEL, format, args...);
+            if (log_access::buffer_id(l) == 0 || l.is_stack_trace_enabled_for(level)) {
+                return fast_slow_fallback;
             }
             if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() == 0) {
-                bq::fast_inline::site_init_guard guard(&site);
-                if (BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_relaxed() == 0) {
-                    // normalized the way init_fast_log_site does it: type_copy writes a 4-byte
-                    // length and then the UTF-8/UTF-16 bytes the registry stores
-                    alignas(8) uint8_t format_bytes[traits::buffer_size];
-                    const size_t format_size = bq::tools::_serialize_str_helper_by_type<typename traits::literal_type>::get_storage_data_size(format);
-                    bq::tools::_serialize_str_helper_by_type<typename traits::literal_type>::type_copy(
-                        format, format_bytes, format_size + sizeof(uint32_t));
-                    using wire = fast_wire_types<fast_wire_of<Args>()...>;
-                    const uint64_t meta = bq::api::__api_fast_meta_register(static_cast<uint8_t>(LEVEL), CAT,
-                        static_cast<uint8_t>(traits::arg_type),
-                        reinterpret_cast<const char*>(format_bytes + sizeof(uint32_t)),
-                        static_cast<uint32_t>(format_size), wire::count ? wire::values : nullptr, wire::count);
-                    if (meta == 0) {
-                        BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).store_release(fast_site_refused);
-                        return l.do_log(CAT, LEVEL, format, args...);
-                    }
-                    // one store publishes both the arena address and the enabled-level bit
-                    BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).store_release(meta | (UINT64_C(1) << static_cast<uint32_t>(LEVEL)));
-                }
+                fast_register<CHAR>(site, wire, wire_count);
             }
             const uint64_t site_value = BQ_PACK_ACCESS_BY_TYPE(site.v, bq::platform::atomic<uint64_t>).load_acquire();
             if (site_value == fast_site_refused) {
-                return l.do_log(CAT, LEVEL, format, args...);
+                return fast_slow_fallback;
             }
-            const uint64_t meta_addr = site_value & ~bq::fast_meta_addr_mask();
-            // same shape as the macro slow path, but the buffer is found by log id
-            if constexpr (sizeof...(Args) == 0) {
-                if (!bq::api::__api_fast_log_write_no_args_by_id(log_access::log_id(l), meta_addr)) {
-                    return l.do_log(CAT, LEVEL, format);
-                }
-            } else {
-                auto size_seq = bq::tools::make_size_seq<false>(args...);
-                if (size_seq.get_total() > UINT32_MAX - sizeof(bq::log_head_fast_def)) {
-                    return l.do_log(CAT, LEVEL, format, args...);
-                }
-                auto handle = bq::api::__api_fast_log_write_begin_by_id(log_access::log_id(l), meta_addr,
-                    static_cast<uint32_t>(size_seq.get_total()));
-                if (handle.result != bq::enum_buffer_result_code::success) {
-                    return l.do_log(CAT, LEVEL, format, args...);
-                }
-                bq::impl::_do_log_args_fill<false>(handle.args_addr, size_seq, args...);
-                bq::api::__api_fast_log_write_finish_by_id(log_access::log_id(l), handle.args_addr);
+            return site_value & ~bq::fast_meta_addr_mask();
+        }
+
+        // Only what needs the arguments: one fast write and one do_log fallback.
+        template <typename CHAR, typename... Args>
+        BQ_FAST_INFO_HIDDEN bq_noinline bool fast_slow(fast_info_site& site, const bq::log& l, typename bq::fast_slow_arg<Args>::type... args)
+        {
+            using wire = fast_wire_types<fast_wire_of<Args>()...>;
+            const uint64_t meta_addr = fast_slow_prepare<CHAR>(site, l, wire::values, wire::count);
+            if (meta_addr == 0) {
+                return false;
             }
-            bq::fast_inline::refresh_thread_slot();
-            return true;
+            if (meta_addr != fast_slow_fallback) {
+                // same shape as the macro slow path, but the buffer is found by log id
+                if constexpr (sizeof...(Args) == 0) {
+                    if (bq::api::__api_fast_log_write_no_args_by_id(log_access::log_id(l), meta_addr)) {
+                        bq::fast_inline::refresh_thread_slot();
+                        return true;
+                    }
+                } else {
+                    auto size_seq = bq::tools::make_size_seq<false>(args...);
+                    if (size_seq.get_total() <= UINT32_MAX - sizeof(bq::log_head_fast_def)) {
+                        auto handle = bq::api::__api_fast_log_write_begin_by_id(log_access::log_id(l), meta_addr,
+                            static_cast<uint32_t>(size_seq.get_total()));
+                        if (handle.result == bq::enum_buffer_result_code::success) {
+                            bq::impl::_do_log_args_fill<false>(handle.args_addr, size_seq, args...);
+                            bq::api::__api_fast_log_write_finish_by_id(log_access::log_id(l), handle.args_addr);
+                            bq::fast_inline::refresh_thread_slot();
+                            return true;
+                        }
+                    }
+                }
+            }
+            const fast_info_site_desc& desc = site_desc(site);
+            return l.do_log(desc.category, static_cast<bq::log_level>(desc.level), desc_format<CHAR>(desc), args...);
         }
     }
     BQ_MODULE_EXPORT_END
