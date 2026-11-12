@@ -1082,7 +1082,7 @@ jobs:
           mem: 8192
           prepare: |
             for i in 1 2 3 4 5; do
-              pkg install -y cmake bash gmake gdb openjdk11 gcc llvm && exit 0
+              pkg install -y openssl cmake bash gmake gdb openjdk11 gcc llvm && exit 0
               echo "Install failed, retrying in 60s... ($i/5)"
               sleep 60
             done
