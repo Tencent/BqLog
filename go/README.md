@@ -1,10 +1,10 @@
-# BqLog for Go 2.8.0
+# BqLog for Go 2.8.1
 
 **GitHub: [https://github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
 
 Go bindings for BqLog, Tencent's lightweight, high-performance logging system.
 
-[Integration Guide](https://github.com/Tencent/BqLog/blob/42a1068d784f152cd964ce3fcd19f70a975322c7/docs/INTEGRATION_GUIDE.md#go) | [简体中文](https://github.com/Tencent/BqLog/blob/42a1068d784f152cd964ce3fcd19f70a975322c7/docs/INTEGRATION_GUIDE_CHS.md#go)
+[Integration Guide](https://github.com/Tencent/BqLog/blob/fa7ec4513e56b4c868b81231a0a1f75e9c407edb/docs/INTEGRATION_GUIDE.md#go) | [简体中文](https://github.com/Tencent/BqLog/blob/fa7ec4513e56b4c868b81231a0a1f75e9c407edb/docs/INTEGRATION_GUIDE_CHS.md#go)
 
 ## Quick Start
 

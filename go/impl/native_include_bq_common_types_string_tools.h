@@ -257,6 +257,13 @@ namespace bq {
         }
 
         template <typename CHAR_TYPE>
+        BQ_FUNC_RETURN_CONSTEXPR bool is_space(CHAR_TYPE c)
+        {
+            return c == static_cast<CHAR_TYPE>(' ')
+                || (c >= static_cast<CHAR_TYPE>('\t') && c <= static_cast<CHAR_TYPE>('\r'));
+        }
+
+        template <typename CHAR_TYPE>
         inline const CHAR_TYPE* find_char(const CHAR_TYPE* str, CHAR_TYPE c)
         {
             if (!str) {

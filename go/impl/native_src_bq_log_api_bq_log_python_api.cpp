@@ -16,23 +16,6 @@
 #include "native_src_bq_log_api_bq_log_python_api.h"
 #if defined(BQ_PYTHON)
 
-// Use Python Stable ABI (abi3) targeting Python 3.7+.
-#define Py_LIMITED_API 0x03070000
-
-#if defined(BQ_MSVC) && defined(_DEBUG)
-#if _DEBUG
-#define _BQ_PYTHON_HAD_DEBUG
-#undef _DEBUG
-#endif
-#endif
-
-#include <Python.h>
-
-#if defined(_BQ_PYTHON_HAD_DEBUG)
-#define _DEBUG 1
-#undef _BQ_PYTHON_HAD_DEBUG
-#endif
-
 #include <string.h>
 #include <stdlib.h>
 #include "native_src_bq_common_bq_common.h"
