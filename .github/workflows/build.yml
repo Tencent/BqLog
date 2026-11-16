@@ -2190,6 +2190,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             # Java
@@ -2226,6 +2231,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             # Java
@@ -2286,6 +2296,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             # Java
@@ -2322,6 +2337,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             # Java
@@ -2376,6 +2396,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2412,6 +2437,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2476,6 +2506,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -2512,6 +2547,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             export JAVA_HOME="/usr/local/openjdk11"
@@ -5555,6 +5595,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5591,6 +5636,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5651,6 +5701,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
@@ -5687,6 +5742,11 @@ jobs:
             mkdir -p /tmp/repoconf && echo 'local: { url: "file:///deps", enabled: true }' > /tmp/repoconf/local.conf
             pkg -o REPOS_DIR=/tmp/repoconf update -f
             pkg -o REPOS_DIR=/tmp/repoconf install -y cmake bash gmake gdb openjdk11 gcc llvm node20 npm-node20
+            # The image ships OpenSSL 3.5 (libssl.so.17) while the frozen snapshot's cmake was built
+            # against 3.0 (libssl.so.12), and pkg will not downgrade a satisfied name. Take just those
+            # two versioned libraries from the snapshot's own openssl package.
+            mkdir -p /tmp/openssl30 && tar -xf /deps/All/openssl-*.pkg -C /tmp/openssl30
+            cp /tmp/openssl30/usr/local/lib/libssl.so.12 /tmp/openssl30/usr/local/lib/libcrypto.so.12 /usr/local/lib/
           run: |
             set -e -x
             pkg info -l openjdk11 | grep 'bin/java'
