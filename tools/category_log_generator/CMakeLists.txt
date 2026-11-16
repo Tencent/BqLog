@@ -86,11 +86,6 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB
 
 message("Artifacts Directory:${ARTIFACTS_OUTPUT_BASE_DIR}/${ARTIFACTS_SUB_DIR}")
 
-# Universal on Apple unless the caller chose the architectures; a package manager must not get one.
-if(TARGET_PLATFORM STREQUAL "mac" AND NOT DEFINED CMAKE_OSX_ARCHITECTURES)
-    set(CMAKE_OSX_ARCHITECTURES "x86_64;arm64")
-endif()
-
 # generate executable
 add_executable(BqLog_CategoryLogGenerator
 	${TOOLS_LIST}

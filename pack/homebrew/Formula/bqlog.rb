@@ -17,7 +17,7 @@ class Bqlog < Formula
 
   def install
     args = %w[-DBUILD_LIB_TYPE=both -DBQ_WERROR=OFF]
-    # Build for the native architecture instead of upstream's universal default
+    # Bottles are per architecture, so build only this one
     args << "-DCMAKE_OSX_ARCHITECTURES=#{Hardware::CPU.arch}" if OS.mac?
 
     system "cmake", "-S", ".", "-B", "build", *args, *std_cmake_args

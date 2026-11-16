@@ -47,13 +47,28 @@ artifact_dir() {
     echo "${dir}"
 }
 
+# A Debug build and a dSYM DWARF file both carry the binary's name, so pick by configuration.
+CONFIG_PREFERENCE=(RelWithDebInfo Release MinSizeRel)
+
+pick_binary() {
+    local dir="$1" pattern="$2" config src
+    for config in "${CONFIG_PREFERENCE[@]}"; do
+        src="$(find "${dir}" -type f -name "${pattern}" ! -path "*.dSYM/*" -path "*/${config}/*" -print -quit)"
+        if [ -n "${src}" ]; then
+            echo "${src}"
+            return 0
+        fi
+    done
+    find "${dir}" -type f -name "${pattern}" ! -path "*.dSYM/*" -print -quit
+}
+
 # cp follows the versioned symlink, which is what a package needs: NuGet flattens symlinks
 # into empty files, so packaging libBqLog.so itself would ship a broken library.
 place() {
     local artifact="$1" rid="$2" name="$3" pattern="$4"
     local dir src
     dir="$(artifact_dir "${artifact}")"
-    src="$(find "${dir}" -type f -name "${pattern}" -print -quit)"
+    src="$(pick_binary "${dir}" "${pattern}")"
     if [ -z "${src}" ]; then
         echo "collect_runtimes: ${pattern} not found under ${dir}" >&2
         exit 1

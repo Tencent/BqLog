@@ -162,6 +162,18 @@ Prebuilt native binaries are included — **no compiler needed** at install time
 | 🐉 DragonflyBSD | x64 |
 | ☀️ Solaris / OmniOS (SunOS) | x64 |
 
+### Debug symbols
+
+Symbols ship beside the binary, not inside it:
+
+| Platform | File | Location |
+|----------|------|----------|
+| macOS | `BqLog.node.dSYM` | `prebuilds/darwin-universal/` — one bundle covers the x64 and arm64 slices |
+| Windows | `BqLog.pdb` | `prebuilds/win32-x64/`, `prebuilds/win32-arm64/` |
+
+`prebuilds/darwin-universal/` holds symbols only and is never loaded at runtime; hand it to
+`atos` or your crash pipeline to symbolicate macOS stacks.
+
 ---
 
 ## 📈 Benchmark

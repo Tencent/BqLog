@@ -6541,14 +6541,14 @@ jobs:
               continue
             fi
 
-            # Find RelWithDebInfo/BqLog.node
-            mapfile -t nodes < <(find "$d" -type f -path "*/RelWithDebInfo/*" -name "BqLog.node" 2>/dev/null || true)
+            # The dSYM carries a DWARF file named BqLog.node; it is never the binary.
+            mapfile -t nodes < <(find "$d" -type f -path "*/RelWithDebInfo/*" -name "BqLog.node" \
+                                      ! -path "*.dSYM/*" 2>/dev/null || true)
             if (( ${#nodes[@]} == 0 )); then
               echo "No RelWithDebInfo/BqLog.node found in $base, skipping."
               continue
             fi
 
-            # Prefer the first match
             node_src="${nodes[0]}"
             echo "::group::Stage from $base -> $target"
             if [[ "$target" == "darwin-universal" ]]; then
@@ -6556,6 +6556,15 @@ jobs:
                 mkdir -p "$PREBUILDS_DIR/$tdir"
                 cp -f "$node_src" "$PREBUILDS_DIR/$tdir/BqLog.node"
               done
+              # One universal binary, one dSYM: ship it once for both slices.
+              dsym_src="$(dirname "$node_src")/BqLog.node.dSYM"
+              if [[ -d "$dsym_src" ]]; then
+                mkdir -p "$PREBUILDS_DIR/darwin-universal"
+                rm -rf "$PREBUILDS_DIR/darwin-universal/BqLog.node.dSYM"
+                cp -R "$dsym_src" "$PREBUILDS_DIR/darwin-universal/"
+              else
+                echo "::warning::No dSYM beside $node_src; the macOS package ships without symbols."
+              fi
             else
               mkdir -p "$PREBUILDS_DIR/$target"
               cp -f "$node_src" "$PREBUILDS_DIR/$target/BqLog.node"
@@ -6968,9 +6977,9 @@ jobs:
             local prefer="${3:-RelWithDebInfo}"
             local required_segment="${4:-}"
             local result
-            result=$(find "$base" -type f -name "$name" 2>/dev/null | { if [[ -n "$required_segment" ]]; then grep "$required_segment" || true; else cat; fi; } | grep "$prefer" | head -n1 || true)
+            result=$(find "$base" -type f -name "$name" ! -path "*.dSYM/*" 2>/dev/null | { if [[ -n "$required_segment" ]]; then grep "$required_segment" || true; else cat; fi; } | grep "$prefer" | head -n1 || true)
             if [[ -z "$result" ]]; then
-              result=$(find "$base" -type f -name "$name" 2>/dev/null | { if [[ -n "$required_segment" ]]; then grep "$required_segment" || true; else cat; fi; } | head -n1 || true)
+              result=$(find "$base" -type f -name "$name" ! -path "*.dSYM/*" 2>/dev/null | { if [[ -n "$required_segment" ]]; then grep "$required_segment" || true; else cat; fi; } | head -n1 || true)
             fi
             echo "$result"
           }
