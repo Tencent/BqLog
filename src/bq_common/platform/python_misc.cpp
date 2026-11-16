@@ -12,24 +12,6 @@
 #include "bq_common/platform/python_misc.h"
 #if defined(BQ_PYTHON)
 
-// Use Python Stable ABI (abi3) targeting Python 3.7+.
-// A single compiled extension works across all Python 3.7+ versions.
-#define Py_LIMITED_API 0x03070000
-
-#if defined(BQ_MSVC) && defined(_DEBUG)
-#if _DEBUG
-#define _BQ_PYTHON_HAD_DEBUG
-#undef _DEBUG
-#endif
-#endif
-
-#include <Python.h>
-
-#if defined(_BQ_PYTHON_HAD_DEBUG)
-#define _DEBUG 1
-#undef _BQ_PYTHON_HAD_DEBUG
-#endif
-
 // ---- Module name: default "_bqlog", overridable via BQ_PYTHON_MODULE_NAME macro ----
 #if !defined(BQ_PYTHON_MODULE_NAME)
 #define BQ_PYTHON_MODULE_NAME _bqlog

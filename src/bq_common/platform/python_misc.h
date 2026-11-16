@@ -10,15 +10,11 @@
  */
 #pragma once
 
+// Before bq_common_public_include.h: Python.h has to come before any system header.
+#include "bq_common/platform/python_include.h"
+
 #include "bq_common/bq_common_public_include.h"
 #if defined(BQ_PYTHON)
-
-// Forward declare PyObject to avoid pulling in Python.h in the header.
-struct _object;
-typedef _object PyObject;
-
-// Forward declare PyMethodDef (defined in Python.h as a simple C struct).
-struct PyMethodDef;
 
 namespace bq {
     namespace platform {
