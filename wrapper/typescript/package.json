@@ -30,14 +30,24 @@
   "type": "module",
   "exports": {
     ".": {
-      "import": "./dist/esm/index.js",
-      "require": "./dist/cjs/index.js",
-      "types": "./dist/types/index.d.ts"
-    }
+      "import": {
+        "types": "./dist/esm/index.d.ts",
+        "default": "./dist/esm/index.js"
+      },
+      "require": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      },
+      "default": {
+        "types": "./dist/cjs/index.d.ts",
+        "default": "./dist/cjs/index.js"
+      }
+    },
+    "./package.json": "./package.json"
   },
-  "main": "./dist/cjs/index.cjs",
+  "main": "./dist/cjs/index.js",
   "module": "./dist/esm/index.js",
-  "types": "./dist/types/index.d.ts",
+  "types": "./dist/cjs/index.d.ts",
   "files": [
     "dist",
     "prebuilds",
@@ -47,13 +57,7 @@
     "LICENSE"
   ],
   "scripts": {
-    "prebuild:esm": "node -e \"const fs=require('fs');const p='src/bq/utils/lib_loader.ts',bak='src/bq/utils/lib_loader.bak';if(fs.existsSync(p))fs.copyFileSync(p,bak);fs.copyFileSync('src/bq/utils/lib_loader.esm.txt',p)\"",
-    "build:esm": "tsc -p tsconfig.esm.json",
-    "postbuild:esm": "node -e \"const fs=require('fs');const p='src/bq/utils/lib_loader.ts',bak='src/bq/utils/lib_loader.bak';if(fs.existsSync(bak)){fs.copyFileSync(bak,p);fs.unlinkSync(bak)}\" && node scripts/fix_esm_extensions.cjs",
-    "prebuild:cjs": "node -e \"const fs=require('fs');const p='src/bq/utils/lib_loader.ts',bak='src/bq/utils/lib_loader.bak';if(fs.existsSync(p))fs.copyFileSync(p,bak);fs.copyFileSync('src/bq/utils/lib_loader.cjs.txt',p)\"",
-    "build:cjs": "tsc -p tsconfig.cjs.json",
-    "postbuild:cjs": "node -e \"const fs=require('fs');const p='src/bq/utils/lib_loader.ts',bak='src/bq/utils/lib_loader.bak';if(fs.existsSync(bak)){fs.copyFileSync(bak,p);fs.unlinkSync(bak)}\" && node -e \"const fs=require('fs');fs.mkdirSync('dist/cjs',{recursive:true});fs.writeFileSync('dist/cjs/package.json',JSON.stringify({type:'commonjs'},null,2))\"",
-    "build": "npm run build:esm && npm run build:cjs",
+    "build": "node scripts/build.cjs",
     "prepublishOnly": "node -e \"require('fs').copyFileSync('README.nodejs.md','README.md')\" && npm run build",
     "postpublish": "node -e \"try{require('fs').unlinkSync('README.md')}catch(e){}\""
   },

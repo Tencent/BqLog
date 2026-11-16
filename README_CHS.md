@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.8.0
+# BqLog (扁鹊日志) V 2.8.1
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.8.0-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.8.0-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.8.1-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.8.1-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -54,7 +54,7 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.8.0-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.8.1-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
 ## 📋 v2.8.x 更新亮点
 

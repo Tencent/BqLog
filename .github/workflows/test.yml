@@ -2090,6 +2090,31 @@ jobs:
         run: |
           ${{ matrix.script_path }}
 
+  # The npm package as consumers resolve it, under every Node major the package supports. The Node 22
+  # entry also type-checks it across TypeScript releases and module modes and runs arethetypeswrong;
+  # node_wrapper_tests loads the native library through the same entry points.
+  npm_verify:
+    name: npm verify (node ${{ matrix.node }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['16', '18', '20', '22', '24']
+        include:
+          - node: '22'
+            phases: layout,resolve,types,attw
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Verify the npm package
+        run: node build/pack_test/npm_verify.cjs --phases ${{ matrix.phases || 'layout,resolve' }}
+
 
   # Python Tests
   python_test:

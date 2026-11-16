@@ -6524,6 +6524,23 @@ jobs:
           chmod +x *.sh
           ./build_all_and_pack.sh
 
+      - name: Setup Node for the package verification
+        uses: actions/setup-node@v5
+        with:
+          node-version: '22'
+
+      # The tarball publish_npm will publish, found the same way; load runs the linux-x64 prebuild.
+      - name: Verify the npm package
+        shell: bash
+        run: |
+          set -euo pipefail
+          TGZ=$(find dist/ -name "*.tgz" | head -n1)
+          if [[ -z "$TGZ" ]]; then
+            echo "::error::No .tgz file found in dist/"
+            exit 1
+          fi
+          node build/pack_test/npm_verify.cjs --tgz "$TGZ"
+
       - name: Upload Artifacts
         uses: actions/upload-artifact@v6
         with:

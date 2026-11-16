@@ -2,6 +2,10 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
+## [v2.8.1] - 2026-11-16
+- **Node.js package**: the types resolve under `moduleResolution` `node16`, `node18`, `node20` and `nodenext`. They used to error there, and turn into `any` once `skipLibCheck` was on; `main` pointed at a file that did not exist ([#95](https://github.com/Tencent/BqLog/issues/95)).
+- **CI**: the packed tarball is checked the way a consumer gets it - entry points, module resolution, loading the native library, type-checking under TypeScript 4.0 to 7.0 and tsgo, and `arethetypeswrong`.
+
 ## [v2.8.0] - 2026-11-05
 - **Encrypted log format v11**: the encryption layer was rebuilt, so it resists known-plaintext attacks and AI-assisted analysis; the decoder's private-key operation no longer branches on or indexes memory by key values, and every result is checked against the public key.
 - **BqLog_LogDecoder**: decodes compressed log files written by every release since 2.x, and decodes encrypted files noticeably faster (a small one about 6x).

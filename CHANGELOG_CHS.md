@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md)
 
+## [v2.8.1] - 2026-11-16
+- **Node.js 包**：`moduleResolution` 为 `node16`、`node18`、`node20`、`nodenext` 时类型可以正常使用。之前在这些模式下会报错，打开 `skipLibCheck` 后类型还会悄悄变成 `any`；`main` 也指向了不存在的文件（[#95](https://github.com/Tencent/BqLog/issues/95)）。
+- **CI**：按使用者的方式检查打包产物——入口、模块解析、加载原生库、在 TypeScript 4.0～7.0 和 tsgo 下做类型检查，以及 `arethetypeswrong`。
+
 ## [v2.8.0] - 2026-11-05
 - **加密日志格式 v11**：加密层重做，可以防已知明文攻击和 AI 分析；解码端的私钥运算也做了加固，不按私钥取值分支或寻址，每个结果都用公钥回验。
 - **BqLog_LogDecoder**：可以解码 2.x 以来所有版本的压缩日志，解码加密文件的速度也明显提升（小的加密文件快约 6 倍）。
