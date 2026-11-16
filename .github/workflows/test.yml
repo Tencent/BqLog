@@ -680,9 +680,33 @@ jobs:
         cpp_ver: [ 11, 14, 17, 20, 23 ]
     container:
       image: ghcr.io/pippocao/bqlog/${{ matrix.arch.runs_on }}debian:latest
+      # The 32-bit glibc opens sockets through socketcall; the default profile is unconfined here because
+      # name resolution failed in a millisecond inside that container, i.e. before any packet left it.
+      options: --security-opt seccomp=unconfined
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
+
+      # The 32-bit container cannot resolve names on the current runner image, so every apt-get below fails
+      # while continue-on-error keeps it quiet and the job dies at Ninja. Report what the container has and
+      # never fail here; the assertion further down is the gate.
+      - name: Report the container
+        continue-on-error: true
+        run: |
+          uname -m
+          dpkg --print-architecture || true
+          getconf LONG_BIT || true
+          echo "--- nsswitch.conf ---"
+          grep -E '^hosts' /etc/nsswitch.conf || true
+          cat /etc/resolv.conf || true
+          echo "--- nss files, no socket involved ---"
+          getent passwd root || echo "passwd failed"
+          getent hosts localhost || echo "localhost failed"
+          echo "--- dns ---"
+          s=$(date +%s%N)
+          getent hosts deb.debian.org || echo "getent failed"
+          e=$(date +%s%N)
+          echo "elapsed ms: $(( (e - s) / 1000000 ))"
 
       - name: Install necessary tools (Attempt 1)
         continue-on-error: true
@@ -711,6 +735,18 @@ jobs:
           apt-get update
           apt-get install -y openjdk-17-jdk
           apt-get install -y openssh-client   
+
+      # The three attempts above may all have failed without saying so; stop here instead of at CMake.
+      - name: The toolchain has to be complete
+        run: |
+          for tool in cmake ninja gcc g++ clang; do
+            if ! command -v "$tool" > /dev/null; then
+              echo "::error::$tool is missing; the install attempts above did not do their job"
+              exit 1
+            fi
+          done
+          cmake --version | head -n 1
+          ninja --version
 
       - name: Set up Java
         run: |
