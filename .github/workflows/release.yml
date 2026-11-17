@@ -89,6 +89,9 @@ jobs:
               dest_dir="release_assets"
             fi
 
+            # download-artifact does not restore the executable bit, so the tools arrive as 644.
+            find "$artifact_dir" -type f -path "*/tools/bin/*" -exec chmod 755 {} +
+
             archive_name="${name}.zip"
             (cd "$artifact_dir" && zip -qry "$OLDPWD/$dest_dir/$archive_name" .)
             echo "  Packed: $dest_dir/$archive_name"
