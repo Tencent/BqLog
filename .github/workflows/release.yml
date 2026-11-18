@@ -2,16 +2,6 @@ name: Build And Release
 
 on:
   workflow_dispatch:
-    inputs:
-      republish_version:
-        description: 'Package-only republish. Publishes an existing release under this version and builds nothing.'
-        required: false
-        type: string
-      republish_source_tag:
-        description: 'Release tag whose packaged files get republished'
-        required: false
-        type: string
-        default: Release_2.8.1
 
 permissions:
   id-token: write  # Required for OIDC
@@ -19,8 +9,6 @@ permissions:
 
 jobs:
   build:
-    # A republish reuses an existing release, so nothing is built and nothing downstream runs.
-    if: inputs.republish_version == ''
     uses: ./.github/workflows/build.yml
 
   release:
@@ -511,102 +499,6 @@ jobs:
           fi
           echo "Publishing: $TGZ"
           npm publish "$TGZ"
-
-  # npm and nuget.org never let a published version be replaced, so a packaging fix has to go out
-  # under a new version number. These two jobs republish an existing release's packaged files.
-  republish_npm:
-    if: inputs.republish_version != ''
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # Required for OIDC Trusted Publishing
-      contents: read
-    steps:
-      - name: Download the tarball the release shipped
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release download "${{ inputs.republish_source_tag }}" -R "$GITHUB_REPOSITORY" \
-            -p 'nodejs_npm_*.zip' -D pkg --clobber
-          unzip -q pkg/nodejs_npm_*.zip -d pkg
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v6
-        with:
-          node-version: '24'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Repack under the new version
-        env:
-          NEW_VERSION: ${{ inputs.republish_version }}
-        run: |
-          set -euo pipefail
-          TGZ="$(find pkg -name '*.tgz' -print -quit)"
-          mkdir work
-          tar xzf "$TGZ" -C work
-          node -e "
-            const fs = require('node:fs');
-            const file = 'work/package/package.json';
-            const pkg = JSON.parse(fs.readFileSync(file, 'utf8'));
-            pkg.version = process.env.NEW_VERSION;
-            fs.writeFileSync(file, JSON.stringify(pkg, null, 2) + '\n');
-          "
-          (cd work/package && npm pack --pack-destination "$GITHUB_WORKSPACE" >/dev/null)
-
-      - name: Publish to npm
-        run: |
-          set -euo pipefail
-          npm publish "$(find . -maxdepth 1 -name '*.tgz' -print -quit)"
-
-  republish_nuget:
-    if: inputs.republish_version != ''
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write  # Required for OIDC Trusted Publishing
-      contents: read
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v5
-
-      # collect_runtimes.sh looks for a directory per platform artifact, so give each zip one.
-      - name: Download the prebuilt libraries the release shipped
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          gh release download "${{ inputs.republish_source_tag }}" -R "$GITHUB_REPOSITORY" \
-            -p 'windows_x86_64_libs_*.zip' -p 'windows_arm64_libs_*.zip' \
-            -p 'linux_x86_64_libs_*.zip' -p 'linux_arm64_libs_*.zip' \
-            -p 'macos_universal_binary_libs_*.zip' -D zips --clobber
-          for z in zips/*.zip; do
-            name="$(basename "$z" .zip)"
-            mkdir -p "artifacts_in/$name"
-            unzip -q "$z" -d "artifacts_in/$name"
-          done
-
-      - name: Assemble the native libraries
-        run: bash pack/nuget/collect_runtimes.sh artifacts_in pack/nuget
-
-      - name: Set up .NET
-        uses: actions/setup-dotnet@v5
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Pack
-        run: dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=${{ inputs.republish_version }} -o nuget_out
-
-      - name: Log in to nuget.org (OIDC -> temporary API key)
-        uses: NuGet/login@8d196754b4036150537f80ac539e15c2f1028841 # v1.2.0
-        id: login
-        with:
-          user: ${{ secrets.NUGET_USER }}
-
-      - name: Publish to nuget.org
-        run: |
-          dotnet nuget push "nuget_out/*.nupkg" \
-            --api-key "${{ steps.login.outputs.NUGET_API_KEY }}" \
-            --source https://api.nuget.org/v3/index.json \
-            --skip-duplicate
 
   # Publish Java fat JAR to Maven Central
   publish_java_maven:
