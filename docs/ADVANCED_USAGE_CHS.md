@@ -497,7 +497,7 @@ appenders_config.{AppenderName}.pub_key=ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCw
 
 - `要解码的文件`：压缩加密日志文件路径；
 - `-o 输出文件`：可选，指定解码后的文本保存路径，不填则输出到标准输出；
-- `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件（PEM），支持常见 PKCS#1 / PKCS#8 形式。
+- `-k "./你的私钥文件路径"`：指向 `ssh-keygen` 生成的私钥文件。只接受未加密的 PKCS#1 PEM（以 `-----BEGIN RSA PRIVATE KEY-----` 开头）；OpenSSH 新格式（`-----BEGIN OPENSSH PRIVATE KEY-----`）和 PKCS#8（`-----BEGIN PRIVATE KEY-----`）都会被拒绝，先转换：`ssh-keygen -p -m PEM -N "" -f <私钥文件>`。
 
 ### 5）从老版本迁移
 

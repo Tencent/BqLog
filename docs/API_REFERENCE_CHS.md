@@ -802,6 +802,8 @@ snapshot := logObj.Take_snapshot("UTC+8")
 运行时解码 CompressedFileAppender 日志。它只解库自己写的那个格式版本，下面的各语言 wrapper
 暴露的是同一个解码器，限制相同：
 
+私钥参数传的是 **PEM 文本内容**，不是文件路径：自己读取私钥文件，把内容传进来。只有下面的命令行工具是用 `-k` 传文件路径的。
+
 ```cpp
 bq::tools::log_decoder decoder("path/to/file.logcompr", "optional_private_key");
 while (decoder.decode() == bq::appender_decode_result::success) {

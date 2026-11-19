@@ -804,6 +804,9 @@ For decoding CompressedFileAppender logs at runtime. This reads the format versi
 writes and nothing else; every language wrapper below exposes the same decoder and inherits that
 limit:
 
+The private key argument is the **PEM text itself**, not a path: read the key file and pass its
+contents. The command-line tool below is the only place that takes a file path, through `-k`.
+
 ```cpp
 bq::tools::log_decoder decoder("path/to/file.logcompr", "optional_private_key");
 while (decoder.decode() == bq::appender_decode_result::success) {
