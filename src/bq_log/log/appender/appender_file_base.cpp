@@ -22,6 +22,31 @@ namespace bq {
     static constexpr size_t CACHE_WRITE_MIN_SIZE = 64 * 1024;
     static constexpr size_t CACHE_WRITE_MAX_SIZE = 4 * 1024 * 1024;
 
+    // Only "<file_name>_<index><ext>" and "<file_name>_<YYYYMMDD>_<index><ext>" are written by this appender.
+    // A bare prefix match would also pick up the files of another appender whose name starts with "<file_name>_".
+    static bool is_own_indexed_file_name(const bq::string& name, const bq::string& file_name, const bq::string& ext_name)
+    {
+        if (name.size() <= file_name.size() + 1 + ext_name.size() || !name.begin_with(file_name) || name[file_name.size()] != '_' || !name.end_with(ext_name)) {
+            return false;
+        }
+        size_t pos = file_name.size() + 1;
+        const size_t end = name.size() - ext_name.size();
+        size_t digit_count = 0;
+        while (pos < end && name[pos] >= '0' && name[pos] <= '9') {
+            ++pos;
+            ++digit_count;
+        }
+        if (pos < end && name[pos] == '_' && digit_count == 8) {
+            ++pos;
+            digit_count = 0;
+            while (pos < end && name[pos] >= '0' && name[pos] <= '9') {
+                ++pos;
+                ++digit_count;
+            }
+        }
+        return pos == end && digit_count > 0;
+    }
+
 #if defined(BQ_UNIT_TEST)
     static appender_file_base::flush_hook_fn s_flush_hook_fn = nullptr;
     static void* s_flush_hook_user = nullptr;
@@ -741,7 +766,7 @@ namespace bq {
         }
         auto dir_name = bq::file_manager::get_directory_from_path(config_file_name_);
         auto file_name = bq::file_manager::get_file_name_from_path(config_file_name_);
-        bq::string file_prefix = file_name + "_";
+        const bq::string ext_name_with_dot = get_file_ext_name();
 
         bq::string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::array<bq::string> exist_files = bq::file_manager::get_sub_dirs_and_files_name(path);
@@ -751,7 +776,7 @@ namespace bq {
             if (!bq::file_manager::is_file(full_name_in_absolute_path)) {
                 continue;
             }
-            if (!name.begin_with(file_prefix) || !name.end_with(get_file_ext_name())) {
+            if (!is_own_indexed_file_name(name, file_name, ext_name_with_dot)) {
                 continue;
             }
             uint64_t last_m_time_ms = bq::file_manager::get_file_last_modified_epoch_ms(full_name_in_absolute_path);
@@ -768,7 +793,7 @@ namespace bq {
         }
         auto dir_name = bq::file_manager::get_directory_from_path(config_file_name_);
         auto file_name = bq::file_manager::get_file_name_from_path(config_file_name_);
-        bq::string file_prefix = file_name + "_";
+        const bq::string ext_name_with_dot = get_file_ext_name();
         bq::string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::array<bq::string> exist_files = bq::file_manager::get_sub_dirs_and_files_name(path);
 
@@ -779,7 +804,7 @@ namespace bq {
             if (!bq::file_manager::is_file(full_name_in_absolute_path)) {
                 continue;
             }
-            if (!name.begin_with(file_prefix) || !name.end_with(get_file_ext_name())) {
+            if (!is_own_indexed_file_name(name, file_name, ext_name_with_dot)) {
                 continue;
             }
             uint64_t last_m_time_ms = bq::file_manager::get_file_last_modified_epoch_ms(full_name_in_absolute_path);

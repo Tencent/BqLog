@@ -661,6 +661,51 @@ namespace bq {
                 }
             }
 
+            static void write_cleanup_test_file(const bq::string& relative_path)
+            {
+                char bytes[8192];
+                memset(bytes, 'o', sizeof(bytes));
+                auto handle = bq::file_manager::instance().open_file(TO_ABSOLUTE_PATH(relative_path, 0), file_open_mode_enum::auto_create | file_open_mode_enum::read_write);
+                bq::file_manager::instance().truncate_file(handle, 0);
+                bq::file_manager::instance().write_file(handle, bytes, sizeof(bytes));
+                bq::file_manager::instance().flush_file(handle);
+            }
+
+            // capacity_limit and expire_time only clean the files of the appender they are set on. Another appender
+            // whose file_name starts with "<file_name>_" (app and app_error) keeps its files.
+            void do_file_cleanup_sibling_name_test(test_result& result)
+            {
+                test_output_dynamic(bq::log_level::info, "appender file cleanup test begin, please wait...          \r");
+                const char* limit_configs[] = { "capacity_limit=4096", "expire_time_seconds=1" };
+                for (const char* limit_config : limit_configs) {
+                    const bq::string dir = bq::string("appender_cleanup_test/") + (limit_config[0] == 'c' ? "capacity" : "expire");
+                    bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH(dir, 0));
+                    bq::file_manager::create_directory(TO_ABSOLUTE_PATH(dir, 0));
+                    const bq::string own_files[] = { dir + "/app_7.log", dir + "/app_20250101_3.log" };
+                    const bq::string other_files[] = { dir + "/app_error_7.log", dir + "/app_error_20250101_3.log" };
+                    for (const auto& file : own_files) {
+                        write_cleanup_test_file(file);
+                    }
+                    for (const auto& file : other_files) {
+                        write_cleanup_test_file(file);
+                    }
+                    if (limit_config[0] == 'e') {
+                        bq::platform::thread::sleep(2100);
+                    }
+                    bq::log log_obj = bq::log::create_log(bq::string("cleanup_sibling_name_") + (limit_config[0] == 'c' ? "capacity" : "expire"),
+                        bq::string("log.thread_mode=sync\n") + "appenders_config.f.type=text_file\n" + "appenders_config.f.levels=[all]\n" + "appenders_config.f.always_create_new_file=true\n" + "appenders_config.f.file_name=" + dir + "/app\n" + "appenders_config.f." + limit_config + "\n");
+                    result.add_result(log_obj.is_valid(), "create_log for the cleanup test succeeds, %s", limit_config);
+                    log_obj.info("cleanup test %d", 1);
+                    log_obj.force_flush();
+                    for (const auto& file : own_files) {
+                        result.add_result(!bq::file_manager::is_file(TO_ABSOLUTE_PATH(file, 0)), "%s removes the appender's own file %s", limit_config, file.c_str());
+                    }
+                    for (const auto& file : other_files) {
+                        result.add_result(bq::file_manager::is_file(TO_ABSOLUTE_PATH(file, 0)), "%s keeps the file of another appender %s", limit_config, file.c_str());
+                    }
+                }
+            }
+
             void do_file_appender_test(test_result& result)
             {
                 do_appender_test<appender_file_base_for_test>(result, "appender_file_base_test", false, "", "");
@@ -1955,6 +2000,7 @@ namespace bq {
 #endif
                 do_binary_appender_test_with_enc(result);
                 do_appender_config_reject_test(result);
+                do_file_cleanup_sibling_name_test(result);
                 do_decoder_malformed_file_test(result);
                 do_decoder_resync_test(result);
                 do_decoder_untrusted_size_allocation_test(result);
