@@ -50,10 +50,20 @@ endif()
 bq_require_large_file_support()
 bq_default_target_platform()
 
+# The warning flags below are for the sources of this project. An imported target states its own
+# requirements, and CMake builds the standard library module of a module test as an imported
+# target: it compiles libstdc++'s own std.cc and std.compat.cc, whose #if tests trip -Wundef, so a
+# directory-wide -Werror would fail the build on a source that is not ours to police.
+function(bq_add_warnings)
+    foreach(flag IN LISTS ARGN)
+        add_compile_options("$<$<NOT:$<BOOL:$<TARGET_PROPERTY:IMPORTED>>>:${flag}>")
+    endforeach()
+endfunction()
+
 #make __cplusplus correct in Visual Studio
 if (MSVC)
     string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8 /bigobj")
-    add_compile_options(/W4 /WX)
+    bq_add_warnings(/W4 /WX)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -64,7 +74,7 @@ else()
         list(APPEND EXTRA_FLAGS -Warray-bounds)
     endif()
 
-    add_compile_options(
+    bq_add_warnings(
             -Wall -Wextra -pedantic -Werror
             -Wundef -Wshadow -Wstrict-aliasing
             -Wcast-qual -Wconversion -Wsign-conversion
@@ -72,7 +82,7 @@ else()
             ${EXTRA_FLAGS}
     )
     if (TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
+        bq_add_warnings(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
     endif()
 endif()
 
