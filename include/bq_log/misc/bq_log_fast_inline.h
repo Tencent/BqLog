@@ -12,7 +12,6 @@
 #include "bq_common/bq_common_public_include.h"
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace fast_inline {
         struct expected_layout {
             static constexpr uint32_t head_wt_reading_cursor_cache = 128;
@@ -240,5 +239,4 @@ namespace bq {
             return 0;
         }
     }
-    BQ_MODULE_EXPORT_END
 }

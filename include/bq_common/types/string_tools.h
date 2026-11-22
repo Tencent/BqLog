@@ -26,7 +26,6 @@
 #include "bq_common/types/type_traits.h"
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace string_tools {
         template <typename T, typename = void>
         struct __has_value_type : bq::false_type {};
@@ -325,5 +324,4 @@ namespace bq {
             static const char32_t* value() { return U""; }
         };
     }
-    BQ_MODULE_EXPORT_END
 }

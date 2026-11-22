@@ -22,7 +22,6 @@
 
 #if defined(__cplusplus)
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     enum class log_level : int32_t {
         verbose,
         debug,
@@ -33,7 +32,6 @@ namespace bq {
 
         log_level_max = 32,
     };
-    BQ_MODULE_EXPORT_END
 }
 #else
 // Keep the ABI fixed at 32 bits, even with -fshort-enums.

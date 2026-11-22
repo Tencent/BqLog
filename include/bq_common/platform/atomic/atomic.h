@@ -22,7 +22,6 @@
 #include "bq_common/types/type_traits.h"
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace platform {
         enum class memory_order : uint8_t {
             relaxed,
@@ -32,7 +31,6 @@ namespace bq {
             seq_cst
         };
     }
-    BQ_MODULE_EXPORT_END
 }
 
 #ifdef BQ_MSVC
@@ -44,7 +42,6 @@ static_assert(false, "bq::platform::atomic is not supported in your compiler");
 #endif
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace platform {
         template <typename T>
         class atomic_trivially_constructible : public _atomic_base<T, sizeof(T)> {
@@ -678,5 +675,4 @@ namespace bq {
         static_assert(bq::is_trivially_move_constructible<atomic_trivially_constructible<int32_t>>::value, "atomic_trivially_constructible must be trivial type");
         static_assert(!bq::is_trivially_constructible<atomic<int32_t>>::value, "atomic must not be trivially constructible");
     }
-    BQ_MODULE_EXPORT_END
 }

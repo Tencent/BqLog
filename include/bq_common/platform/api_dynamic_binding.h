@@ -45,7 +45,6 @@ struct HINSTANCE__;
 #endif
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace api_dynamic_binding {
 #if defined(BQ_WIN)
         // The same C linkage symbols as windows.h, which may be included before or after this header.
@@ -265,11 +264,9 @@ namespace bq {
             return function;
         }
     }
-    BQ_MODULE_EXPORT_END
 }
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     /// <summary>
     /// Returns true when the late-bound dynamic library can be loaded.
     /// If it has not been loaded yet, this call attempts to load and cache it.
@@ -279,7 +276,6 @@ namespace bq {
     {
         return ::bq::api_dynamic_binding::is_library_ready();
     }
-    BQ_MODULE_EXPORT_END
 }
 
 #if defined(BQ_GCC) || defined(BQ_CLANG)

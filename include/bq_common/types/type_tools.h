@@ -26,25 +26,20 @@
 // but in order to avoid pollute users code,
 // we don't include <new> or overload default operator new.
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     enum class enum_new_dummy {
         dummy
     };
-    BQ_MODULE_EXPORT_END
 }
-BQ_MODULE_EXPORT_BEGIN
 inline void* operator new(size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
 inline void* operator new[](size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
 inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept {}
 inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept {}
-BQ_MODULE_EXPORT_END
 
 // BQ_EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
 // that the macro-only header a generated category module includes in its global module fragment
 // is the one that carries it.
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     template <typename T>
     inline T& min_ref(T& left, T& right)
     {
@@ -532,7 +527,6 @@ namespace bq {
     {
         return *reinterpret_cast<TO*>(const_cast<char*>(from));
     }
-    BQ_MODULE_EXPORT_END
 }
 
 // Macro designed to generate high-performance code by accessing a variable Var through a forced cast.

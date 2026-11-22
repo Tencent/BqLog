@@ -26,7 +26,6 @@
 #endif
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     template <typename Allocator>
     class allocator_traits {
     private:
@@ -80,5 +79,4 @@ namespace bq {
         bool operator==(const default_allocator&) const noexcept { return true; }
         bool operator!=(const default_allocator&) const noexcept { return false; }
     };
-    BQ_MODULE_EXPORT_END
 }

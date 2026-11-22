@@ -16,7 +16,6 @@
 #include "bq_log/misc/bq_log_fast_inline.h"
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace fast_info_detail {
         // defined here (not in class log) so log can friend it: it reads the handle's private fields
         struct log_access {
@@ -279,7 +278,6 @@ namespace bq {
             return l.do_log(desc.category, level, desc_format<CHAR>(desc), args...);
         }
     }
-    BQ_MODULE_EXPORT_END
 }
 
 #undef BQ_FAST_INFO_HIDDEN

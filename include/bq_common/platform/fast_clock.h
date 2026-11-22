@@ -34,7 +34,6 @@
 #endif
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace platform {
         // Zero initialized. epoch_ms_ is current until the counter reaches next_ms_counter_.
         struct fast_clock_thread_cache {
@@ -290,5 +289,4 @@ namespace bq {
             return fast_clock_read_epoch_ms(cache, fast_clock_sync_epoch_ns, out_epoch_ms);
         }
     }
-    BQ_MODULE_EXPORT_END
 }

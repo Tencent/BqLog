@@ -28,7 +28,6 @@ namespace bq {
     // The first word is epoch milliseconds in both heads; its high bit marks fast records.
     static constexpr uint64_t log_head_fast_flag = UINT64_C(1) << 63;
 
-    BQ_MODULE_EXPORT_BEGIN
     struct log_head_base_def {
         static bq_forceinline uint64_t get_epoch(uint64_t value)
         {
@@ -50,11 +49,9 @@ namespace bq {
         class test_log;
         class test_fast_log;
     }
-    BQ_MODULE_EXPORT_END
 }
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     enum class log_memory_policy {
         discard_when_full, // If the log_buffer is full, incoming logs will be discarded.
         block_when_full, // If the log_buffer is full, the logging thread will be blocked until space becomes available.
@@ -81,14 +78,11 @@ namespace bq {
 
         static constexpr uint32_t get_head_size_without_format_str();
     } BQ_PACK_END
-    BQ_MODULE_EXPORT_END
 
-    // A member definition may not appear in an export block, so it sits between the markers.
     constexpr uint32_t _log_entry_head_def::get_head_size_without_format_str()
     {
         return offsetof(_log_entry_head_def, log_format_str_type);
     }
-    BQ_MODULE_EXPORT_BEGIN
 
     static_assert(_log_entry_head_def::get_head_size_without_format_str() == 32,
         "_log_entry_head_def::get_head_size_without_format_str() must equal 32");
@@ -142,10 +136,8 @@ namespace bq {
     // mask into the low bits of the meta address it publishes (see fast_info_site), so every
     // consumer must mask the low bits off before using the address stored in a record head as a
     // pointer. The macro path stores a clean address, for which the mask is a no-op.
-    BQ_MODULE_EXPORT_END
     constexpr uint64_t fast_meta_addr_align() { return 64; }
     constexpr uint64_t fast_meta_addr_mask() { return fast_meta_addr_align() - 1; }
-    BQ_MODULE_EXPORT_BEGIN
 
     // zero level words for an invalid log (all levels disabled); a template static member
     // so the single array definition in a public header never multiplies across TUs
@@ -153,12 +145,9 @@ namespace bq {
     struct log_zero_level_words {
         static const uint32_t value[1];
     };
-    BQ_MODULE_EXPORT_END
 
-    // A static data member definition may not appear in an export block.
     template <typename T>
     const uint32_t log_zero_level_words<T>::value[1] = { 0 };
-    BQ_MODULE_EXPORT_BEGIN
 
     // this is C-linkage version of bq::log_buffer_read_handle
     BQ_PACK_BEGIN
@@ -213,5 +202,4 @@ namespace bq {
         string_utf32_type,
         string_utf_mixed_type
     };
-    BQ_MODULE_EXPORT_END
 }

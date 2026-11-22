@@ -30,10 +30,11 @@
 #include <time.h>
 #endif
 
-// Declarations between these two markers make up the interface of the C++20 module
-// (see include/bq_log/bq.log.cppm). They are empty unless a module is being built,
-// which defines them as `export {` and `}` before including any header; the include
-// entry sees exactly the same declarations with the same linkage.
+// A generated category log is one text for two entries: the header, and a module unit that turns
+// the class into the module's own by reading it between these markers, which it defines as
+// `export {` and `}`. The include entry sees them empty. bq.log's own module entry does not use
+// them: it re-exports the names it wants from a header read in the global module fragment, so a
+// definition there would be owned by the module and could not be linked with the library.
 // An export block takes namespace scoped declarations only, so internal linkage helpers and
 // the bodies in *_impl.h stay outside it: a class carries its own members when it is exported.
 #ifndef BQ_MODULE_EXPORT_BEGIN

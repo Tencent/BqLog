@@ -30,7 +30,6 @@
 #endif
 
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     class log {
     private:
 #if defined(BQ_UNIT_TEST)
@@ -483,7 +482,6 @@ namespace bq {
             static bool decode_file(const bq::string& log_file_path, const bq::string& output_file, const bq::string& priv_key = "");
         };
     }
-    BQ_MODULE_EXPORT_END
 }
 
 #include "bq_log/misc/bq_log_impl.h"

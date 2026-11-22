@@ -15,7 +15,6 @@
 
 #if defined(__cplusplus)
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     namespace api {
 #define BQ_LOG_API_TYPE(cpp_type, c_type) cpp_type
 #else
@@ -25,6 +24,5 @@ namespace bq {
 #undef BQ_LOG_API_TYPE
 #if defined(__cplusplus)
     }
-    BQ_MODULE_EXPORT_END
 }
 #endif
