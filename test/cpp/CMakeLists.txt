@@ -1,4 +1,4 @@
-﻿cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.22)
 
 project(BqLogUnitTest)
 
@@ -344,8 +344,4 @@ endif()
 set(BQ_OWN_SOURCES ${SRC_LIST} ${LEGACY_DECODER_LIST} ${THIRD_PARTY_LIST} ${TEST_LIST} ${INC_LIST}
         ${BQ_MODULE_TEST_SOURCES})
 set_source_files_properties(${BQ_OWN_SOURCES} PROPERTIES COMPILE_OPTIONS "${BQ_WARNING_FLAGS}")
-
-
-
-
 
