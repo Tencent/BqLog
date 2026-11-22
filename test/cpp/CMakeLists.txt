@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.22)
+﻿cmake_minimum_required(VERSION 3.22)
 
 project(BqLogUnitTest)
 
@@ -50,8 +50,9 @@ endif()
 bq_require_large_file_support()
 bq_default_target_platform()
 
-# The warning flags are collected here and given to the targets of this project at the end of the
-# file, not to the directory, so that they reach this project's sources and nothing else.
+# The warning flags are collected here and attached to this project's sources at the end of the
+# file, neither to the directory nor to the targets, so that they reach this project's sources and
+# nothing else.
 set(BQ_WARNING_FLAGS "")
 
 #make __cplusplus correct in Visual Studio
@@ -308,9 +309,14 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
         endforeach()
     endif()
 
-    # This is what the warning loop at the end of the file keys on: these targets are the consumers
-    # of the standard library module, so their compile options are also the ones that build it.
-    list(APPEND BQ_MODULE_TARGETS bqlog_module BqLogModuleUnitTest ${BQ_MODULE_TEST_LIBS})
+    # COLLECT_SRC_FILES takes *.h, *.hpp, *.c and *.cpp, and the module unit of the test sits
+    # outside TEST_DIR, so the warning block at the end of the file would miss all three of these.
+    list(APPEND BQ_MODULE_TEST_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm
+            ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+        list(APPEND BQ_MODULE_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+    endif()
 
     enable_testing()
     add_test(NAME module_entry COMMAND BqLogModuleUnitTest)
@@ -323,27 +329,23 @@ else()
 endif()
 
 ############################################################
-# Warning flags, once every target of this project exists
+# Warning flags, on the sources of this project
 ############################################################
-# Every target built from the sources above gets the flags. A target created below this point
-# would miss them, so create targets above it.
-#
-# The module entry is the exception, and it cannot be one: since CMake 4.4 it builds the standard
-# library module that module sources depend on as a synthetic target that adopts the
-# COMPILE_OPTIONS of its consumer (cmake-cxxmodules(7)), and that compile reads libstdc++'s own
-# std.cc, whose #if tests trip -Wundef. The consumer's options are the only ones that reach that
-# compile, so there is nothing to scope a fatal warning to: the module targets warn, everything
-# else still fails the build on a warning.
-set(BQ_MODULE_WARNING_FLAGS ${BQ_WARNING_FLAGS})
-list(REMOVE_ITEM BQ_MODULE_WARNING_FLAGS -Werror /WX)
+# The flags are attached to our own source files instead of to the targets that own them, because
+# only that keeps them off the files of the toolchain. A module test makes CMake compile the
+# standard library's std.cc and std.compat.cc, and since CMake 4.4 that compile is a synthetic
+# target: cmGeneratorTarget::GetCxxSyntheticTarget() hands it the consuming target's
+# COMPILE_OPTIONS through cmTarget::CopyUsageEffects(), which copies GetCompileOptions() and
+# nothing else. Set on a target, -Werror travels there and judges libstdc++'s own #if tests with
+# -Wundef, so the build fails over a file that is not ours to police; set on a source of ours, no
+# copy can pick it up. The same copy is why GCC's -fmodules-ts above has to stay on the target: the
+# standard library module has to be built with it too. A source file added to this project later
+# has to be added here as well.
+set(BQ_OWN_SOURCES ${SRC_LIST} ${LEGACY_DECODER_LIST} ${THIRD_PARTY_LIST} ${TEST_LIST} ${INC_LIST}
+        ${BQ_MODULE_TEST_SOURCES})
+set_source_files_properties(${BQ_OWN_SOURCES} PROPERTIES COMPILE_OPTIONS "${BQ_WARNING_FLAGS}")
 
-get_property(BQ_OWN_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
-foreach(BQ_TARGET IN LISTS BQ_OWN_TARGETS)
-    if(BQ_TARGET IN_LIST BQ_MODULE_TARGETS)
-        target_compile_options(${BQ_TARGET} PRIVATE ${BQ_MODULE_WARNING_FLAGS})
-    else()
-        target_compile_options(${BQ_TARGET} PRIVATE ${BQ_WARNING_FLAGS})
-    endif()
-endforeach()
+
+
 
 
