@@ -50,20 +50,16 @@ endif()
 bq_require_large_file_support()
 bq_default_target_platform()
 
-# The warning flags below are for the sources of this project. An imported target states its own
-# requirements, and CMake builds the standard library module of a module test as an imported
-# target: it compiles libstdc++'s own std.cc and std.compat.cc, whose #if tests trip -Wundef, so a
-# directory-wide -Werror would fail the build on a source that is not ours to police.
-function(bq_add_warnings)
-    foreach(flag IN LISTS ARGN)
-        add_compile_options("$<$<NOT:$<BOOL:$<TARGET_PROPERTY:IMPORTED>>>:${flag}>")
-    endforeach()
-endfunction()
+# The warning flags are collected here and given to the targets of this project at the end of the
+# file, not to the directory. CMake compiles the standard library module of a module test itself,
+# from libstdc++'s std.cc and std.compat.cc, and those #if tests trip -Wundef: a directory-wide
+# -Werror fails a build over a source that is not ours to police.
+set(BQ_WARNING_FLAGS "")
 
 #make __cplusplus correct in Visual Studio
 if (MSVC)
     string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8 /bigobj")
-    bq_add_warnings(/W4 /WX)
+    list(APPEND BQ_WARNING_FLAGS /W4 /WX)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -74,7 +70,7 @@ else()
         list(APPEND EXTRA_FLAGS -Warray-bounds)
     endif()
 
-    bq_add_warnings(
+    list(APPEND BQ_WARNING_FLAGS
             -Wall -Wextra -pedantic -Werror
             -Wundef -Wshadow -Wstrict-aliasing
             -Wcast-qual -Wconversion -Wsign-conversion
@@ -82,7 +78,7 @@ else()
             ${EXTRA_FLAGS}
     )
     if (TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        bq_add_warnings(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
+        list(APPEND BQ_WARNING_FLAGS -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
     endif()
 endif()
 
@@ -323,5 +319,16 @@ else()
     file(REMOVE "${CMAKE_BINARY_DIR}/bq_module_test_enabled")
     message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, and MSVC with the Visual Studio generator, or Clang 16 / GCC 15 with Ninja)")
 endif()
+
+############################################################
+# Warning flags, once every target of this project exists
+############################################################
+# Every target built from the sources above gets the flags; the standard library module CMake
+# compiles for a module test is not one of them and stays out. A target created below this point
+# would miss them, so create targets above it.
+get_property(BQ_OWN_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+foreach(BQ_TARGET IN LISTS BQ_OWN_TARGETS)
+    target_compile_options(${BQ_TARGET} PRIVATE ${BQ_WARNING_FLAGS})
+endforeach()
 
 
