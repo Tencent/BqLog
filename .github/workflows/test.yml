@@ -862,6 +862,8 @@ jobs:
         with:
           usesh: true
           mem: 8192
+          # as in the dragonfly job: these packages break the copy back's rsync, and nothing reads it
+          copyback: false
           prepare: |
             for i in 1 2 3 4 5; do
               pkg install -y llvm cmake bash gdb gcc && exit 0
