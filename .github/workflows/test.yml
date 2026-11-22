@@ -350,21 +350,22 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      # The image's LLVM is older than its MSVC STL accepts (STL1000), and arm64 has none.
       - name: Install Clang(Attempt 1)
-        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
+        if: ${{ matrix.cc == 'mingw_clang' }}
         continue-on-error: true
         shell: bash
         run: |
           choco uninstall -y llvm --all-versions || true
           choco install -y llvm
       - name: Install Clang(Attempt 2)
-        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
+        if: ${{ matrix.cc == 'mingw_clang' }}
         continue-on-error: true
         shell: bash
         run: |
           choco install -y llvm
       - name: Install Clang(Attempt 3)
-        if: ${{ matrix.runner.runs_on == 'windows-11-arm' }}
+        if: ${{ matrix.cc == 'mingw_clang' }}
         continue-on-error: true
         shell: bash
         run: |
