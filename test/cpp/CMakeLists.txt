@@ -51,9 +51,7 @@ bq_require_large_file_support()
 bq_default_target_platform()
 
 # The warning flags are collected here and given to the targets of this project at the end of the
-# file, not to the directory. CMake compiles the standard library module of a module test itself,
-# from libstdc++'s std.cc and std.compat.cc, and those #if tests trip -Wundef: a directory-wide
-# -Werror fails a build over a source that is not ours to police.
+# file, not to the directory, so that they reach this project's sources and nothing else.
 set(BQ_WARNING_FLAGS "")
 
 #make __cplusplus correct in Visual Studio
@@ -310,6 +308,10 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
         endforeach()
     endif()
 
+    # This is what the warning loop at the end of the file keys on: these targets are the consumers
+    # of the standard library module, so their compile options are also the ones that build it.
+    list(APPEND BQ_MODULE_TARGETS bqlog_module BqLogModuleUnitTest ${BQ_MODULE_TEST_LIBS})
+
     enable_testing()
     add_test(NAME module_entry COMMAND BqLogModuleUnitTest)
 
@@ -323,12 +325,25 @@ endif()
 ############################################################
 # Warning flags, once every target of this project exists
 ############################################################
-# Every target built from the sources above gets the flags; the standard library module CMake
-# compiles for a module test is not one of them and stays out. A target created below this point
+# Every target built from the sources above gets the flags. A target created below this point
 # would miss them, so create targets above it.
+#
+# The module entry is the exception, and it cannot be one: since CMake 4.4 it builds the standard
+# library module that module sources depend on as a synthetic target that adopts the
+# COMPILE_OPTIONS of its consumer (cmake-cxxmodules(7)), and that compile reads libstdc++'s own
+# std.cc, whose #if tests trip -Wundef. The consumer's options are the only ones that reach that
+# compile, so there is nothing to scope a fatal warning to: the module targets warn, everything
+# else still fails the build on a warning.
+set(BQ_MODULE_WARNING_FLAGS ${BQ_WARNING_FLAGS})
+list(REMOVE_ITEM BQ_MODULE_WARNING_FLAGS -Werror /WX)
+
 get_property(BQ_OWN_TARGETS DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
 foreach(BQ_TARGET IN LISTS BQ_OWN_TARGETS)
-    target_compile_options(${BQ_TARGET} PRIVATE ${BQ_WARNING_FLAGS})
+    if(BQ_TARGET IN_LIST BQ_MODULE_TARGETS)
+        target_compile_options(${BQ_TARGET} PRIVATE ${BQ_MODULE_WARNING_FLAGS})
+    else()
+        target_compile_options(${BQ_TARGET} PRIVATE ${BQ_WARNING_FLAGS})
+    endif()
 endforeach()
 
 
