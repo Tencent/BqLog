@@ -838,6 +838,10 @@ jobs:
         with:
           usesh: true
           mem: 8192
+          # The rsync the copy back uses dies on the packages below, the way it does for the
+          # dragonfly job. Nothing after this step reads the VM's files, so there is nothing to
+          # copy back.
+          copyback: false
           prepare: |
             for i in 1 2 3 4 5; do
               pkg install -y llvm cmake bash gdb gcc && exit 0
