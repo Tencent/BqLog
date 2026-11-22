@@ -58,7 +58,12 @@ namespace bq {
             uint64_t v;
         };
 
-        constexpr uint64_t fast_site_refused = UINT64_C(1) << 63;
+        // An enumerator rather than a constexpr object: an object here would have internal linkage,
+        // and a template that names such an entity may not be instantiated in another translation
+        // unit (-Wtemplate-names-tu-local), which is what a module consumer of fast_register is.
+        enum : uint64_t {
+            fast_site_refused = UINT64_C(1) << 63
+        };
 
         struct fast_info_site_desc {
             uint32_t category;
@@ -225,7 +230,10 @@ namespace bq {
         }
 
         // what fast_slow_prepare returns instead of the meta address when do_log has to do the work
-        constexpr uint64_t fast_slow_fallback = 1;
+        // (an enumerator for the same reason as fast_site_refused above)
+        enum : uint64_t {
+            fast_slow_fallback = 1
+        };
 
         template <typename CHAR>
         BQ_FAST_INFO_HIDDEN bq_noinline uint64_t fast_slow_prepare(fast_info_site& site, const bq::log& l, const fast_info_site_desc& desc, const uint8_t* wire,
