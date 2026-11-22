@@ -54,8 +54,8 @@ cmake --install "$WORK/build" >> "$WORK/configure.log" 2>&1
 test -f "$PREFIX/include/bq_log/bq.log.cppm" \
     || { echo "module_verify: bq.log.cppm is missing from the install" >&2; exit 1; }
 
-# 3. The interface unit compiles on its own. A member definition must not sit in an export
-# block, which is what the BQ_MODULE_EXPORT_BEGIN/END markers keep track of.
+# 3. The interface unit compiles on its own. It reads the headers in its global module fragment
+# and re-exports the names, so no definition ends up owned by the module.
 "$CXX" -std=c++20 -x c++-module --precompile \
     -I"$PREFIX/include" \
     "$PREFIX/include/bq_log/bq.log.cppm" \
@@ -64,8 +64,12 @@ test -f "$PREFIX/include/bq_log/bq.log.cppm" \
 # 4. A module unit also needs an object file: it carries the module initializer.
 "$CXX" -std=c++20 -c "$WORK/bq.log.pcm" -o "$WORK/bq.log.o"
 
-# 5. The consumer imports the module instead of including the header.
+# 5. The consumer imports the module instead of including the header. It builds a bq::string, a
+# template, because that is the case a module cannot satisfy on its own: the instantiation happens
+# here, so the placement new the containers construct with has to be declared here too.
 cat > "$WORK/consumer.cpp" <<'CPP'
+#include "bq_common/types/placement_new.h"
+
 import bq.log;
 
 int main() {
@@ -77,7 +81,8 @@ int main() {
     if (!log.is_valid()) {
         return 1;
     }
-    log.info("bqlog module import works");
+    bq::string text = "bqlog module import works";
+    log.info(text);
     log.force_flush();
     return 0;
 }

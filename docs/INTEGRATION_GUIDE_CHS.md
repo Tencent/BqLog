@@ -79,6 +79,8 @@ target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 
 `import bq.log;` 交出的是公开接口里的那些名字：`bq::log`、`bq::category_log`、`bq::string` 和 `bq::array`、接口用到的枚举与回调类型、`bq::tools::log_decoder` 以及 `bq::platform_capability`。模块单元是在全局模块片段里读头文件、再把这些名字转交出去的，所以没有任何定义属于模块，同一个程序里别的翻译单元仍然可以 include 这些头文件。不在这个清单里的名字，include 它所在的头文件即可。
 
+容器构造对象时用的 placement new 声明在 `bq_common/types/placement_new.h` 里。GCC 会到实例化模板的那个翻译单元里去找这个分配函数，而不是在定义它的模块里找，所以用到 `bq::string`、`bq::array` 的翻译单元要在 import 之前 include 这个头文件。`bq_common/module_system_headers.h` 已经把它包进去了，预包含该文件的模块入口不用再管。
+
 **GCC 16 已知问题：** 在 `import bq.log;` 之后 include C 头文件（`<string.h>` 就会踩），可能被判成 `redefinition of 'strstr'`（或 `memcpy`）。这是 GCC 16 的回归：同样代码在 GCC 15、Clang、MSVC 上都正常。规避方法：把系统头文件写在 import 之前。
 
 ```cpp

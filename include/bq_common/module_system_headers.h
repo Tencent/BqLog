@@ -42,6 +42,11 @@
 #include "bq_common/platform/macros.h"
 #include "bq_common/misc/assert.h"
 
+// The placement new the containers construct with. A template reaches it only through the
+// translation unit that instantiates it, and inside the purview of a module entry that unit is
+// not this one, so the declarations have to be here.
+#include "bq_common/types/placement_new.h"
+
 // The system headers the platform specific parts of the library need.
 #if defined(BQ_WIN)
 #include <intrin.h>

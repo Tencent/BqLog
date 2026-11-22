@@ -21,19 +21,10 @@
 #include <stdint.h>
 #endif
 #include "bq_common/types/type_traits.h"
+#include "bq_common/types/placement_new.h"
 
-// we must supply a custom placement new, because we can compile without libc++.
-// but in order to avoid pollute users code,
-// we don't include <new> or overload default operator new.
-namespace bq {
-    enum class enum_new_dummy {
-        dummy
-    };
-}
-inline void* operator new(size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
-inline void* operator new[](size_t, void* p, bq::enum_new_dummy) noexcept { return p; }
-inline void operator delete(void*, void*, bq::enum_new_dummy) noexcept {}
-inline void operator delete[](void*, void*, bq::enum_new_dummy) noexcept {}
+// the placement new the containers construct with lives in placement_new.h: a translation unit
+// that instantiates a container through a module entry has to declare it there itself.
 
 // BQ_EBCO is defined in bq_common/platform/macros.h, next to the other language-level macros, so
 // that the macro-only header a generated category module includes in its global module fragment
