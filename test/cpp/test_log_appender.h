@@ -671,37 +671,62 @@ namespace bq {
                 bq::file_manager::instance().flush_file(handle);
             }
 
-            // capacity_limit and expire_time only clean the files of the appender they are set on. Another appender
-            // whose file_name starts with "<file_name>_" (app and app_error) keeps its files.
-            void do_file_cleanup_sibling_name_test(test_result& result)
+            // capacity_limit and expire_time clean only the files this appender wrote, which are "<file_name>_<index><ext>"
+            // and "<file_name>_<YYYYMMDD>_<index><ext>". A second appender named "app_error" in the same directory keeps its files.
+            void do_file_cleanup_test(test_result& result)
             {
                 test_output_dynamic(bq::log_level::info, "appender file cleanup test begin, please wait...          \r");
-                const char* limit_configs[] = { "capacity_limit=4096", "expire_time_seconds=1" };
-                for (const char* limit_config : limit_configs) {
-                    const bq::string dir = bq::string("appender_cleanup_test/") + (limit_config[0] == 'c' ? "capacity" : "expire");
+                struct cleanup_case
+                {
+                    const char* name;
+                    const char* limit_config;
+                    bool rolling;
+                    bool expire;
+                };
+                const cleanup_case cases[] = {
+                    { "capacity", "capacity_limit=4096", false, false },
+                    { "expire", "expire_time_seconds=1", false, true },
+                    { "rolling_date", "capacity_limit=4096", true, false }
+                };
+                for (const cleanup_case& cleanup : cases) {
+                    const bq::string dir = bq::string("appender_cleanup_test/") + cleanup.name;
                     bq::file_manager::remove_file_or_dir(TO_ABSOLUTE_PATH(dir, 0));
                     bq::file_manager::create_directory(TO_ABSOLUTE_PATH(dir, 0));
-                    const bq::string own_files[] = { dir + "/app_7.log", dir + "/app_20250101_3.log" };
-                    const bq::string other_files[] = { dir + "/app_error_7.log", dir + "/app_error_20250101_3.log" };
-                    for (const auto& file : own_files) {
+                    bq::array<bq::string> own_files;
+                    bq::array<bq::string> other_files;
+                    if (cleanup.rolling) {
+                        // Own file of a past date: the rolling form has to be recognized whatever the day is.
+                        own_files.push_back(dir + "/app_20240101_1.log");
+                        other_files.push_back(dir + "/app_error_20240101_1.log");
+                    } else {
+                        own_files.push_back(dir + "/app_7.log");
+                        own_files.push_back(dir + "/app_20250101_3.log");
+                        other_files.push_back(dir + "/app_error_7.log");
+                        other_files.push_back(dir + "/app_error_20250101_3.log");
+                        other_files.push_back(dir + "/app_backup.log");
+                    }
+                    for (const bq::string& file : own_files) {
                         write_cleanup_test_file(file);
                     }
-                    for (const auto& file : other_files) {
+                    for (const bq::string& file : other_files) {
                         write_cleanup_test_file(file);
                     }
-                    if (limit_config[0] == 'e') {
+                    bool prepared = bq::file_manager::get_file_size(TO_ABSOLUTE_PATH(own_files[0], 0)) == 8192;
+                    result.add_result(prepared, "the %s cleanup case starts with an 8KB file of the appender", cleanup.name);
+                    if (cleanup.expire) {
                         bq::platform::thread::sleep(2100);
                     }
-                    bq::log log_obj = bq::log::create_log(bq::string("cleanup_sibling_name_") + (limit_config[0] == 'c' ? "capacity" : "expire"),
-                        bq::string("log.thread_mode=sync\n") + "appenders_config.f.type=text_file\n" + "appenders_config.f.levels=[all]\n" + "appenders_config.f.always_create_new_file=true\n" + "appenders_config.f.file_name=" + dir + "/app\n" + "appenders_config.f." + limit_config + "\n");
-                    result.add_result(log_obj.is_valid(), "create_log for the cleanup test succeeds, %s", limit_config);
+                    bq::string config = bq::string("log.thread_mode=sync\n") + "appenders_config.f.type=text_file\n" + "appenders_config.f.levels=[all]\n" + "appenders_config.f.always_create_new_file=true\n" + "appenders_config.f.file_name=" + dir + "/app\n" + "appenders_config.f." + cleanup.limit_config + "\n"
+                        + (cleanup.rolling ? "appenders_config.f.enable_rolling_log_file=true\n" : "appenders_config.f.enable_rolling_log_file=false\n");
+                    bq::log log_obj = bq::log::create_log(bq::string("cleanup_") + cleanup.name, config);
+                    result.add_result(log_obj.is_valid(), "create_log for the %s cleanup case succeeds", cleanup.name);
                     log_obj.info("cleanup test %d", 1);
                     log_obj.force_flush();
-                    for (const auto& file : own_files) {
-                        result.add_result(!bq::file_manager::is_file(TO_ABSOLUTE_PATH(file, 0)), "%s removes the appender's own file %s", limit_config, file.c_str());
+                    for (const bq::string& file : own_files) {
+                        result.add_result(!bq::file_manager::is_file(TO_ABSOLUTE_PATH(file, 0)), "%s cleanup removes the appender's own file %s", cleanup.name, file.c_str());
                     }
-                    for (const auto& file : other_files) {
-                        result.add_result(bq::file_manager::is_file(TO_ABSOLUTE_PATH(file, 0)), "%s keeps the file of another appender %s", limit_config, file.c_str());
+                    for (const bq::string& file : other_files) {
+                        result.add_result(bq::file_manager::is_file(TO_ABSOLUTE_PATH(file, 0)), "%s cleanup keeps the file of another appender %s", cleanup.name, file.c_str());
                     }
                 }
             }
@@ -2000,7 +2025,7 @@ namespace bq {
 #endif
                 do_binary_appender_test_with_enc(result);
                 do_appender_config_reject_test(result);
-                do_file_cleanup_sibling_name_test(result);
+                do_file_cleanup_test(result);
                 do_decoder_malformed_file_test(result);
                 do_decoder_resync_test(result);
                 do_decoder_untrusted_size_allocation_test(result);

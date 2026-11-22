@@ -22,29 +22,52 @@ namespace bq {
     static constexpr size_t CACHE_WRITE_MIN_SIZE = 64 * 1024;
     static constexpr size_t CACHE_WRITE_MAX_SIZE = 4 * 1024 * 1024;
 
-    // Only "<file_name>_<index><ext>" and "<file_name>_<YYYYMMDD>_<index><ext>" are written by this appender.
-    // A bare prefix match would also pick up the files of another appender whose name starts with "<file_name>_".
-    static bool is_own_indexed_file_name(const bq::string& name, const bq::string& file_name, const bq::string& ext_name)
+    // An indexed file is "<file_name><date_part><index><ext>", date_part being "_" or "_<YYYYMMDD>_".
+    // The index scan and both cleanups read a name through parse_indexed_file_name(), so the rule lives in one place.
+    static constexpr char INDEXED_FILE_DATE_PART_FORMAT[] = "_%Y%m%d_";
+    static constexpr size_t INDEXED_FILE_DATE_PART_DIGITS = 8; // the date the format above renders; change the two together
+
+    // Rejects the files of another appender whose name starts with this one ("logs/app" against "logs/app_error_1.log").
+    static bool parse_indexed_file_name(const bq::string& name, const bq::string& file_name, const bq::string& ext_name, bq::string* date_part = nullptr, int32_t* index = nullptr)
     {
         if (name.size() <= file_name.size() + 1 + ext_name.size() || !name.begin_with(file_name) || name[file_name.size()] != '_' || !name.end_with(ext_name)) {
             return false;
         }
-        size_t pos = file_name.size() + 1;
         const size_t end = name.size() - ext_name.size();
-        size_t digit_count = 0;
-        while (pos < end && name[pos] >= '0' && name[pos] <= '9') {
-            ++pos;
-            ++digit_count;
+        size_t index_begin = file_name.size() + 1;
+        size_t index_end = index_begin;
+        bq::string parsed_date_part = "_";
+        while (index_end < end && name[index_end] >= '0' && name[index_end] <= '9') {
+            ++index_end;
         }
-        if (pos < end && name[pos] == '_' && digit_count == 8) {
-            ++pos;
-            digit_count = 0;
-            while (pos < end && name[pos] >= '0' && name[pos] <= '9') {
-                ++pos;
-                ++digit_count;
+        if (index_end < end && name[index_end] == '_') {
+            if (index_end - index_begin != INDEXED_FILE_DATE_PART_DIGITS) {
+                return false;
+            }
+            parsed_date_part = name.substr(file_name.size(), index_end + 1 - file_name.size());
+            index_begin = index_end + 1;
+            index_end = index_begin;
+            while (index_end < end && name[index_end] >= '0' && name[index_end] <= '9') {
+                ++index_end;
             }
         }
-        return pos == end && digit_count > 0;
+        if (index_end != end || index_end == index_begin) {
+            return false;
+        }
+        int64_t parsed_index = 0;
+        for (size_t pos = index_begin; pos < index_end; ++pos) {
+            parsed_index = parsed_index * 10 + (name[pos] - '0');
+            if (parsed_index > INT32_MAX) {
+                return false;
+            }
+        }
+        if (date_part) {
+            *date_part = parsed_date_part;
+        }
+        if (index) {
+            *index = static_cast<int32_t>(parsed_index);
+        }
+        return true;
     }
 
 #if defined(BQ_UNIT_TEST)
@@ -682,12 +705,12 @@ namespace bq {
         auto epoch = bq::platform::high_performance_epoch_ms();
         struct tm time_st;
         time_zone_.get_tm_by_epoch(epoch, time_st);
-        strftime(time_str_buf, sizeof(time_str_buf), "_%Y%m%d_", &time_st);
+        strftime(time_str_buf, sizeof(time_str_buf), INDEXED_FILE_DATE_PART_FORMAT, &time_st);
 
-        int32_t max_index = 0;
-        bq::string file_prefix = file_name + (enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "_");
+        const bq::string today_date_part = enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "_";
         const bq::string ext_name_with_dot = get_file_ext_name();
 
+        int32_t max_index = 0;
         string path = TO_ABSOLUTE_PATH(dir_name, base_dir_type_);
         bq::array<bq::string> exist_files = bq::file_manager::get_sub_dirs_and_files_name(path);
         for (const bq::string& name : exist_files) {
@@ -695,13 +718,10 @@ namespace bq {
             if (!bq::file_manager::is_file(full_name_in_absolute_path)) {
                 continue;
             }
-            if (name.begin_with(file_prefix) && name.end_with(ext_name_with_dot)) {
-                bq::string idx_str = name.substr(file_prefix.size());
-                idx_str = idx_str.substr(0, idx_str.size() - ext_name_with_dot.size());
-                int32_t idx = atoi(idx_str.c_str());
-                if (idx != 0 && idx > max_index) {
-                    max_index = idx;
-                }
+            bq::string date_part;
+            int32_t index = 0;
+            if (parse_indexed_file_name(name, file_name, ext_name_with_dot, &date_part, &index) && date_part == today_date_part && index > max_index) {
+                max_index = index;
             }
         }
         if (is_prev_file_exist || max_index == 0 || always_create_new_file_) {
@@ -718,7 +738,7 @@ namespace bq {
         while (need_open_new_file) {
             char idx_buff[32];
             snprintf(idx_buff, sizeof(idx_buff), "%" PRId32, max_index++);
-            bq::string file_relative_path = config_file_name_ + (enable_rolling_log_file_ ? static_cast<const char*>(time_str_buf) : "_") + idx_buff + ext_name_with_dot;
+            bq::string file_relative_path = config_file_name_ + today_date_part + idx_buff + ext_name_with_dot;
             bq::string absolute_file_path = TO_ABSOLUTE_PATH(file_relative_path, base_dir_type_);
             parse_file_context parse_context(absolute_file_path);
 
@@ -776,7 +796,7 @@ namespace bq {
             if (!bq::file_manager::is_file(full_name_in_absolute_path)) {
                 continue;
             }
-            if (!is_own_indexed_file_name(name, file_name, ext_name_with_dot)) {
+            if (!parse_indexed_file_name(name, file_name, ext_name_with_dot)) {
                 continue;
             }
             uint64_t last_m_time_ms = bq::file_manager::get_file_last_modified_epoch_ms(full_name_in_absolute_path);
@@ -804,7 +824,7 @@ namespace bq {
             if (!bq::file_manager::is_file(full_name_in_absolute_path)) {
                 continue;
             }
-            if (!is_own_indexed_file_name(name, file_name, ext_name_with_dot)) {
+            if (!parse_indexed_file_name(name, file_name, ext_name_with_dot)) {
                 continue;
             }
             uint64_t last_m_time_ms = bq::file_manager::get_file_last_modified_epoch_ms(full_name_in_absolute_path);
