@@ -10,7 +10,6 @@
 
 #if defined(__cplusplus)
 namespace bq {
-    BQ_MODULE_EXPORT_BEGIN
     enum class enum_buffer_result_code : int32_t {
         success = 0,
         err_empty_log_buffer, // no valid data to read in log buffer;
@@ -39,16 +38,21 @@ namespace bq {
     };
 
     // Bits of log::get_platform_capabilities(): what the linked library was built with.
+    // An enum, like the C entry below, and not constexpr objects: a namespace-scope object is
+    // internal to its translation unit unless it is declared inline, and the C++20 module entry
+    // hands a name out only if it has external linkage.
     namespace platform_capability {
-        constexpr uint32_t memory_map = 1u << 0;
-        constexpr uint32_t multi_process = 1u << 1;
-        constexpr uint32_t cross_process_file_lock = 1u << 2;
-        constexpr uint32_t crash_handler = 1u << 3;
-        constexpr uint32_t backtrace = 1u << 4;
-        constexpr uint32_t dirent = 1u << 5;
-        constexpr uint32_t thread_name = 1u << 6;
-        constexpr uint32_t default_base_dir = 1u << 7;
-        constexpr uint32_t user_counter = 1u << 8;
+        enum capability_bits : uint32_t {
+            memory_map = 1u << 0,
+            multi_process = 1u << 1,
+            cross_process_file_lock = 1u << 2,
+            crash_handler = 1u << 3,
+            backtrace = 1u << 4,
+            dirent = 1u << 5,
+            thread_name = 1u << 6,
+            default_base_dir = 1u << 7,
+            user_counter = 1u << 8
+        };
     }
 
     // Fills buf with size bytes of cryptographically secure random data, or returns false when it cannot.
@@ -187,7 +191,6 @@ typedef void(BQ_STDCALL* BQ_LOG_ABI_TYPE(type_func_ptr_console_buffer_fetch_call
     static_assert(sizeof(appender_decode_result) == sizeof(int32_t), "32-bit decoder result ABI");
     static_assert(sizeof(recovery_capability) == sizeof(int32_t), "32-bit recovery capability ABI");
     static_assert(sizeof(platform_capability::memory_map) == sizeof(uint32_t), "32-bit platform capability ABI");
-    BQ_MODULE_EXPORT_END
 }
 #else
 typedef struct bq_api_string_def bq_api_string_def;
