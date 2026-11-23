@@ -2,6 +2,10 @@
 
 [English](CHANGELOG.md)
 
+## [v2.8.3] - 2026-11-23
+- **问题修复**：`capacity_limit` 与 `expire_time_*` 会把同目录下另一个 appender 的文件也算进额度并删掉，只要那个 appender 的 `file_name` 是本 appender 的 `file_name` 加 `_` 开头（`logs/app` 会删 `logs/app_error` 的文件）。现在每个 appender 只清理自己写出的文件。感谢 [@0z5a](https://github.com/0z5a) 的报告与修复（[#97](https://github.com/Tencent/BqLog/issues/97)、[#98](https://github.com/Tencent/BqLog/pull/98)）。
+- **问题修复**：C++20 模块：Windows 上用 Clang 以 Debug 构建、`import bq.log` 的程序，链接库时报重复符号（`bq::fast_format_meta::arg_types` 等）。`import bq.log;` 导出的内容不变，旧版 `BqLog_CategoryLogGenerator` 生成的分类日志模块无需改动、照常可用。
+
 ## [v2.8.1] - 2026-11-16
 - **Node.js 包**：`moduleResolution` 为 `node16`、`node18`、`node20`、`nodenext` 时类型可以正常使用。之前在这些模式下会报错，打开 `skipLibCheck` 后类型还会悄悄变成 `any`；`main` 也指向了不存在的文件（[#95](https://github.com/Tencent/BqLog/issues/95)）。
 - **CI**：按使用者的方式检查打包产物——入口、模块解析、加载原生库、在 TypeScript 4.0～7.0 和 tsgo 下做类型检查，以及 `arethetypeswrong`。
