@@ -65,11 +65,10 @@ test -f "$PREFIX/include/bq_log/bq.log.cppm" \
 "$CXX" -std=c++20 -c "$WORK/bq.log.pcm" -o "$WORK/bq.log.o"
 
 # 5. The consumer imports the module instead of including the header. It builds a bq::string, a
-# template, because that is the case a module cannot satisfy on its own: the instantiation happens
-# here, so the placement new the containers construct with has to be declared here too.
+# template, because that is the case the module has to satisfy by itself: the instantiation happens
+# here, so the placement new the container constructs with has to reach this unit through the
+# import. Nothing but the import sets it up, which is what a consumer sees.
 cat > "$WORK/consumer.cpp" <<'CPP'
-#include "bq_common/types/placement_new.h"
-
 import bq.log;
 
 int main() {

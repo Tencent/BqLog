@@ -99,3 +99,17 @@ using ::bq::fast_info_detail::fast_impl;
 using ::bq::fast_info_detail::is_category;
 }
 }
+
+// The placement new the containers construct their elements with, and the tag type that tells it
+// from the standard one (bq_common/types/type_tools.h). An importer instantiates bq::string and
+// bq::array, and the allocation function of a new-expression whose type is still dependent is
+// looked up in the translation unit doing the instantiation: gcc 15 does not look back into this
+// unit's global module fragment for it. Re-exporting the declarations here makes them part of the
+// import, so a consumer needs no include of its own. They are declared at global scope, so unlike
+// the names above they are re-exported there.
+export {
+using ::operator new;
+using ::operator new[];
+using ::operator delete;
+using ::operator delete[];
+}

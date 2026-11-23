@@ -22,10 +22,8 @@
 // system headers in its global module fragment, and GCC 16 reports them as a redefinition when
 // it parses them again after the import. Nothing here includes bq_log or the C++ standard
 // library: bq::string comes from the module, and GCC's module TS crashes on an STL header after
-// an import. Two project headers are the exception, both for something a module cannot hand out:
-// macros.h for the calling convention of the console callback below, and placement_new.h for the
-// allocation function bq::string is constructed with, which gcc looks up here, in the translation
-// unit that instantiates the template, rather than in the module that defines it.
+// an import. macros.h is the one project header it takes, for the calling convention of the
+// console callback below.
 #define _CRT_SECURE_NO_WARNINGS // the fopen/fread below read the log file on purpose
 
 #include <stdint.h>
@@ -33,7 +31,6 @@
 #include <string.h>
 
 #include "bq_common/platform/macros.h"
-#include "bq_common/types/placement_new.h"
 
 import bq.log;
 import bq.test_category_log;

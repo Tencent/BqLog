@@ -77,9 +77,7 @@ target_link_libraries(your_target PRIVATE bqlog::BqLogStatic)
 
 Supported compilers: Clang 16+, MSVC 19.34+, GCC 15+ (GCC 14 crashes with an internal compiler error on the module). GCC also needs `-fmodules-ts`.
 
-`import bq.log;` hands out the names of the public API: `bq::log`, `bq::category_log`, `bq::string` and `bq::array`, the enums and callback types the API uses, `bq::tools::log_decoder` and `bq::platform_capability`. The module unit reads the headers in its global module fragment and re-exports those names, so no definition belongs to the module and a header can still be included by another translation unit of the same program. A name that is not in that list is reached by including its header.
-
-The containers construct their objects with a placement new declared in `bq_common/types/placement_new.h`. GCC looks that allocation function up in the translation unit that instantiates the template, not in the module that defines it, so a translation unit that uses `bq::string` or `bq::array` includes that header before the import. `bq_common/module_system_headers.h` already carries it, so a module entry that pre-includes that file needs nothing else.
+`import bq.log;` hands out the names of the public API: `bq::log`, `bq::category_log`, `bq::string` and `bq::array`, the enums and callback types the API uses, `bq::tools::log_decoder` and `bq::platform_capability`. The module unit reads the headers in its global module fragment and re-exports those names, so no definition belongs to the module and a header can still be included by another translation unit of the same program. It also re-exports the placement new the containers construct with, so `bq::string` and `bq::array` work in an importing unit without any other include. A name that is not in that list is reached by including its header.
 
 **Known GCC 16 issue:** a C header included after `import bq.log;` — `<string.h>` among them — may be reported as `redefinition of 'strstr'` (or `memcpy`). It is a GCC 16 regression: GCC 15, Clang and MSVC accept the same code. Workaround: include your system headers before the import.
 
