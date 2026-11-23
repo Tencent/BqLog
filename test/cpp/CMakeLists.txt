@@ -50,10 +50,13 @@ endif()
 bq_require_large_file_support()
 bq_default_target_platform()
 
+# Collected here and attached to this project's sources at the end of the file.
+set(BQ_WARNING_FLAGS "")
+
 #make __cplusplus correct in Visual Studio
 if (MSVC)
     string(APPEND CMAKE_CXX_FLAGS " /Zc:__cplusplus /utf-8 /bigobj")
-    add_compile_options(/W4 /WX)
+    list(APPEND BQ_WARNING_FLAGS /W4 /WX)
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fno-exceptions -fno-rtti")
     if (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
@@ -64,7 +67,7 @@ else()
         list(APPEND EXTRA_FLAGS -Warray-bounds)
     endif()
 
-    add_compile_options(
+    list(APPEND BQ_WARNING_FLAGS
             -Wall -Wextra -pedantic -Werror
             -Wundef -Wshadow -Wstrict-aliasing
             -Wcast-qual -Wconversion -Wsign-conversion
@@ -72,7 +75,7 @@ else()
             ${EXTRA_FLAGS}
     )
     if (TARGET_PLATFORM STREQUAL "ohos" AND CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-        add_compile_options(-Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
+        list(APPEND BQ_WARNING_FLAGS -Wno-unused-command-line-argument -Wno-error=unused-command-line-argument)
     endif()
 endif()
 
@@ -304,6 +307,14 @@ if(BQ_MODULE_TEST AND DEFINED CPP_VER AND CPP_VER GREATER_EQUAL 20 AND BQ_MODULE
         endforeach()
     endif()
 
+    # COLLECT_SRC_FILES does not pick these up, so the warning flags at the end of the file list them here.
+    list(APPEND BQ_MODULE_TEST_SOURCES
+            ${CMAKE_CURRENT_SOURCE_DIR}/../../include/bq_log/bq.log.cppm
+            ${CMAKE_CURRENT_SOURCE_DIR}/../module/module_test.cpp)
+    if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+        list(APPEND BQ_MODULE_TEST_SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/test_category_log.cppm)
+    endif()
+
     enable_testing()
     add_test(NAME module_entry COMMAND BqLogModuleUnitTest)
 
@@ -314,4 +325,12 @@ else()
     message(STATUS "Module entry test: skipped (needs C++20, CMake 3.28+, and MSVC with the Visual Studio generator, or Clang 16 / GCC 15 with Ninja)")
 endif()
 
+############################################################
+# Warning flags, on the sources of this project
+############################################################
+# On the sources, not the targets: CMake 4.4+ copies a target's COMPILE_OPTIONS to the synthetic
+# target that builds the standard library module, where -Werror would judge the toolchain's code.
+set(BQ_OWN_SOURCES ${SRC_LIST} ${LEGACY_DECODER_LIST} ${THIRD_PARTY_LIST} ${TEST_LIST} ${INC_LIST}
+        ${BQ_MODULE_TEST_SOURCES})
+set_source_files_properties(${BQ_OWN_SOURCES} PROPERTIES COMPILE_OPTIONS "${BQ_WARNING_FLAGS}")
 
