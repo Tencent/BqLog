@@ -19,9 +19,13 @@ module;
 
 export module bq.log;
 
+// extern "C++" attaches the headers to the global module, as an #include would: the library is
+// built from them without modules, so a definition owned by this module would collide with its copy.
+extern "C++" {
 // The headers mark their interface with these; the include entry sees them empty.
 #define BQ_MODULE_EXPORT_BEGIN export {
 #define BQ_MODULE_EXPORT_END }
 #include "bq_log/bq_log.h"
 #undef BQ_MODULE_EXPORT_BEGIN
 #undef BQ_MODULE_EXPORT_END
+}

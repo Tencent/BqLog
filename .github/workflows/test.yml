@@ -61,6 +61,33 @@ jobs:
           fi
           bash build/pack_test/module_verify.sh
 
+  #The module entry under Clang on Windows, in Debug: a definition the module owned used to collide
+  # there with the library's copy at link time.
+  module_verify_clang_windows:
+    name: module verify (windows clang)
+    runs-on: windows-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # The image's LLVM is older than its MSVC STL accepts (STL1000).
+      - name: Install Clang and Ninja
+        shell: bash
+        run: |
+          choco uninstall -y llvm --all-versions || true
+          for i in 1 2 3; do choco install -y llvm ninja && break; sleep 30; done
+          clang++ --version
+
+      - name: Build and run the module entry test
+        shell: bash
+        run: |
+          cmake -S test/cpp -B build_module_clang -G Ninja -DTARGET_PLATFORM=win64 \
+            -DCMAKE_BUILD_TYPE=Debug -DCPP_VER=20 -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang
+          cmake --build build_module_clang --target BqLogModuleUnitTest --parallel 2
+          test -f build_module_clang/bq_module_test_enabled
+          cd build_module_clang
+          ./BqLogModuleUnitTest.exe
+
   #The module entry under GCC (the default GCC 13 cannot build modules).
   # GCC 14 crashes with an internal compiler error (nonnull_arg_p) on a module that imports
   # bq.log, so the module test wants 15 or newer; both supported versions run here, in their

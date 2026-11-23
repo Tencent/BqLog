@@ -282,8 +282,11 @@
 #if defined(__cplusplus) && (__cplusplus >= 201703L)
 #define BQ_CPP_17 1
 #define BQ_CONSTEXPR_IF if constexpr
+// gives a namespace-scope constant external linkage, so a module entry can export it
+#define BQ_INLINE_CONSTEXPR inline constexpr
 #else
 #define BQ_CONSTEXPR_IF if
+#define BQ_INLINE_CONSTEXPR constexpr
 #endif
 
 #if defined(__cplusplus) && (__cplusplus >= 202002L)

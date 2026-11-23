@@ -132,6 +132,20 @@ int main()
     bq::log::enable_auto_crash_handle();
     report("enable_auto_crash_handle is callable", true);
 
+    // Every capability bit the API reference documents is in this module's surface, and the
+    // library sets nothing outside them.
+    const uint32_t documented_capabilities = bq::platform_capability::memory_map
+        | bq::platform_capability::multi_process
+        | bq::platform_capability::cross_process_file_lock
+        | bq::platform_capability::crash_handler
+        | bq::platform_capability::backtrace
+        | bq::platform_capability::dirent
+        | bq::platform_capability::thread_name
+        | bq::platform_capability::default_base_dir
+        | bq::platform_capability::user_counter;
+    report("get_platform_capabilities only sets documented bits",
+        (bq::log::get_platform_capabilities() & ~documented_capabilities) == 0);
+
     // ---- a log with one appender of every kind, plus a snapshot ------------------------
     const char* log_file = "module_api_test";
     char config[1400];
@@ -162,7 +176,9 @@ int main()
     remove("module_api_test_c_1.logcompr");
     remove("module_api_decoded.txt");
 
-    bq::log::register_console_callback(&on_console);
+    // The callback type the API takes is part of the module's surface too, not only its value.
+    const bq::type_func_ptr_console_callback console_callback = &on_console;
+    bq::log::register_console_callback(console_callback);
 
     bq::log log = bq::log::create_log(bq::string("module_api"), bq::string(config));
     report("create_log through the module", log.is_valid());

@@ -59,7 +59,7 @@ namespace bq {
             uint64_t v;
         };
 
-        constexpr uint64_t fast_site_refused = UINT64_C(1) << 63;
+        BQ_INLINE_CONSTEXPR uint64_t fast_site_refused = UINT64_C(1) << 63;
 
         struct fast_info_site_desc {
             uint32_t category;
@@ -226,7 +226,7 @@ namespace bq {
         }
 
         // what fast_slow_prepare returns instead of the meta address when do_log has to do the work
-        constexpr uint64_t fast_slow_fallback = 1;
+        BQ_INLINE_CONSTEXPR uint64_t fast_slow_fallback = 1;
 
         template <typename CHAR>
         BQ_FAST_INFO_HIDDEN bq_noinline uint64_t fast_slow_prepare(fast_info_site& site, const bq::log& l, const fast_info_site_desc& desc, const uint8_t* wire,
