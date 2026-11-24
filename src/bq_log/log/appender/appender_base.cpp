@@ -154,22 +154,18 @@ namespace bq {
             }
         }
 
+        // same matching rule as log.categories_mask and snapshot.categories_mask, plus "*" for all categories
         categories_mask_array_.clear();
         auto& categories_name_array_ = parent_log_->get_categories_name();
-        for (size_t i = 0; i < categories_name_array_.size(); ++i) {
-            const auto& category_name = categories_name_array_[i];
-            uint8_t mask = 0;
-            if (categories_mask_config_.size() == 0) {
-                mask = 1;
-            } else {
-                for (const bq::string& mask_config : categories_mask_config_) {
-                    if (mask_config == "*" || category_name.begin_with(mask_config)) {
-                        mask = 1;
-                        break;
-                    }
+        categories_mask_array_.fill_uninitialized(categories_name_array_.size());
+        bq::log_utils::get_categories_mask_by_config(categories_name_array_, config_obj["categories_mask"], categories_mask_array_);
+        for (const bq::string& mask_config : categories_mask_config_) {
+            if (mask_config == "*") {
+                for (size_t i = 0; i < categories_mask_array_.size(); ++i) {
+                    categories_mask_array_[i] = 1;
                 }
+                break;
             }
-            categories_mask_array_.push_back(mask);
         }
         if (parent_log_->get_thread_mode() == log_thread_mode::async) {
             layout_ptr_ = &log_manager::instance().get_public_layout();

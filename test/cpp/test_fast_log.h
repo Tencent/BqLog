@@ -292,6 +292,50 @@ namespace bq {
                 result.add_result(data.find("category 1 6") != bq::string::npos, "site level word: re-enabled by reset_config");
             }
 
+            // An appender's categories_mask uses the same rule as log.categories_mask: a whole name or a parent
+            // followed by '.', and "*default" for the default category; "*" keeps all categories.
+            static void test_appender_categories_mask(test_result& result)
+            {
+                char name[96];
+                snprintf(name, sizeof(name), "fast_mode_appender_mask_%" PRIu64,
+                    bq::platform::high_performance_epoch_ms());
+                const bq::string file_base = bq::string("fast_mode_output/") + name;
+                bq::string config = "log.thread_mode=sync\n";
+                const char* appender_names[] = { "shop", "default", "all" };
+                const char* appender_masks[] = { "[Shop]", "[*default]", "[*]" };
+                for (size_t i = 0; i < 3; ++i) {
+                    const bq::string prefix = bq::string("appenders_config.") + appender_names[i];
+                    config += prefix + ".type=text_file\n";
+                    config += prefix + ".levels=[all]\n";
+                    config += prefix + ".file_name=" + file_base + "_" + appender_names[i] + "\n";
+                    config += prefix + ".base_dir_type=0\n";
+                    config += prefix + ".enable_rolling_log_file=false\n";
+                    config += prefix + ".categories_mask=" + appender_masks[i] + "\n";
+                }
+                const char* categories[] = { "", "Shop", "Shop.Manager", "ShopEvent" };
+                bq::api::__api_create_log(name, config.c_str(), 4, categories);
+                bq::log log = bq::log::get_log_by_name(name);
+                result.add_result(log.is_valid(), "appender categories mask log create");
+                if (!log.is_valid()) {
+                    return;
+                }
+                BQ_LOG_FAST_INFO(log, bq::log_category_base<0>(), "mask record 0");
+                BQ_LOG_FAST_INFO(log, bq::log_category_base<1>(), "mask record 1");
+                BQ_LOG_FAST_INFO(log, bq::log_category_base<2>(), "mask record 2");
+                BQ_LOG_FAST_INFO(log, bq::log_category_base<3>(), "mask record 3");
+                log.force_flush();
+                const bq::string shop = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_base + "_shop_1.log", 0));
+                result.add_result(shop.find("mask record 0") == bq::string::npos && shop.find("mask record 1") != bq::string::npos
+                        && shop.find("mask record 2") != bq::string::npos && shop.find("mask record 3") == bq::string::npos,
+                    "appender categories mask [Shop]: Shop and Shop.Manager, not ShopEvent");
+                const bq::string def = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_base + "_default_1.log", 0));
+                result.add_result(def.find("mask record 0") != bq::string::npos && def.find("mask record 1") == bq::string::npos,
+                    "appender categories mask [*default]: default category only");
+                const bq::string all = bq::file_manager::read_all_text(TO_ABSOLUTE_PATH(file_base + "_all_1.log", 0));
+                result.add_result(all.find("mask record 0") != bq::string::npos && all.find("mask record 3") != bq::string::npos,
+                    "appender categories mask [*]: all categories");
+            }
+
             // A site whose registration the registry refuses must write through the ordinary log path
             // and must not repeat the registration: otherwise every call would add the format
             // normalization, the allocation and the registry lock on top of the ordinary path.
@@ -1629,6 +1673,7 @@ namespace bq {
                 test_generated_category(result);
                 test_level_bitmaps(result);
                 test_site_level_word(result);
+                test_appender_categories_mask(result);
                 test_meta_capacity_refusal(result);
                 test_hp_thread_info(result);
                 test_recovery(result);
