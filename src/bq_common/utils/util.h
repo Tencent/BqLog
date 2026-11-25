@@ -59,6 +59,12 @@ namespace bq {
         // Non-inline wrapper for bq_hash_only to reduce binary size in non-critical paths.
         static uint64_t get_hash_64(const void* data, size_t size);
 
+        // Legacy 2.8.0/2.8.1 software-table hash (entries 206/207 had bit 21 flipped); for reading existing files only.
+        static uint64_t get_legacy_sw_hash_64(const void* data, size_t size);
+
+        // Legacy 2.8.0/2.8.1 ARM hardware-CRC hash (IEEE 802.3 instead of CRC32C); for reading existing files only.
+        static uint64_t get_legacy_arm_hash_64(const void* data, size_t size);
+
         static bool is_little_endian();
 
         static void srand(uint32_t seed);
@@ -124,6 +130,10 @@ namespace bq {
         static uint32_t utf8_to_utf16_ascii(const char* BQ_RESTRICT src, uint32_t src_character_num, char16_t* BQ_RESTRICT dst, uint32_t dst_character_num);
 
 #ifdef BQ_UNIT_TEST
+        // The table path of bq_memcpy_with_hash and bq_hash_only, whether or not the CPU has CRC instructions.
+        static uint64_t bq_memcpy_with_hash_sw(void* BQ_RESTRICT dst, const void* BQ_RESTRICT src, size_t len);
+        static uint64_t bq_hash_only_sw(const void* src, size_t len);
+
         static uint32_t utf16_to_utf8_legacy(const char16_t* BQ_RESTRICT src_utf16_str, uint32_t src_character_num, char* BQ_RESTRICT dst_utf8_str, uint32_t dst_character_num);
         static uint32_t utf8_to_utf16_legacy(const char* BQ_RESTRICT src_utf8_str, uint32_t src_character_num, char16_t* BQ_RESTRICT dst_utf16_str, uint32_t dst_character_num);
 

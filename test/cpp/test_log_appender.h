@@ -676,8 +676,7 @@ namespace bq {
             void do_file_cleanup_test(test_result& result)
             {
                 test_output_dynamic(bq::log_level::info, "appender file cleanup test begin, please wait...          \r");
-                struct cleanup_case
-                {
+                struct cleanup_case {
                     const char* name;
                     const char* limit_config;
                     bool rolling;
@@ -781,6 +780,7 @@ namespace bq {
                     do_binary_appender_reset_to_plaintext_test(result, pub_key);
                     do_binary_segment_encryption_matrix_test(result, pub_key, priv_key);
                     do_binary_segment_key_boundary_test(result, pub_key, priv_key, pub_key_b);
+                    do_binary_segment_legacy_fingerprint_test(result, pub_key, priv_key);
                     do_binary_recovery_segment_test(result, pub_key);
                     do_text_recovery_marker_test(result);
                     do_binary_recovery_mmap_test(result, pub_key, pub_key_b);
@@ -1152,6 +1152,127 @@ namespace bq {
                         && fresh_segments.size() == 2;
                     result.add_result(fresh_ok, "fresh file reuses its metadata segment, encrypted:%d, segment_count:%zu",
                         static_cast<int32_t>(i), fresh_segments.size());
+                }
+            }
+
+            // Rewrites segment 0 with `fingerprint` and re-encrypts its payload under the derived key.
+            static bool rewrite_first_segment_fingerprint_for_test(const bq::string& path, const bq::string& private_key_pem, uint64_t fingerprint)
+            {
+                rsa::private_key key;
+                if (!rsa::parse_private_key_pem(private_key_pem, key)) {
+                    return false;
+                }
+                const size_t file_size = static_cast<size_t>(bq::file_manager::get_file_size(path));
+                const size_t segment_pos = sizeof(appender_file_binary::appender_file_header);
+                appender_file_binary::appender_file_segment_head segment_head;
+                appender_file_binary::appender_segment_encryption_head enc_head;
+                if (file_size < segment_pos + appender_file_binary::encrypted_payload_base_offset) {
+                    return false;
+                }
+                auto file = bq::file_manager::instance().open_file(path, bq::file_open_mode_enum::read_write);
+                if (!file) {
+                    return false;
+                }
+                bq::array<uint8_t> data;
+                data.fill_uninitialized(file_size);
+                bool ok = bq::file_manager::instance().read_file(file, data.begin(), file_size, bq::file_manager::seek_option::begin, 0) == file_size;
+                memcpy(&segment_head, data.begin() + segment_pos, sizeof(segment_head));
+                memcpy(&enc_head, data.begin() + segment_pos + sizeof(segment_head), sizeof(enc_head));
+                const size_t payload_begin = segment_pos + appender_file_binary::encrypted_payload_base_offset;
+                const size_t payload_end = segment_head.next_seg_pos == UINT64_MAX ? file_size : static_cast<size_t>(segment_head.next_seg_pos);
+                ok = ok && segment_head.enc_type == appender_file_binary::appender_encryption_type::rsa_kem_chacha
+                    && payload_begin <= payload_end && payload_end <= file_size;
+                bq::array<uint8_t> kem_ciphertext;
+                kem_ciphertext.insert_batch(kem_ciphertext.end(), enc_head.kem_ciphertext, appender_file_binary::kem_ciphertext_size);
+                bq::array<uint8_t> shared_secret;
+                appender_file_binary::segment_key old_key {};
+                appender_file_binary::segment_key new_key {};
+                ok = ok && rsa::kem_decapsulate(key, kem_ciphertext, shared_secret)
+                    && appender_file_binary::derive_segment_key(enc_head, shared_secret.begin(), shared_secret.size(), old_key);
+                enc_head.rsa_key_fingerprint = fingerprint;
+                ok = ok && appender_file_binary::derive_segment_key(enc_head, shared_secret.begin(), shared_secret.size(), new_key);
+                if (ok) {
+                    uint8_t* payload = data.begin() + payload_begin;
+                    appender_file_binary::transform_segment_payload(payload, payload_end - payload_begin, 0, old_key, enc_head.chacha_rounds);
+                    appender_file_binary::transform_segment_payload(payload, payload_end - payload_begin, 0, new_key, enc_head.chacha_rounds);
+                    memcpy(data.begin() + segment_pos + sizeof(segment_head), &enc_head, sizeof(enc_head));
+                    ok = bq::file_manager::instance().write_file(file, data.begin(), file_size, bq::file_manager::seek_option::begin, 0) == file_size;
+                }
+                bq::file_manager::instance().close_file(file);
+                return ok;
+            }
+
+            // Verifies the fixed CRC32C key fingerprint and backward compatibility with 2.8.0/2.8.1 legacy fingerprints.
+            void do_binary_segment_legacy_fingerprint_test(test_result& result, const bq::string& pub_key, const bq::string& private_key)
+            {
+                constexpr uint64_t fingerprint = 0xf5e6cddd4762302cULL;
+                constexpr uint64_t legacy_fingerprints[] = { 0x08c7b6c58ab5bf09ULL, 0xfb596fc229299747ULL };
+                rsa::public_key parsed_key;
+                result.add_result(rsa::parse_public_key_ssh(pub_key, parsed_key)
+                        && rsa::get_public_key_fingerprint(parsed_key) == fingerprint,
+                    "RSA key fingerprint fixed value");
+
+                clear_appender_file_base_test_folder();
+                log_imp log_obj;
+                bq::array<bq::string> categories;
+                categories.push_back("");
+                const auto log_config = bq::property_value::create_from_string(R"(
+                    log.recovery=false
+                    appenders_config.appender_0.type=console
+                )");
+                if (!log_obj.init("binary_segment_legacy_fingerprint", log_config, categories)) {
+                    result.add_result(false, "init legacy fingerprint parent log");
+                    return;
+                }
+                for (uint32_t i = 0; i < 3; ++i) {
+                    // case 2 carries a fingerprint of no variant, as a file of another key would
+                    const bool is_same_key = i < 2;
+                    const uint64_t written_fingerprint = is_same_key ? legacy_fingerprints[i] : (legacy_fingerprints[0] ^ 1ULL);
+                    char case_id[32];
+                    snprintf(case_id, sizeof(case_id), "%" PRIu32, i);
+                    const bq::string file_name = bq::string("appender_test/segment_legacy_fingerprint_") + case_id;
+                    const bq::string file_path = TO_ABSOLUTE_PATH(file_name + "_1.bt", 0);
+                    bool written = false;
+                    {
+                        appender_file_binary_for_test writer;
+                        written = writer.init("segment_legacy_first", make_binary_recovery_test_config(file_name, pub_key), &log_obj)
+                            && writer.write_payload_for_test(make_segment_payload(110 + i, 0));
+                    }
+                    written = written && rewrite_first_segment_fingerprint_for_test(file_path, private_key, written_fingerprint);
+                    result.add_result(written, "binary segment legacy fingerprint, write, case:%" PRIu32, i);
+
+                    // An upgraded build appends the crash recovery of the previous run to the old file.
+                    bool appended = false;
+                    {
+                        appender_file_binary_appender_recovery_for_test writer;
+                        appended = writer.init("segment_legacy_append", make_binary_recovery_test_config(file_name, pub_key), &log_obj)
+                            && writer.append_appender_recovery_to_file_for_test(file_path, make_segment_payload(110 + i, 1));
+                    }
+                    bq::array<appender_file_binary::appender_file_segment_head> segment_heads;
+                    bq::array<uint64_t> fingerprints;
+                    bool chain_ok = appended == is_same_key
+                        && read_binary_segment_chain_for_test(file_path, segment_heads, &fingerprints)
+                        && segment_heads.size() == (is_same_key ? 2U : 1U);
+                    for (size_t k = 0; k < fingerprints.size() && chain_ok; ++k) {
+                        chain_ok = fingerprints[k] == written_fingerprint;
+                    }
+                    result.add_result(chain_ok, "binary segment legacy fingerprint, append, case:%" PRIu32, i);
+
+                    auto file = bq::file_manager::instance().open_file(file_path, bq::file_open_mode_enum::read);
+                    appender_decoder_for_test decoder;
+                    bool decoded = false;
+                    if (is_same_key) {
+                        decoded = file
+                            && decoder.init(file, private_key) == appender_decode_result::success
+                            && decoder.read_payload_for_test(make_segment_payload(110 + i, 0))
+                            && decoder.read_payload_for_test(make_segment_payload(110 + i, 1))
+                            && decoder.is_eof_for_test();
+                    } else {
+                        decoded = file
+                            && decoder.init(file, private_key) == appender_decode_result::failed_decode_error;
+                    }
+                    bq::file_manager::instance().close_file(file);
+                    result.add_result(decoded, "binary segment legacy fingerprint, decode, case:%" PRIu32, i);
                 }
             }
 

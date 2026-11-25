@@ -3,6 +3,7 @@
 [English](CHANGELOG.md)
 
 ## [v2.8.3] - 2026-11-23
+- **问题修复**：加密日志：2.8.0 与 2.8.1 中哈希存在两处错误导致跨平台 RSA 公钥指纹不一致——软件 CRC32C 查表有两项错误（影响 Android、HarmonyOS、iOS/tvOS 真机、ARM Linux/Windows 及无 SSE4.2 的 x86）以及 ARM 硬件路径误用了 IEEE 802.3 CRC32 多项式（影响 Apple Silicon Mac、Apple 模拟器、watchOS `arm64_32`、visionOS），跨平台解码会报 `private key does not match the public key this file was encrypted with`。现在所有平台统一算出标准 CRC32C 指纹，同时解码与崩溃恢复兼容 2.8.0/2.8.1 的两种旧指纹，已有加密日志在任何平台上都能正常解开（[#96](https://github.com/Tencent/BqLog/issues/96)、[#101](https://github.com/Tencent/BqLog/issues/101)）。
 - **问题修复**：`capacity_limit` 与 `expire_time_*` 会把同目录下另一个 appender 的文件也算进额度并删掉，只要那个 appender 的 `file_name` 是本 appender 的 `file_name` 加 `_` 开头（`logs/app` 会删 `logs/app_error` 的文件）。现在每个 appender 只清理自己写出的文件。感谢 [@0z5a](https://github.com/0z5a) 的报告与修复（[#97](https://github.com/Tencent/BqLog/issues/97)、[#98](https://github.com/Tencent/BqLog/pull/98)）。
 - **问题修复**：C++20 模块：Windows 上用 Clang 以 Debug 构建、`import bq.log` 的程序，链接库时报重复符号（`bq::fast_format_meta::arg_types` 等）。`import bq.log;` 导出的内容不变，旧版 `BqLog_CategoryLogGenerator` 生成的分类日志模块无需改动、照常可用。
 

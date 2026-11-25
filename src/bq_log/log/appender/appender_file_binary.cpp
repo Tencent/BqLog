@@ -63,7 +63,8 @@ namespace bq {
         const rsa::private_key& key, segment_key& out, uint8_t& rounds)
     {
         // Decapsulation succeeds for any key, so this is the only way to tell a wrong one.
-        if (head.rsa_key_fingerprint != rsa::get_public_key_fingerprint(key.n_, key.e_)) {
+        // Files written by 2.8.0 and 2.8.1 may carry one of two other variants of the fingerprint.
+        if (!rsa::is_public_key_fingerprint_of(head.rsa_key_fingerprint, key.n_, key.e_)) {
             bq::util::log_device_console(bq::log_level::error, "decode log file failed, private key does not match the public key this file was encrypted with");
             return false;
         }
@@ -573,11 +574,16 @@ namespace bq {
             bq::util::log_device_console(bq::log_level::error, "binary appender refused to append a segment to invalid topology: %s", get_file_handle().abs_file_path().c_str());
             return false;
         }
-        if (enc_type_ != appender_encryption_type::plaintext
-            && topology.has_encrypted_segment
-            && topology.rsa_key_fingerprint != rsa_key_fingerprint_) {
-            bq::util::log_device_console(bq::log_level::warning, "binary appender refused to append a segment with a different RSA key: %s", get_file_handle().abs_file_path().c_str());
-            return false;
+        // A file started by 2.8.0 or 2.8.1 may carry another variant of this key's fingerprint, see
+        // rsa::is_public_key_fingerprint_of. Keep writing that value so all its segments agree.
+        uint64_t segment_fingerprint = rsa_key_fingerprint_;
+        if (enc_type_ != appender_encryption_type::plaintext && topology.has_encrypted_segment) {
+            if (topology.rsa_key_fingerprint != rsa_key_fingerprint_
+                && !rsa::is_public_key_fingerprint_of(topology.rsa_key_fingerprint, rsa_pub_key_.n_, rsa_pub_key_.e_)) {
+                bq::util::log_device_console(bq::log_level::warning, "binary appender refused to append a segment with a different RSA key: %s", get_file_handle().abs_file_path().c_str());
+                return false;
+            }
+            segment_fingerprint = topology.rsa_key_fingerprint;
         }
 
         bq::encryption::secure_zero(&cur_seg_key_, sizeof(cur_seg_key_));
@@ -588,7 +594,7 @@ namespace bq {
                     "no secure random source left for segment key material; segment keys are derived from a software mix: %s", get_file_handle().abs_file_path().c_str());
                 warned_weak_key_source_ = true;
             }
-            enc_head.rsa_key_fingerprint = rsa_key_fingerprint_;
+            enc_head.rsa_key_fingerprint = segment_fingerprint;
             enc_head.chacha_rounds = default_chacha_rounds;
             memset(enc_head.reserved, 0, sizeof(enc_head.reserved));
             bq::array<uint8_t> kem_ciphertext;

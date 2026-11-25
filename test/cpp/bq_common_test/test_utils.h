@@ -140,6 +140,51 @@ namespace bq {
                     }
                 }
 
+                // Fixed CRC32C and legacy 2.8.0/2.8.1 golden hashes across all length branches (31/100/267 hit table 206/207).
+                {
+                    struct hash_golden {
+                        size_t len;
+                        uint64_t hash;
+                        uint64_t legacy_sw_hash;
+                        uint64_t legacy_arm_hash;
+                    };
+                    static const hash_golden goldens[] = {
+                        { 0, 0x0000000000000000ULL, 0x0000000000000000ULL, 0x0000000000000000ULL },
+                        { 1, 0x74dcb4b900000000ULL, 0x74dcb4b900000000ULL, 0x3b614ab800000000ULL },
+                        { 2, 0x000000007b8dde09ULL, 0x000000007b8dde09ULL, 0x00000000267432c7ULL },
+                        { 3, 0x93fbad78682f467eULL, 0x93fbad78682f467eULL, 0x0762ae693f6f0386ULL },
+                        { 5, 0x1a79aa2a5ff76011ULL, 0x1a79aa2a5ff76011ULL, 0x4a622339f7f5f425ULL },
+                        { 8, 0x6189f25723b2f68dULL, 0x6189f25723b2f68dULL, 0xa041385373a423e6ULL },
+                        { 13, 0xd6f6ca1a23b2f68dULL, 0xd6f6ca1a23b2f68dULL, 0x8c257bd873a423e6ULL },
+                        { 16, 0x0983ea57ddc1b904ULL, 0x0983ea57ddc1b904ULL, 0x80d592ef563e3dd8ULL },
+                        { 31, 0x5099209e2de0f73cULL, 0x5099209e04f75976ULL, 0x8f4557b982341e74ULL },
+                        { 32, 0x6a3a4ee42f617ee2ULL, 0x6a3a4ee42f617ee2ULL, 0x06cefddf97288679ULL },
+                        { 33, 0x04799e87cd89fb2eULL, 0x04799e87cd89fb2eULL, 0x6fe88c249b4b7d51ULL },
+                        { 64, 0xa6a28b2a84c35031ULL, 0xa6a28b2a84c35031ULL, 0xc29eca208247a167ULL },
+                        { 100, 0x0aa43a8e93c9f476ULL, 0xde940bfe93c9f476ULL, 0x978f6a5c9c6b883cULL },
+                        { 267, 0xbd43ffb418f70720ULL, 0xa4095002f7cd8bbdULL, 0xb7c89cdccab0101fULL },
+                    };
+                    uint8_t golden_src[512];
+                    for (size_t k = 0; k < sizeof(golden_src); ++k) {
+                        golden_src[k] = static_cast<uint8_t>(k * 13 + 7);
+                    }
+                    uint8_t golden_dst[512];
+                    for (const auto& golden : goldens) {
+                        result.add_result(bq::util::get_hash_64(golden_src, golden.len) == golden.hash,
+                            "get_hash_64 fixed value, len=%" PRIu64, static_cast<uint64_t>(golden.len));
+                        result.add_result(bq::util::bq_memcpy_with_hash(golden_dst, golden_src, golden.len) == golden.hash,
+                            "bq_memcpy_with_hash fixed value, len=%" PRIu64, static_cast<uint64_t>(golden.len));
+                        result.add_result(bq::util::bq_hash_only_sw(golden_src, golden.len) == golden.hash,
+                            "bq_hash_only_sw fixed value, len=%" PRIu64, static_cast<uint64_t>(golden.len));
+                        result.add_result(bq::util::bq_memcpy_with_hash_sw(golden_dst, golden_src, golden.len) == golden.hash,
+                            "bq_memcpy_with_hash_sw fixed value, len=%" PRIu64, static_cast<uint64_t>(golden.len));
+                        result.add_result(bq::util::get_legacy_sw_hash_64(golden_src, golden.len) == golden.legacy_sw_hash,
+                            "get_legacy_sw_hash_64 fixed value, len=%" PRIu64, static_cast<uint64_t>(golden.len));
+                        result.add_result(bq::util::get_legacy_arm_hash_64(golden_src, golden.len) == golden.legacy_arm_hash,
+                            "get_legacy_arm_hash_64 fixed value, len=%" PRIu64, static_cast<uint64_t>(golden.len));
+                    }
+                }
+
                 // =================================================================================
                 // Test for bq::util::get_hash and bq::util::get_hash_64
                 // =================================================================================
@@ -160,6 +205,12 @@ namespace bq {
                     size_t real_data_size = size - static_cast<size_t>(8);
                     uint32_t base_hash_32 = bq::util::get_hash(data_base, real_data_size);
                     uint64_t base_hash_64 = bq::util::get_hash_64(data_base, real_data_size);
+                    // Compare default (HW when available) against the software table path.
+                    result.add_result(base_hash_64 == bq::util::bq_hash_only_sw(data_base, real_data_size),
+                        "hash64 equals the table path, data size %" PRIu64, static_cast<uint64_t>(real_data_size));
+                    result.add_result(base_hash_64 == bq::util::bq_memcpy_with_hash_sw(target_base, data_base, real_data_size)
+                            && memcmp(target_base, data_base, real_data_size) == 0,
+                        "memcpy_with_hash_sw matches hash64, data size %" PRIu64, static_cast<uint64_t>(real_data_size));
                     uint8_t* data_tmp = data_base;
                     for (size_t offset = 1; offset < 8; ++offset) {
                         ++data_tmp;

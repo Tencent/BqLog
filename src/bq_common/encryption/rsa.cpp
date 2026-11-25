@@ -22,7 +22,8 @@
 #include "bq_common/encryption/random_bytes.h"
 
 namespace bq {
-    static uint64_t get_public_key_fingerprint(const bq::array<uint8_t>& n, const bq::array<uint8_t>& e)
+    static uint64_t get_public_key_fingerprint(const bq::array<uint8_t>& n, const bq::array<uint8_t>& e,
+        uint64_t (*hash_func)(const void*, size_t))
     {
         if (n.is_empty() || e.is_empty()) {
             return 0;
@@ -49,7 +50,7 @@ namespace bq {
         cursor[3] = static_cast<uint8_t>(e_size);
         cursor += sizeof(uint32_t);
         memcpy(cursor, e.begin(), e.size());
-        return bq::util::get_hash_64(data_begin, data.size());
+        return hash_func(data_begin, data.size());
     }
 
     static uint32_t load_u32_be(const uint8_t* p)
@@ -1321,12 +1322,22 @@ namespace bq {
 
     uint64_t rsa::get_public_key_fingerprint(const public_key& key)
     {
-        return bq::get_public_key_fingerprint(key.n_, key.e_);
+        return bq::get_public_key_fingerprint(key.n_, key.e_, &bq::util::get_hash_64);
     }
 
     uint64_t rsa::get_public_key_fingerprint(const bq::array<uint8_t>& n, const bq::array<uint8_t>& e)
     {
-        return bq::get_public_key_fingerprint(n, e);
+        return bq::get_public_key_fingerprint(n, e, &bq::util::get_hash_64);
+    }
+
+    bool rsa::is_public_key_fingerprint_of(uint64_t fingerprint, const bq::array<uint8_t>& n, const bq::array<uint8_t>& e)
+    {
+        if (fingerprint == 0 || n.is_empty() || e.is_empty()) {
+            return false;
+        }
+        return fingerprint == bq::get_public_key_fingerprint(n, e, &bq::util::get_hash_64)
+            || fingerprint == bq::get_public_key_fingerprint(n, e, &bq::util::get_legacy_sw_hash_64)
+            || fingerprint == bq::get_public_key_fingerprint(n, e, &bq::util::get_legacy_arm_hash_64);
     }
 
     bool rsa::encrypt(const public_key& pub, const bq::array<uint8_t>& plaintext, bq::array<uint8_t>& out_ciphertext)
