@@ -18,7 +18,7 @@
 [![Nintendo Switch](https://img.shields.io/badge/Switch-experimental-lightgrey?logo=nintendoswitch&style=flat)]()
 [![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
 
-[![Homebrew](https://img.shields.io/badge/Homebrew-bqlog-orange?logo=homebrew&logoColor=white&style=flat)](https://formulae.brew.sh/formula/bqlog)
+[![Homebrew](https://img.shields.io/homebrew/v/bqlog?logo=homebrew&logoColor=white&label=homebrew&style=flat)](https://formulae.brew.sh/formula/bqlog)
 [![NuGet](https://img.shields.io/nuget/v/BqLog?logo=nuget&label=nuget&style=flat)](https://www.nuget.org/packages/BqLog)
 [![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/java?label=maven%20java&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/java)
 [![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/android?label=maven%20android&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/android)
