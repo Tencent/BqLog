@@ -75,6 +75,9 @@ namespace bq {
 
         static uint64_t get_public_key_fingerprint(const bq::array<uint8_t>& n, const bq::array<uint8_t>& e);
 
+        // Matches the current CRC32C fingerprint or the two legacy 2.8.0/2.8.1 variants.
+        static bool is_public_key_fingerprint_of(uint64_t fingerprint, const bq::array<uint8_t>& n, const bq::array<uint8_t>& e);
+
         // Encrypt: output ciphertext is k bytes, plaintext must be integer < modulus
         static bool encrypt(const public_key& pub,
             const bq::array<uint8_t>& plaintext,

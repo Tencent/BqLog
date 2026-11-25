@@ -40,15 +40,15 @@ namespace bq {
 
     // Bits of log::get_platform_capabilities(): what the linked library was built with.
     namespace platform_capability {
-        constexpr uint32_t memory_map = 1u << 0;
-        constexpr uint32_t multi_process = 1u << 1;
-        constexpr uint32_t cross_process_file_lock = 1u << 2;
-        constexpr uint32_t crash_handler = 1u << 3;
-        constexpr uint32_t backtrace = 1u << 4;
-        constexpr uint32_t dirent = 1u << 5;
-        constexpr uint32_t thread_name = 1u << 6;
-        constexpr uint32_t default_base_dir = 1u << 7;
-        constexpr uint32_t user_counter = 1u << 8;
+        BQ_INLINE_CONSTEXPR uint32_t memory_map = 1u << 0;
+        BQ_INLINE_CONSTEXPR uint32_t multi_process = 1u << 1;
+        BQ_INLINE_CONSTEXPR uint32_t cross_process_file_lock = 1u << 2;
+        BQ_INLINE_CONSTEXPR uint32_t crash_handler = 1u << 3;
+        BQ_INLINE_CONSTEXPR uint32_t backtrace = 1u << 4;
+        BQ_INLINE_CONSTEXPR uint32_t dirent = 1u << 5;
+        BQ_INLINE_CONSTEXPR uint32_t thread_name = 1u << 6;
+        BQ_INLINE_CONSTEXPR uint32_t default_base_dir = 1u << 7;
+        BQ_INLINE_CONSTEXPR uint32_t user_counter = 1u << 8;
     }
 
     // Fills buf with size bytes of cryptographically secure random data, or returns false when it cannot.

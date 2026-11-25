@@ -403,7 +403,7 @@ namespace bq {
     constexpr uint8_t fast_log_arg_types<bq::tuple<Args...>>::values[sizeof...(Args) + 1];
 #endif
 
-    constexpr uint64_t fast_log_refused_meta = ~UINT64_C(0);
+    BQ_INLINE_CONSTEXPR uint64_t fast_log_refused_meta = ~UINT64_C(0);
 
     // One per format type: the argument types arrive as data, so sites that differ only in their
     // argument types share this code.
