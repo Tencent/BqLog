@@ -24,7 +24,7 @@ cmake -S "${PLUGIN_DIR}" -B "${BUILD_DIR}" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
     -DBQLOG_LIB_PATH="${BQLOG_LIB}" \
     -DBQLOG_GODOT_OUTPUT_NAME=BqLogGodot.macos.universal \
-    "${EXTRA_ARGS[@]}"
+    ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
 cmake --build "${BUILD_DIR}" --parallel "$(sysctl -n hw.ncpu)"
 

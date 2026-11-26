@@ -32,7 +32,7 @@ build_slice() {
         -DDEPLOYMENT_TARGET=12.0 \
         -DBQLOG_LIB_PATH="${BQLOG_FW}/BqLog" \
         -DBQLOG_GODOT_OUTPUT_NAME=BqLogGodot \
-        "${EXTRA_ARGS[@]}"
+        ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
     cmake --build "${BUILD_DIR}" --config RelWithDebInfo --parallel "$(sysctl -n hw.ncpu)"
 }

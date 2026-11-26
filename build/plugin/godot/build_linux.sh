@@ -27,7 +27,7 @@ cmake -S "${PLUGIN_DIR}" -B "${BUILD_DIR}" \
     -DCMAKE_BUILD_TYPE=RelWithDebInfo \
     -DBQLOG_LIB_PATH="${BQLOG_LIB}" \
     -DBQLOG_GODOT_OUTPUT_NAME=BqLogGodot \
-    "${EXTRA_ARGS[@]}"
+    ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
 cmake --build "${BUILD_DIR}" --parallel "$(nproc)"
 
