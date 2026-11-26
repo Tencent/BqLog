@@ -10,6 +10,8 @@ var _passed: int = 0
 var _console_events: Array = []
 var _reentrant_logger: BqLog = null
 var _reentrant_calls: int = 0
+var _done: bool = false
+var _exit_code: int = 1
 
 
 func _assert_true(cond: bool, msg: String) -> void:
@@ -68,7 +70,15 @@ func _initialize() -> void:
 
 	BqLog.force_flush_all_logs()
 	print("=== BqLog Godot AutoTest Done: passed=%d, failed=%d ===" % [_passed, _failed])
-	quit(0 if _failed == 0 else 1)
+	_exit_code = 0 if _failed == 0 else 1
+	_done = true
+
+
+func _process(_delta: float) -> bool:
+	if _done:
+		quit(_exit_code)
+		return true
+	return false
 
 
 func _test_basic_metadata() -> void:

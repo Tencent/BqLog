@@ -2452,8 +2452,9 @@ jobs:
           BQLOG_GODOT_CMAKE_ARGS="-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON" \
             bash build/plugin/godot/build_linux.sh "$(pwd)/staged_lib/libBqLog.so" x86_64
 
-          mkdir -p test/godot/addons/bqlog/bin/linux/x86_64 test/godot/generated
+          mkdir -p test/godot/addons/bqlog/bin/linux/x86_64 test/godot/generated test/godot/.godot
           cp plugin/godot/addons/bqlog/plugin.cfg plugin/godot/addons/bqlog/bqlog.gdextension test/godot/addons/bqlog/
+          echo "res://addons/bqlog/bqlog.gdextension" > test/godot/.godot/extension_list.cfg
           cp -Lf staged_lib/libBqLog.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLog.so
           cp -Lf build/plugin/godot/out/linux/x86_64/libBqLogGodot.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLogGodot.so
           ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
@@ -2490,8 +2491,9 @@ jobs:
           cmd /c "build\plugin\godot\build_win64.bat `"$bqLib`" x64"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-          New-Item -ItemType Directory -Force test\godot\addons\bqlog\bin\windows\x86_64, test\godot\generated | Out-Null
+          New-Item -ItemType Directory -Force test\godot\addons\bqlog\bin\windows\x86_64, test\godot\generated, test\godot\.godot | Out-Null
           Copy-Item plugin\godot\addons\bqlog\plugin.cfg, plugin\godot\addons\bqlog\bqlog.gdextension test\godot\addons\bqlog\ -Force
+          Set-Content -Path test\godot\.godot\extension_list.cfg -Value "res://addons/bqlog/bqlog.gdextension" -Encoding ascii
           Copy-Item $bqDll, build\plugin\godot\out\windows\x86_64\BqLogGodot.dll test\godot\addons\bqlog\bin\windows\x86_64\ -Force
           & artifacts\tools\bin\Release\BqLog_CategoryLogGenerator.exe test_category_log test\godot\test_category.cfg test\godot\generated
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
@@ -2537,8 +2539,9 @@ jobs:
           BQLOG_GODOT_CMAKE_ARGS="-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON" \
             bash build/plugin/godot/build_macos.sh "$(pwd)/staged_mac/libBqLog.dylib"
 
-          mkdir -p test/godot/addons/bqlog/bin/macos test/godot/generated
+          mkdir -p test/godot/addons/bqlog/bin/macos test/godot/generated test/godot/.godot
           cp plugin/godot/addons/bqlog/plugin.cfg plugin/godot/addons/bqlog/bqlog.gdextension test/godot/addons/bqlog/
+          echo "res://addons/bqlog/bqlog.gdextension" > test/godot/.godot/extension_list.cfg
           cp -Lf staged_mac/libBqLog.dylib test/godot/addons/bqlog/bin/macos/libBqLog.dylib
           cp -Lf build/plugin/godot/out/macos/libBqLogGodot.macos.universal.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodot.macos.universal.dylib
           ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
