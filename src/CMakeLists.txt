@@ -321,6 +321,13 @@ else()
     endif()
 endif()
 
+# Keep shared library mapped for process lifetime (immortal singleton + background worker threads).
+if(NOT BUILD_LIB_TYPE STREQUAL "static_lib")
+    if(TARGET_PLATFORM MATCHES "^(linux|android|ohos|unix)$")
+        target_link_options(BqLog PRIVATE "-Wl,-z,nodelete")
+    endif()
+endif()
+
 # What an exported consumer sees: the public include root, never the src/ internals.
 target_include_directories(BqLog PUBLIC
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/../include>

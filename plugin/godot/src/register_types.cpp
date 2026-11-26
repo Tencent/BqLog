@@ -21,30 +21,12 @@
 #include "bq_log/bq_log.h"
 #include "bq_log_godot.h"
 #include "bq_log_godot_console.h"
-#if defined(BQ_WIN)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#endif
 
 void initialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
 {
     if (level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
     }
-
-#if defined(BQ_WIN)
-    // Pin BqLog.dll for process lifetime so FreeLibrary(BqLogGodot.dll) during
-    // GDExtension teardown never unmaps BqLog.dll while worker threads are active.
-    HMODULE bqlog_module = nullptr;
-    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"BqLog.dll", &bqlog_module)) {
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"libBqLog.dll", &bqlog_module);
-    }
-#endif
 
     godot::ClassDB::register_class<bq_log_category>();
     godot::ClassDB::register_class<bq_log_base>();
