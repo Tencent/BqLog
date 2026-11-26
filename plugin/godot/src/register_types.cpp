@@ -24,6 +24,15 @@
 #if defined(BQLOG_GODOT_ENABLE_TEST_HELPER)
 #include "bq_log_godot_adapter.h"
 #endif
+#if defined(_WIN32)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef NOMINMAX
+#define NOMINMAX
+#endif
+#include <windows.h>
+#endif
 
 #if defined(BQLOG_GODOT_ENABLE_TEST_HELPER)
 class BqLogGodotCppTestHelper : public godot::RefCounted {
@@ -62,6 +71,16 @@ void initialize_bqlog_godot_module(godot::ModuleInitializationLevel p_level)
     if (p_level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
     }
+
+#if defined(_WIN32)
+    // Pin BqLog.dll for the process lifetime so Godot's FreeLibrary(BqLogGodot.dll)
+    // during GDExtension teardown never unmaps BqLog.dll while its async/independent
+    // worker threads are still running.
+    HMODULE bqlog_module = nullptr;
+    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"BqLog.dll", &bqlog_module)) {
+        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"libBqLog.dll", &bqlog_module);
+    }
+#endif
 
     godot::ClassDB::register_class<BqLogCategory>();
     godot::ClassDB::register_class<BqLogBase>();
