@@ -2467,13 +2467,12 @@ jobs:
           "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
 
           # Godot C# (.NET) + GDScript shared-singleton interop test
-          mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64
+          mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64 test/godot_csharp/.godot
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
+          echo "res://addons/bqlog/bqlog.gdextension" > test/godot_csharp/.godot/extension_list.cfg
           dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
           LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit || true
-          LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp
+            "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
 
       - name: Build and test Godot plugin via build_win64.bat (Windows)
         if: matrix.os == 'windows-latest'
@@ -2514,13 +2513,12 @@ jobs:
 
           Copy-Item -Recurse -Force test\godot\addons test\godot_csharp\
           Copy-Item $bqDll test\godot_csharp\ -Force
+          New-Item -ItemType Directory -Force test\godot_csharp\.godot | Out-Null
+          Set-Content -Path test\godot_csharp\.godot\extension_list.cfg -Value "res://addons/bqlog/bqlog.gdextension" -Encoding ascii
           dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:PATH = "$(Resolve-Path test\godot_csharp\addons\bqlog\bin\windows\x86_64);$env:PATH"
-          $ErrorActionPreference = 'Continue'
-          & $godotExe --headless --path test\godot_csharp --import --quit
-          $ErrorActionPreference = 'Stop'
-          & $godotExe --headless --path test\godot_csharp
+          & $godotExe --headless --path test\godot_csharp --quit-after 120
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
       - name: Build and test Godot plugin via build_macos.sh (macOS)
@@ -2553,10 +2551,9 @@ jobs:
           "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
 
           # Godot C# (.NET) + GDScript shared-singleton interop test
-          mkdir -p test/godot_csharp/addons/bqlog/bin/macos
+          mkdir -p test/godot_csharp/addons/bqlog/bin/macos test/godot_csharp/.godot
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
+          echo "res://addons/bqlog/bqlog.gdextension" > test/godot_csharp/.godot/extension_list.cfg
           dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
           DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit || true
-          DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp
+            "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120

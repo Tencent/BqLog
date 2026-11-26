@@ -33,65 +33,28 @@ namespace bq_godot {
     static constexpr uint8_t k_type_int64 = static_cast<uint8_t>(bq::log_arg_type_enum::int64_type);
     static constexpr uint8_t k_type_double = static_cast<uint8_t>(bq::log_arg_type_enum::double_type);
     static constexpr uint8_t k_type_str8 = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf8_type);
+    static constexpr uint8_t k_type_str16 = static_cast<uint8_t>(bq::log_arg_type_enum::string_utf16_type);
 
     static inline uint32_t align4(uint32_t v)
     {
         return (v + 3u) & ~3u;
     }
 
-    // Measure UTF-8 encoded byte length of a UTF-32 Godot String without heap allocation.
-    static uint32_t calc_utf32_to_utf8_len(const char32_t* src, int64_t len)
+    static inline uint32_t calc_utf32_to_utf16_bytes(const char32_t* src, int64_t len)
     {
-        uint32_t total = 0u;
-        for (int64_t i = 0; i < len; ++i) {
-            const uint32_t cp = static_cast<uint32_t>(src[i]);
-            if (cp <= 0x7Fu) {
-                total += 1u;
-            } else if (cp <= 0x7FFu) {
-                total += 2u;
-            } else if (cp <= 0xFFFFu) {
-                if (cp >= 0xD800u && cp <= 0xDFFFu) {
-                    total += 3u; // U+FFFD replacement
-                } else {
-                    total += 3u;
-                }
-            } else if (cp <= 0x10FFFFu) {
-                total += 4u;
-            } else {
-                total += 3u; // U+FFFD replacement
-            }
+        if (!src || len <= 0) {
+            return 0u;
         }
-        return total;
+        return static_cast<uint32_t>(
+            bq::tools::_serialize_str_helper_by_encode<char32_t>::get_c_style_string_storage_size(
+                src, static_cast<size_t>(len)));
     }
 
-    // Encode UTF-32 Godot String directly into destination buffer as UTF-8.
-    static void encode_utf32_to_utf8(const char32_t* src, int64_t len, uint8_t* dst)
+    static inline void copy_utf32_to_utf16(uint8_t* dst, const char32_t* src, uint32_t utf16_bytes)
     {
-        uint8_t* out = dst;
-        for (int64_t i = 0; i < len; ++i) {
-            uint32_t cp = static_cast<uint32_t>(src[i]);
-            if (cp <= 0x7Fu) {
-                *out++ = static_cast<uint8_t>(cp);
-            } else if (cp <= 0x7FFu) {
-                *out++ = static_cast<uint8_t>(0xC0u | (cp >> 6u));
-                *out++ = static_cast<uint8_t>(0x80u | (cp & 0x3Fu));
-            } else if (cp <= 0xFFFFu) {
-                if (cp >= 0xD800u && cp <= 0xDFFFu) {
-                    cp = 0xFFFDu;
-                }
-                *out++ = static_cast<uint8_t>(0xE0u | (cp >> 12u));
-                *out++ = static_cast<uint8_t>(0x80u | ((cp >> 6u) & 0x3Fu));
-                *out++ = static_cast<uint8_t>(0x80u | (cp & 0x3Fu));
-            } else if (cp <= 0x10FFFFu) {
-                *out++ = static_cast<uint8_t>(0xF0u | (cp >> 18u));
-                *out++ = static_cast<uint8_t>(0x80u | ((cp >> 12u) & 0x3Fu));
-                *out++ = static_cast<uint8_t>(0x80u | ((cp >> 6u) & 0x3Fu));
-                *out++ = static_cast<uint8_t>(0x80u | (cp & 0x3Fu));
-            } else {
-                *out++ = 0xEFu;
-                *out++ = 0xBFu;
-                *out++ = 0xBDu;
-            }
+        if (utf16_bytes > 0u && src) {
+            bq::tools::_serialize_str_helper_by_encode<char32_t>::c_style_string_copy(
+                dst, src, static_cast<size_t>(utf16_bytes));
         }
     }
 
@@ -101,7 +64,7 @@ namespace bq_godot {
             bool_val,
             int64_val,
             double_val,
-            str32_val,
+            str16_from_godot_val,
             inline_utf8_val
         };
 
@@ -135,22 +98,16 @@ namespace bq_godot {
             slot.pod_.double_val_ = static_cast<double>(v);
             break;
         case godot::Variant::STRING: {
-            slot.kind_ = godot_arg_slot::arg_kind::str32_val;
+            slot.kind_ = godot_arg_slot::arg_kind::str16_from_godot_val;
             slot.str_holder_ = v;
-            const int64_t len = slot.str_holder_.length();
-            slot.byte_len_ = (len > 0 && slot.str_holder_.ptr())
-                ? calc_utf32_to_utf8_len(slot.str_holder_.ptr(), len)
-                : 0u;
+            slot.byte_len_ = calc_utf32_to_utf16_bytes(slot.str_holder_.ptr(), slot.str_holder_.length());
             break;
         }
         case godot::Variant::STRING_NAME: {
-            slot.kind_ = godot_arg_slot::arg_kind::str32_val;
+            slot.kind_ = godot_arg_slot::arg_kind::str16_from_godot_val;
             godot::StringName sn = v;
             slot.str_holder_ = godot::String(sn);
-            const int64_t len = slot.str_holder_.length();
-            slot.byte_len_ = (len > 0 && slot.str_holder_.ptr())
-                ? calc_utf32_to_utf8_len(slot.str_holder_.ptr(), len)
-                : 0u;
+            slot.byte_len_ = calc_utf32_to_utf16_bytes(slot.str_holder_.ptr(), slot.str_holder_.length());
             break;
         }
         case godot::Variant::VECTOR2: {
@@ -210,12 +167,9 @@ namespace bq_godot {
             break;
         }
         default: {
-            slot.kind_ = godot_arg_slot::arg_kind::str32_val;
+            slot.kind_ = godot_arg_slot::arg_kind::str16_from_godot_val;
             slot.str_holder_ = v.stringify();
-            const int64_t len = slot.str_holder_.length();
-            slot.byte_len_ = (len > 0 && slot.str_holder_.ptr())
-                ? calc_utf32_to_utf8_len(slot.str_holder_.ptr(), len)
-                : 0u;
+            slot.byte_len_ = calc_utf32_to_utf16_bytes(slot.str_holder_.ptr(), slot.str_holder_.length());
             break;
         }
         }
@@ -230,7 +184,7 @@ namespace bq_godot {
         case godot_arg_slot::arg_kind::int64_val:
         case godot_arg_slot::arg_kind::double_val:
             return 12u;
-        case godot_arg_slot::arg_kind::str32_val:
+        case godot_arg_slot::arg_kind::str16_from_godot_val:
         case godot_arg_slot::arg_kind::inline_utf8_val:
             return align4(8u + slot.byte_len_);
         }
@@ -266,15 +220,13 @@ namespace bq_godot {
             dst[3] = 0u;
             memcpy(dst + 4, &slot.pod_.double_val_, sizeof(double));
             break;
-        case godot_arg_slot::arg_kind::str32_val:
-            dst[0] = k_type_str8;
+        case godot_arg_slot::arg_kind::str16_from_godot_val:
+            dst[0] = k_type_str16;
             dst[1] = 0u;
             dst[2] = 0u;
             dst[3] = 0u;
             memcpy(dst + 4, &slot.byte_len_, sizeof(uint32_t));
-            if (slot.byte_len_ > 0u && slot.str_holder_.ptr()) {
-                encode_utf32_to_utf8(slot.str_holder_.ptr(), slot.str_holder_.length(), dst + 8);
-            }
+            copy_utf32_to_utf16(dst + 8, slot.str_holder_.ptr(), slot.byte_len_);
             break;
         case godot_arg_slot::arg_kind::inline_utf8_val:
             dst[0] = k_type_str8;
@@ -297,11 +249,8 @@ namespace bq_godot {
         const godot::Variant* const* args,
         int64_t arg_count)
     {
-        const int64_t fmt_char_len = format_str.length();
         const char32_t* fmt_ptr = format_str.ptr();
-        const uint32_t fmt_utf8_len = (fmt_char_len > 0 && fmt_ptr)
-            ? calc_utf32_to_utf8_len(fmt_ptr, fmt_char_len)
-            : 0u;
+        const uint32_t fmt_utf16_bytes = calc_utf32_to_utf16_bytes(fmt_ptr, format_str.length());
 
         godot_arg_slot stack_slots[k_stack_arg_capacity];
         godot_arg_slot* slots = stack_slots;
@@ -318,13 +267,13 @@ namespace bq_godot {
         }
 
         // Pass nullptr for format_str_data so BqLog reserves the slot without extra copy,
-        // then encode UTF-32 -> UTF-8 directly into handle.format_data_addr.
+        // then convert UTF-32 -> UTF-16 directly into handle.format_data_addr.
         bq::_api_log_write_handle handle = bq::api::__api_log_write_begin(
             log_id,
             static_cast<uint8_t>(level),
             category_index,
-            k_type_str8,
-            fmt_utf8_len,
+            k_type_str16,
+            fmt_utf16_bytes,
             nullptr,
             total_args_bytes);
 
@@ -335,11 +284,9 @@ namespace bq_godot {
             return false;
         }
 
-        if (fmt_utf8_len > 0u && fmt_ptr) {
-            encode_utf32_to_utf8(fmt_ptr, fmt_char_len, handle.format_data_addr);
-        }
+        copy_utf32_to_utf16(handle.format_data_addr, fmt_ptr, fmt_utf16_bytes);
 
-        uint8_t* arg_cursor = handle.format_data_addr + align4(fmt_utf8_len);
+        uint8_t* arg_cursor = handle.format_data_addr + align4(fmt_utf16_bytes);
         for (int64_t i = 0; i < arg_count; ++i) {
             write_slot_to_buffer(slots[i], arg_cursor);
             arg_cursor += calc_slot_storage_size(slots[i]);
