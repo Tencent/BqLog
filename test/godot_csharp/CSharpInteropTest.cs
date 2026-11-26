@@ -19,7 +19,7 @@ public partial class CSharpInteropTest : Node
         }
 
         // Disable editor console redirect during headless test.
-        var gdHelper = ResourceLoader.Load<GDScript>("res://gd_interop_helper.gd").New();
+        var gdHelper = ResourceLoader.Load<GDScript>("res://gd_interop_helper.gd").New().AsGodotObject();
         gdHelper.Call("disable_redirect");
 
         string cfg = @"

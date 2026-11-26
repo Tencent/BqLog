@@ -2463,7 +2463,7 @@ jobs:
           GODOT_EXE=$(find godot_bin -maxdepth 2 -type f -name "Godot_v4.2.2-stable_mono_linux.x86_64" | head -n 1)
           chmod +x "$GODOT_EXE"
 
-          "$GODOT_EXE" --headless --path test/godot --import --quit
+          "$GODOT_EXE" --headless --path test/godot --import --quit || true
           "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
 
           # Godot C# (.NET) + GDScript shared-singleton interop test
@@ -2471,7 +2471,7 @@ jobs:
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
           dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
           LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit
+            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit || true
           LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
             "$GODOT_EXE" --headless --path test/godot_csharp
 
@@ -2497,15 +2497,19 @@ jobs:
           & artifacts\tools\bin\Release\BqLog_CategoryLogGenerator.exe test_category_log test\godot\test_category.cfg test\godot\generated
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
+          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_win64.exe.zip" -OutFile godot_std.zip
+          Expand-Archive -Path godot_std.zip -DestinationPath godot_std_bin -Force
+          $godotStdExe = (Get-ChildItem -Recurse godot_std_bin -Filter "*win64_console.exe" | Select-Object -First 1).FullName
+
+          & $godotStdExe --headless --path test\godot --import --quit
+          & $godotStdExe --headless --path test\godot --script res://run_tests.gd
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Godot C# (.NET) + GDScript shared-singleton interop test
           Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_win64.zip" -OutFile godot_mono.zip
           Expand-Archive -Path godot_mono.zip -DestinationPath godot_bin -Force
           $godotExe = (Get-ChildItem -Recurse godot_bin -Filter "*win64_console.exe" | Select-Object -First 1).FullName
 
-          & $godotExe --headless --path test\godot --import --quit
-          & $godotExe --headless --path test\godot --script res://run_tests.gd
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-
-          # Godot C# (.NET) + GDScript shared-singleton interop test
           Copy-Item -Recurse -Force test\godot\addons test\godot_csharp\
           Copy-Item $bqDll test\godot_csharp\ -Force
           dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj
@@ -2541,7 +2545,7 @@ jobs:
           unzip -q godot_mono.zip -d godot_bin
           GODOT_EXE="./godot_bin/Godot_mono.app/Contents/MacOS/Godot"
 
-          "$GODOT_EXE" --headless --path test/godot --import --quit
+          "$GODOT_EXE" --headless --path test/godot --import --quit || true
           "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
 
           # Godot C# (.NET) + GDScript shared-singleton interop test
@@ -2549,6 +2553,6 @@ jobs:
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
           dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
           DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit
+            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit || true
           DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
             "$GODOT_EXE" --headless --path test/godot_csharp
