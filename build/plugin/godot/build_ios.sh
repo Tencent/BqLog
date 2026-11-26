@@ -10,10 +10,19 @@ PLUGIN_DIR="${REPO_ROOT}/plugin/godot"
 TOOLCHAIN="${REPO_ROOT}/build/lib/ios/ios.toolchain.cmake"
 OUT_DIR="${SCRIPT_DIR}/out/ios"
 
-EXTRA_ARGS=()
-if [[ -n "${GODOT_CPP_DIR:-}" ]]; then
-    EXTRA_ARGS+=("-DGODOT_CPP_DIR=${GODOT_CPP_DIR}")
+if [[ -z "${GODOT_CPP_DIR:-}" ]]; then
+    GODOT_CPP_TAG="${GODOT_CPP_GIT_TAG:-godot-4.2-stable}"
+    GODOT_CPP_CACHE="${SCRIPT_DIR}/_godot_cpp_${GODOT_CPP_TAG}"
+    if [[ ! -f "${GODOT_CPP_CACHE}/CMakeLists.txt" ]]; then
+        rm -rf "${GODOT_CPP_CACHE}"
+        mkdir -p "${GODOT_CPP_CACHE}"
+        curl -fsSL --retry 5 --retry-delay 3 \
+            "https://github.com/godotengine/godot-cpp/archive/refs/tags/${GODOT_CPP_TAG}.tar.gz" \
+            | tar -xz --strip-components=1 -C "${GODOT_CPP_CACHE}"
+    fi
+    GODOT_CPP_DIR="${GODOT_CPP_CACHE}"
 fi
+EXTRA_ARGS=("-DGODOT_CPP_DIR=${GODOT_CPP_DIR}")
 
 build_slice() {
     local PLATFORM="$1"

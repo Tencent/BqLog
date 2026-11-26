@@ -30,9 +30,8 @@ else()
     include(FetchContent)
     FetchContent_Declare(
         godot-cpp
-        GIT_REPOSITORY https://github.com/godotengine/godot-cpp.git
-        GIT_TAG ${GODOT_CPP_GIT_TAG}
-        GIT_SHALLOW TRUE
+        URL "https://github.com/godotengine/godot-cpp/archive/refs/tags/${GODOT_CPP_GIT_TAG}.tar.gz"
+        DOWNLOAD_EXTRACT_TIMESTAMP TRUE
     )
     FetchContent_MakeAvailable(godot-cpp)
 endif()
