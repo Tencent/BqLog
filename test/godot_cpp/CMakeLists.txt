@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 3.22)
+if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
+    include("${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
+endif()
 project(BqLogGodotCppTest LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
@@ -28,7 +31,11 @@ if(NOT BQLOG_LIB_PATH OR NOT EXISTS "${BQLOG_LIB_PATH}")
     message(FATAL_ERROR "BQLOG_LIB_PATH must point to the prebuilt BqLog shared library.")
 endif()
 
-add_library(BqLogGodotCppTest SHARED src/cpp_adapter_test.cpp)
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
+GROUP_FOR_IDE("${SRC_LIST}" "src")
+
+add_library(BqLogGodotCppTest SHARED ${SRC_LIST})
 
 target_include_directories(BqLogGodotCppTest
     PRIVATE

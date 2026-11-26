@@ -54,22 +54,14 @@ if(NOT BQLOG_LINK_LIB)
 endif()
 message(STATUS "Linking BqLogGodot against BqLog: ${BQLOG_LINK_LIB}")
 
-set(BQLOG_GODOT_SOURCES
-    src/register_types.h
-    src/register_types.cpp
-    src/bq_log_godot_runtime.h
-    src/bq_log_godot_runtime.cpp
-    src/bq_log_godot_console.h
-    src/bq_log_godot_console.cpp
-    src/bq_log_godot_encoder.h
-    src/bq_log_godot_encoder.cpp
-    src/bq_log_godot.h
-    src/bq_log_godot.cpp
-    src/bq_category_log_godot.h
-    src/bq_category_log_godot.cpp
-)
+set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
+set(PUB_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
+COLLECT_SRC_FILES(INC_LIST "${PUB_INC_DIR}")
+GROUP_FOR_IDE("${SRC_LIST}" "src")
+GROUP_FOR_IDE("${INC_LIST}" "include")
 
-add_library(BqLogGodot SHARED ${BQLOG_GODOT_SOURCES})
+add_library(BqLogGodot SHARED ${SRC_LIST} ${INC_LIST})
 
 target_include_directories(BqLogGodot
     PRIVATE
