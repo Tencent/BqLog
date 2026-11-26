@@ -2501,7 +2501,9 @@ jobs:
           Expand-Archive -Path godot_std.zip -DestinationPath godot_std_bin -Force
           $godotStdExe = (Get-ChildItem -Recurse godot_std_bin -Filter "*win64_console.exe" | Select-Object -First 1).FullName
 
+          $ErrorActionPreference = 'Continue'
           & $godotStdExe --headless --path test\godot --import --quit
+          $ErrorActionPreference = 'Stop'
           & $godotStdExe --headless --path test\godot --script res://run_tests.gd
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -2515,7 +2517,9 @@ jobs:
           dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           $env:PATH = "$(Resolve-Path test\godot_csharp\addons\bqlog\bin\windows\x86_64);$env:PATH"
+          $ErrorActionPreference = 'Continue'
           & $godotExe --headless --path test\godot_csharp --import --quit
+          $ErrorActionPreference = 'Stop'
           & $godotExe --headless --path test\godot_csharp
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
