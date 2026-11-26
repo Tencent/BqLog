@@ -26,7 +26,6 @@
 #include <sys/auxv.h>
 #endif
 #if defined(BQ_APPLE)
-#include <dlfcn.h>
 #include <sys/sysctl.h>
 #endif
 
@@ -170,20 +169,6 @@ namespace bq {
 
     common_global_vars::common_global_vars()
     {
-#if defined(BQ_DYNAMIC_LIB)
-#if defined(BQ_WIN)
-        HMODULE self_module = nullptr;
-        GetModuleHandleExW(
-            GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_PIN,
-            reinterpret_cast<LPCWSTR>(&common_global_var_default_initer_),
-            &self_module);
-#elif defined(BQ_APPLE)
-        Dl_info dl_info {};
-        if (dladdr(reinterpret_cast<const void*>(&common_global_var_default_initer_), &dl_info) != 0 && dl_info.dli_fname) {
-            dlopen(dl_info.dli_fname, RTLD_NOLOAD | RTLD_NODELETE);
-        }
-#endif
-#endif
 #if defined(BQ_WIN)
         SYSTEM_INFO sysInfo;
         GetSystemInfo(&sysInfo);

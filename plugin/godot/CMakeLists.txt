@@ -85,6 +85,7 @@ target_link_libraries(BqLogGodot
     PRIVATE
         godot::cpp
         "${BQLOG_LINK_LIB}"
+        ${CMAKE_DL_LIBS}
 )
 
 target_compile_definitions(BqLogGodot PRIVATE BQ_DYNAMIC_LIB_IMPORT)
