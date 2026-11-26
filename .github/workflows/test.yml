@@ -2440,6 +2440,7 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y patchelf
           cmake -S src -B build_bqlog -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_LIB_TYPE=dynamic_lib -DTARGET_PLATFORM=linux
           cmake --build build_bqlog --parallel "$(nproc)"
           cmake -S tools/category_log_generator -B build_catgen -DCMAKE_BUILD_TYPE=Release -DTARGET_PLATFORM=linux

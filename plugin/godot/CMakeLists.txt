@@ -75,6 +75,11 @@ target_include_directories(BqLogGodot
     PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}/src"
         "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+# Mark BqLog public headers as SYSTEM so strict -Werror in BqLogGodot (e.g. Android NDK 30
+# fortify diagnose_if warnings in array_impl.h) does not fail on third-party/upstream headers.
+target_include_directories(BqLogGodot
+    SYSTEM PRIVATE
         "${BQLOG_INCLUDE_DIR}"
 )
 

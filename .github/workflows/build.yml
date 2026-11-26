@@ -7884,10 +7884,10 @@ jobs:
         include:
           - arch: x64
             out_arch: x86_64
-            lib_pattern: "win_x86_64_msvc_libs_*"
+            lib_pattern: "windows_x86_64_libs_*"
           - arch: arm64
             out_arch: arm64
-            lib_pattern: "win_arm64_msvc_libs_*"
+            lib_pattern: "windows_arm64_libs_*"
     needs:
       - extract_version
       - build_windows_x86_64_lib_MSVC
@@ -7924,14 +7924,14 @@ jobs:
         include:
           - arch: x86_64
             runner: ubuntu-22.04
-            lib_pattern: "linux_x86_64_gcc_libs_*"
+            lib_pattern: "linux_x86_64_libs_*"
           - arch: arm64
             runner: ubuntu-22.04-arm
-            lib_pattern: "linux_arm64_gcc_libs_*"
+            lib_pattern: "linux_arm64_libs_*"
     needs:
       - extract_version
-      - build_ubuntu_x86_64_lib_GCC
-      - build_ubuntu_arm64_lib_GCC
+      - build_ubuntu_x86_64_lib_Clang
+      - build_ubuntu_arm64_lib_Clang
     steps:
       - uses: actions/checkout@v5
       - name: Download prebuilt BqLog Linux library
@@ -7942,6 +7942,7 @@ jobs:
       - name: Build BqLogGodot (Linux ${{ matrix.arch }})
         run: |
           set -euo pipefail
+          sudo apt-get update && sudo apt-get install -y patchelf
           BQLOG_SO=$(find downloaded_artifacts -type f -path "*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so*" | sort | head -n 1)
           test -n "$BQLOG_SO" || { echo "libBqLog.so not found" >&2; exit 1; }
           mkdir -p staged_lib

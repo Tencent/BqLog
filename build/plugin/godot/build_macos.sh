@@ -31,10 +31,12 @@ cmake --build "${BUILD_DIR}" --parallel "$(sysctl -n hw.ncpu)"
 mkdir -p "${OUT_DIR}"
 cp -Lf "${BUILD_DIR}/libBqLogGodot.macos.universal.dylib" "${OUT_DIR}/libBqLogGodot.macos.universal.dylib"
 
-# Normalize install_name of linked libBqLog to @loader_path/libBqLog.dylib
-BQLOG_DEP="$(otool -L "${OUT_DIR}/libBqLogGodot.macos.universal.dylib" | awk '/libBqLog/{print $1; exit}')"
+# Normalize install_name of linked libBqLog (e.g. @rpath/libBqLog.2.dylib) to @loader_path/libBqLog.dylib.
+# Exclude the binary's own ID line (libBqLogGodot.*) and re-sign ad-hoc for Apple Silicon.
+BQLOG_DEP="$(otool -L "${OUT_DIR}/libBqLogGodot.macos.universal.dylib" | awk '!/libBqLogGodot/ && /libBqLog/{print $1; exit}')"
 if [[ -n "${BQLOG_DEP}" && "${BQLOG_DEP}" != "@loader_path/libBqLog.dylib" ]]; then
     install_name_tool -change "${BQLOG_DEP}" "@loader_path/libBqLog.dylib" "${OUT_DIR}/libBqLogGodot.macos.universal.dylib"
+    codesign --force --sign - "${OUT_DIR}/libBqLogGodot.macos.universal.dylib"
 fi
 
 echo "Built macOS universal Godot plugin in ${OUT_DIR}"

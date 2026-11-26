@@ -33,4 +33,13 @@ cmake --build "${BUILD_DIR}" --parallel "$(nproc)"
 
 mkdir -p "${OUT_DIR}"
 cp -Lf "${BUILD_DIR}/libBqLogGodot.so" "${OUT_DIR}/libBqLogGodot.so"
+
+# Normalize DT_NEEDED from versioned SONAME (e.g. libBqLog.so.2) to libBqLog.so so
+# GDScript and C# DllImport("BqLog") always load the exact same shared library file.
+if command -v patchelf >/dev/null 2>&1; then
+    NEEDED_BQLOG="$(patchelf --print-needed "${OUT_DIR}/libBqLogGodot.so" | grep -E '^libBqLog\.so\.' | head -n 1 || true)"
+    if [[ -n "${NEEDED_BQLOG}" ]]; then
+        patchelf --replace-needed "${NEEDED_BQLOG}" "libBqLog.so" "${OUT_DIR}/libBqLogGodot.so"
+    fi
+fi
 echo "Built Linux (${ARCH}) Godot plugin in ${OUT_DIR}"
