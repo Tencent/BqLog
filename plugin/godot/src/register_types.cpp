@@ -21,33 +21,7 @@
 #include "bq_log/bq_log.h"
 #include "bq_log_godot.h"
 #include "bq_log_godot_console.h"
-#if defined(BQ_WIN)
-#ifndef WIN32_LEAN_AND_MEAN
-#define WIN32_LEAN_AND_MEAN
-#endif
-#ifndef NOMINMAX
-#define NOMINMAX
-#endif
-#include <windows.h>
-#elif defined(BQ_POSIX)
-#include <dlfcn.h>
-#endif
-
-static void pin_bqlog_library()
-{
-#if defined(BQ_WIN)
-    HMODULE bqlog_module = nullptr;
-    if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"BqLog.dll", &bqlog_module)) {
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"libBqLog.dll", &bqlog_module);
-    }
-#elif defined(BQ_APPLE)
-    if (!dlopen("libBqLog.dylib", RTLD_NOLOAD | RTLD_NODELETE)) {
-        dlopen("BqLog.framework/BqLog", RTLD_NOLOAD | RTLD_NODELETE);
-    }
-#elif defined(BQ_POSIX)
-    dlopen("libBqLog.so", RTLD_NOLOAD | RTLD_NODELETE);
-#endif
-}
+#include "bq_log_godot_runtime.h"
 
 void initialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
 {
@@ -55,9 +29,7 @@ void initialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
         return;
     }
 
-    // Keep the shared BqLog core library mapped for process lifetime so Godot's
-    // GDExtension unload never unmaps BqLog while its background worker threads run.
-    pin_bqlog_library();
+    bq_godot::retain_bqlog_runtime();
 
     godot::ClassDB::register_class<bq_log_category>();
     godot::ClassDB::register_class<bq_log_base>();

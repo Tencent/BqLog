@@ -57,6 +57,8 @@ message(STATUS "Linking BqLogGodot against BqLog: ${BQLOG_LINK_LIB}")
 set(BQLOG_GODOT_SOURCES
     src/register_types.h
     src/register_types.cpp
+    src/bq_log_godot_runtime.h
+    src/bq_log_godot_runtime.cpp
     src/bq_log_godot_console.h
     src/bq_log_godot_console.cpp
     src/bq_log_godot_encoder.h
