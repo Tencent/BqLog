@@ -780,10 +780,9 @@ jobs:
   publish_godot_asset_library:
     runs-on: ubuntu-latest
     needs: [build, release]
-    # Runs automatically once GODOT_RELEASE_REPO_TOKEN is configured in repository secrets.
-    # Optionally submits version update to Godot Asset Library REST API when GODOT_ASSET_ID
-    # and GODOT_ASSETLIB_USER / GODOT_ASSETLIB_PASS are configured.
-    if: ${{ secrets.GODOT_RELEASE_REPO_TOKEN != '' }}
+    # Runs automatically once repository variable GODOT_RELEASE_REPO (e.g. pippocao/BqLogGodotRelease)
+    # and secret GODOT_RELEASE_REPO_TOKEN are configured.
+    if: ${{ vars.GODOT_RELEASE_REPO != '' }}
     steps:
       - name: Download Godot plugin artifact
         uses: actions/download-artifact@v8
@@ -794,10 +793,14 @@ jobs:
       - name: Push addons/bqlog to Godot distribution repository
         env:
           VERSION: ${{ needs.build.outputs.version }}
-          GODOT_RELEASE_REPO: ${{ vars.GODOT_RELEASE_REPO || 'pippocao/BqLogGodotRelease' }}
+          GODOT_RELEASE_REPO: ${{ vars.GODOT_RELEASE_REPO }}
           GH_TOKEN: ${{ secrets.GODOT_RELEASE_REPO_TOKEN }}
         run: |
           set -euo pipefail
+          if [[ -z "${GH_TOKEN}" ]]; then
+            echo "GODOT_RELEASE_REPO_TOKEN secret is not set; skipping Godot release repo push."
+            exit 0
+          fi
           git clone "https://x-access-token:${GH_TOKEN}@github.com/${GODOT_RELEASE_REPO}.git" godot_dist_repo
           cd godot_dist_repo
           rm -rf addons
@@ -813,7 +816,7 @@ jobs:
           git push origin -f "v${VERSION}"
 
       - name: Submit update to Godot Asset Library API
-        if: ${{ vars.GODOT_ASSET_ID != '' && secrets.GODOT_ASSETLIB_USER != '' && secrets.GODOT_ASSETLIB_PASS != '' }}
+        if: ${{ vars.GODOT_ASSET_ID != '' }}
         env:
           VERSION: ${{ needs.build.outputs.version }}
           ASSET_ID: ${{ vars.GODOT_ASSET_ID }}
@@ -821,6 +824,10 @@ jobs:
           ASSETLIB_PASS: ${{ secrets.GODOT_ASSETLIB_PASS }}
         run: |
           set -euo pipefail
+          if [[ -z "${ASSETLIB_USER}" || -z "${ASSETLIB_PASS}" ]]; then
+            echo "GODOT_ASSETLIB_USER / GODOT_ASSETLIB_PASS not set; skipping Asset Library API update."
+            exit 0
+          fi
           TOKEN=$(curl -fsSL -X POST "https://godotengine.org/asset-library/api/login" \
             -H "Content-Type: application/json" \
             -d "{\"username\":\"${ASSETLIB_USER}\",\"password\":\"${ASSETLIB_PASS}\"}" \
