@@ -2459,21 +2459,25 @@ jobs:
           cp -Lf build/plugin/godot/out/linux/x86_64/libBqLogGodot.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLogGodot.so
           ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
 
+          curl -fsSL -o godot_std.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip"
+          unzip -q godot_std.zip -d godot_std_bin
+          GODOT_STD_EXE=$(find godot_std_bin -maxdepth 2 -type f -name "Godot_v4.2.2-stable_linux.x86_64" | head -n 1)
+          chmod +x "$GODOT_STD_EXE"
+
+          timeout 60 "$GODOT_STD_EXE" --headless --path test/godot --import --quit || true
+          timeout 120 "$GODOT_STD_EXE" --headless --path test/godot --script res://run_tests.gd
+
+          # Godot C# (.NET) + GDScript shared-singleton interop test
           curl -fsSL -o godot_mono.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_linux_x86_64.zip"
           unzip -q godot_mono.zip -d godot_bin
           GODOT_EXE=$(find godot_bin -maxdepth 2 -type f -name "Godot_v4.2.2-stable_mono_linux.x86_64" | head -n 1)
           chmod +x "$GODOT_EXE"
-
-          "$GODOT_EXE" --headless --path test/godot --import --quit || true
-          "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
-
-          # Godot C# (.NET) + GDScript shared-singleton interop test
           mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64 test/godot_csharp/.godot
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
           echo "res://addons/bqlog/bqlog.gdextension" > test/godot_csharp/.godot/extension_list.cfg
           dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
           LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
+            timeout 120 "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
 
       - name: Build and test Godot plugin via build_win64.bat (Windows)
         if: matrix.os == 'windows-latest'
