@@ -15,14 +15,14 @@
 #include <godot_cpp/variant/string.hpp>
 #include "bq_log_godot.h"
 
-class BqCategoryLog : public BqLogBase {
-    GDCLASS(BqCategoryLog, BqLogBase)
+class bq_category_log : public bq_log_base {
+    GDCLASS(bq_category_log, bq_log_base)
 
 protected:
     static void _bind_methods();
 
 public:
-    BqCategoryLog() = default;
+    bq_category_log() = default;
 
     void init_with_log_id(int64_t log_id);
     int64_t get_categories_count() const { return static_cast<int64_t>(categories_count_); }

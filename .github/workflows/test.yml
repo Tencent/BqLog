@@ -2440,7 +2440,10 @@ jobs:
         if: matrix.os == 'ubuntu-22.04'
         run: |
           set -euo pipefail
-          sudo apt-get update && sudo apt-get install -y patchelf
+          if ! command -v patchelf >/dev/null 2>&1; then
+            sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::Retries=3 update
+            sudo apt-get -o Acquire::http::Timeout=30 -o Acquire::Retries=3 install -y patchelf
+          fi
           cmake -S src -B build_bqlog -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_LIB_TYPE=dynamic_lib -DTARGET_PLATFORM=linux
           cmake --build build_bqlog --parallel "$(nproc)"
           cmake -S tools/category_log_generator -B build_catgen -DCMAKE_BUILD_TYPE=Release -DTARGET_PLATFORM=linux
@@ -2449,35 +2452,42 @@ jobs:
           BQLOG_SO=$(find artifacts/dynamic_lib -name "libBqLog.so" | head -n 1)
           mkdir -p staged_lib
           cp -Lf "$BQLOG_SO" staged_lib/libBqLog.so
-          BQLOG_GODOT_CMAKE_ARGS="-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON" \
-            bash build/plugin/godot/build_linux.sh "$(pwd)/staged_lib/libBqLog.so" x86_64
+          bash build/plugin/godot/build_linux.sh "$(pwd)/staged_lib/libBqLog.so" x86_64
+
+          # Build standalone C++ adapter interop test GDExtension (reusing fetched godot-cpp)
+          cmake -S test/godot_cpp -B build_godot_cpp_test -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DGODOT_CPP_DIR="$(pwd)/build/plugin/godot/build_linux_x86_64/_deps/godot-cpp-src" \
+            -DBQLOG_LIB_PATH="$(pwd)/staged_lib/libBqLog.so"
+          cmake --build build_godot_cpp_test --parallel "$(nproc)"
+          BQLOG_NEEDED="$(patchelf --print-needed build_godot_cpp_test/libBqLogGodotCppTest.so | grep -E '^libBqLog\.so\.' || true)"
+          if [[ -n "$BQLOG_NEEDED" ]]; then
+            patchelf --replace-needed "$BQLOG_NEEDED" libBqLog.so build_godot_cpp_test/libBqLogGodotCppTest.so
+          fi
 
           mkdir -p test/godot/addons/bqlog/bin/linux/x86_64 test/godot/generated test/godot/.godot
           cp plugin/godot/addons/bqlog/plugin.cfg plugin/godot/addons/bqlog/bqlog.gdextension test/godot/addons/bqlog/
-          echo "res://addons/bqlog/bqlog.gdextension" > test/godot/.godot/extension_list.cfg
+          cp test/godot_cpp/cpp_adapter_test.gdextension test/godot/
+          printf "res://addons/bqlog/bqlog.gdextension\nres://cpp_adapter_test.gdextension\n" > test/godot/.godot/extension_list.cfg
           cp -Lf staged_lib/libBqLog.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLog.so
           cp -Lf build/plugin/godot/out/linux/x86_64/libBqLogGodot.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLogGodot.so
+          cp -Lf build_godot_cpp_test/libBqLogGodotCppTest.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLogGodotCppTest.so
           ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
 
-          curl -fsSL -o godot_std.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_linux.x86_64.zip"
-          unzip -q godot_std.zip -d godot_std_bin
-          GODOT_STD_EXE=$(find godot_std_bin -maxdepth 2 -type f -name "Godot_v4.2.2-stable_linux.x86_64" | head -n 1)
-          chmod +x "$GODOT_STD_EXE"
-
-          timeout 60 "$GODOT_STD_EXE" --headless --path test/godot --import --quit || true
-          timeout 120 "$GODOT_STD_EXE" --headless --path test/godot --script res://run_tests.gd
-
-          # Godot C# (.NET) + GDScript shared-singleton interop test
           curl -fsSL -o godot_mono.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_linux_x86_64.zip"
           unzip -q godot_mono.zip -d godot_bin
           GODOT_EXE=$(find godot_bin -maxdepth 2 -type f -name "Godot_v4.2.2-stable_mono_linux.x86_64" | head -n 1)
           chmod +x "$GODOT_EXE"
+
+          "$GODOT_EXE" --headless --path test/godot --import --quit || true
+          "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
+
+          # Godot C# (.NET) + GDScript shared-singleton interop test
           mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64 test/godot_csharp/.godot
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
           echo "res://addons/bqlog/bqlog.gdextension" > test/godot_csharp/.godot/extension_list.cfg
           dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
           LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
-            timeout 120 "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
+            "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
 
       - name: Build and test Godot plugin via build_win64.bat (Windows)
         if: matrix.os == 'windows-latest'
@@ -2491,14 +2501,22 @@ jobs:
 
           $bqLib = (Get-Item "artifacts\dynamic_lib\lib\RelWithDebInfo\BqLog.lib").FullName
           $bqDll = (Get-Item "artifacts\dynamic_lib\lib\RelWithDebInfo\BqLog.dll").FullName
-          $env:BQLOG_GODOT_CMAKE_ARGS = "-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON"
           cmd /c "build\plugin\godot\build_win64.bat `"$bqLib`" x64"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Build standalone C++ adapter interop test GDExtension (reusing fetched godot-cpp)
+          $godotCppSrc = (Resolve-Path "build\plugin\godot\build_win_x64\_deps\godot-cpp-src").Path
+          cmake -S test/godot_cpp -B build_godot_cpp_test -A x64 -DCMAKE_BUILD_TYPE=RelWithDebInfo `
+            "-DGODOT_CPP_DIR=$godotCppSrc" "-DBQLOG_LIB_PATH=$bqLib" `
+            "-DCMAKE_CXX_FLAGS=/MP"
+          cmake --build build_godot_cpp_test --config RelWithDebInfo --parallel
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
           New-Item -ItemType Directory -Force test\godot\addons\bqlog\bin\windows\x86_64, test\godot\generated, test\godot\.godot | Out-Null
           Copy-Item plugin\godot\addons\bqlog\plugin.cfg, plugin\godot\addons\bqlog\bqlog.gdextension test\godot\addons\bqlog\ -Force
-          Set-Content -Path test\godot\.godot\extension_list.cfg -Value "res://addons/bqlog/bqlog.gdextension" -Encoding ascii
-          Copy-Item $bqDll, build\plugin\godot\out\windows\x86_64\BqLogGodot.dll test\godot\addons\bqlog\bin\windows\x86_64\ -Force
+          Copy-Item test\godot_cpp\cpp_adapter_test.gdextension test\godot\ -Force
+          Set-Content -Path test\godot\.godot\extension_list.cfg -Value @("res://addons/bqlog/bqlog.gdextension", "res://cpp_adapter_test.gdextension") -Encoding ascii
+          Copy-Item $bqDll, build\plugin\godot\out\windows\x86_64\BqLogGodot.dll, build_godot_cpp_test\RelWithDebInfo\BqLogGodotCppTest.dll test\godot\addons\bqlog\bin\windows\x86_64\ -Force
           & artifacts\tools\bin\Release\BqLog_CategoryLogGenerator.exe test_category_log test\godot\test_category.cfg test\godot\generated
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -2540,14 +2558,27 @@ jobs:
           BQLOG_DYLIB=$(find artifacts/dynamic_lib -name "libBqLog*.dylib" | head -n 1)
           mkdir -p staged_mac
           cp -Lf "$BQLOG_DYLIB" staged_mac/libBqLog.dylib
-          BQLOG_GODOT_CMAKE_ARGS="-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON" \
-            bash build/plugin/godot/build_macos.sh "$(pwd)/staged_mac/libBqLog.dylib"
+          bash build/plugin/godot/build_macos.sh "$(pwd)/staged_mac/libBqLog.dylib"
+
+          # Build standalone C++ adapter interop test GDExtension (reusing fetched godot-cpp)
+          cmake -S test/godot_cpp -B build_godot_cpp_test -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+            -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
+            -DGODOT_CPP_DIR="$(pwd)/build/plugin/godot/build_macos_universal/_deps/godot-cpp-src" \
+            -DBQLOG_LIB_PATH="$(pwd)/staged_mac/libBqLog.dylib"
+          cmake --build build_godot_cpp_test --parallel "$(sysctl -n hw.ncpu)"
+          BQLOG_DEP="$(otool -L build_godot_cpp_test/libBqLogGodotCppTest.dylib | awk '!/libBqLogGodotCppTest/ && /libBqLog/{print $1; exit}')"
+          if [[ -n "$BQLOG_DEP" && "$BQLOG_DEP" != "@loader_path/libBqLog.dylib" ]]; then
+            install_name_tool -change "$BQLOG_DEP" "@loader_path/libBqLog.dylib" build_godot_cpp_test/libBqLogGodotCppTest.dylib
+            codesign --force --sign - build_godot_cpp_test/libBqLogGodotCppTest.dylib
+          fi
 
           mkdir -p test/godot/addons/bqlog/bin/macos test/godot/generated test/godot/.godot
           cp plugin/godot/addons/bqlog/plugin.cfg plugin/godot/addons/bqlog/bqlog.gdextension test/godot/addons/bqlog/
-          echo "res://addons/bqlog/bqlog.gdextension" > test/godot/.godot/extension_list.cfg
+          cp test/godot_cpp/cpp_adapter_test.gdextension test/godot/
+          printf "res://addons/bqlog/bqlog.gdextension\nres://cpp_adapter_test.gdextension\n" > test/godot/.godot/extension_list.cfg
           cp -Lf staged_mac/libBqLog.dylib test/godot/addons/bqlog/bin/macos/libBqLog.dylib
           cp -Lf build/plugin/godot/out/macos/libBqLogGodot.macos.universal.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodot.macos.universal.dylib
+          cp -Lf build_godot_cpp_test/libBqLogGodotCppTest.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodotCppTest.dylib
           ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
 
           curl -fsSL -o godot_mono.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_macos.universal.zip"

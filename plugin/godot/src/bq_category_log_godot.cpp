@@ -15,23 +15,23 @@
 #include <godot_cpp/variant/char_string.hpp>
 #include "bq_log/bq_log.h"
 
-void BqCategoryLog::_bind_methods()
+void bq_category_log::_bind_methods()
 {
-    godot::ClassDB::bind_method(godot::D_METHOD("init_with_log_id", "log_id"), &BqCategoryLog::init_with_log_id);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_categories_count"), &BqCategoryLog::get_categories_count);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_categories_name_array"), &BqCategoryLog::get_categories_name_array);
+    godot::ClassDB::bind_method(godot::D_METHOD("init_with_log_id", "log_id"), &bq_category_log::init_with_log_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_categories_count"), &bq_category_log::get_categories_count);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_categories_name_array"), &bq_category_log::get_categories_name_array);
     godot::ClassDB::bind_static_method(
-        "BqCategoryLog",
+        "bq_category_log",
         godot::D_METHOD("call_api_create_category_log", "name", "config", "categories_count", "categories"),
-        &BqCategoryLog::call_api_create_category_log);
+        &bq_category_log::call_api_create_category_log);
 }
 
-void BqCategoryLog::init_with_log_id(int64_t log_id)
+void bq_category_log::init_with_log_id(int64_t log_id)
 {
     init_by_id(log_id > 0 ? static_cast<uint64_t>(log_id) : 0u);
 }
 
-int64_t BqCategoryLog::call_api_create_category_log(
+int64_t bq_category_log::call_api_create_category_log(
     const godot::String& name,
     const godot::String& config,
     int64_t categories_count,

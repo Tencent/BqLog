@@ -21,10 +21,7 @@
 #include "bq_log/bq_log.h"
 #include "bq_log_godot.h"
 #include "bq_log_godot_console.h"
-#if defined(BQLOG_GODOT_ENABLE_TEST_HELPER)
-#include "bq_log_godot_adapter.h"
-#endif
-#if defined(_WIN32)
+#if defined(BQ_WIN)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
@@ -34,61 +31,25 @@
 #include <windows.h>
 #endif
 
-#if defined(BQLOG_GODOT_ENABLE_TEST_HELPER)
-class BqLogGodotCppTestHelper : public godot::RefCounted {
-    GDCLASS(BqLogGodotCppTestHelper, godot::RefCounted)
-
-protected:
-    static void _bind_methods()
-    {
-        godot::ClassDB::bind_static_method(
-            "BqLogGodotCppTestHelper",
-            godot::D_METHOD("run_cpp_adapter_interop", "log_name", "config"),
-            &BqLogGodotCppTestHelper::run_cpp_adapter_interop);
-    }
-
-public:
-    static bool run_cpp_adapter_interop(const godot::String& log_name, const godot::String& config)
-    {
-        const godot::CharString name_utf8 = log_name.utf8();
-        const godot::CharString cfg_utf8 = config.utf8();
-        bq::log cpp_log = bq::log::create_log(name_utf8.get_data(), cfg_utf8.get_data());
-        if (!cpp_log.is_valid()) {
-            return false;
-        }
-        const godot::String gd_str = godot::String::utf8("cpp_gd_str_你好");
-        const godot::StringName gd_sn("cpp_gd_sname");
-        cpp_log.info(godot::String::utf8("cpp_adapter: str={}, sn={}"), gd_str, gd_sn);
-        BQ_LOG_FAST_INFO(cpp_log, "cpp_fast_mode: str={}, num={}", gd_str, 777);
-        cpp_log.force_flush();
-        return true;
-    }
-};
-#endif
-
-void initialize_bqlog_godot_module(godot::ModuleInitializationLevel p_level)
+void initialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
 {
-    if (p_level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
+    if (level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
     }
 
-#if defined(_WIN32)
-    // Pin BqLog.dll for the process lifetime so Godot's FreeLibrary(BqLogGodot.dll)
-    // during GDExtension teardown never unmaps BqLog.dll while its async/independent
-    // worker threads are still running.
+#if defined(BQ_WIN)
+    // Pin BqLog.dll for process lifetime so FreeLibrary(BqLogGodot.dll) during
+    // GDExtension teardown never unmaps BqLog.dll while worker threads are active.
     HMODULE bqlog_module = nullptr;
     if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"BqLog.dll", &bqlog_module)) {
         GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_PIN, L"libBqLog.dll", &bqlog_module);
     }
 #endif
 
-    godot::ClassDB::register_class<BqLogCategory>();
-    godot::ClassDB::register_class<BqLogBase>();
-    godot::ClassDB::register_class<BqLog>();
-    godot::ClassDB::register_class<BqCategoryLog>();
-#if defined(BQLOG_GODOT_ENABLE_TEST_HELPER)
-    godot::ClassDB::register_class<BqLogGodotCppTestHelper>();
-#endif
+    godot::ClassDB::register_class<bq_log_category>();
+    godot::ClassDB::register_class<bq_log_base>();
+    godot::ClassDB::register_class<bq_log>();
+    godot::ClassDB::register_class<bq_category_log>();
 
     // Route default relative log paths to Godot's writable user:// directory.
     bool is_editor_env = false;
@@ -99,8 +60,6 @@ void initialize_bqlog_godot_module(godot::ModuleInitializationLevel p_level)
             bq::api::__api_reset_base_dir(0, utf8.get_data());
             bq::api::__api_reset_base_dir(1, utf8.get_data());
         }
-        // "editor" feature is present in the Godot Editor and in projects launched from it (F5),
-        // and absent in exported runtime builds (matching Unity's #if UNITY_EDITOR behavior).
         is_editor_env = os->has_feature("editor");
     }
     if (!is_editor_env) {
@@ -112,9 +71,9 @@ void initialize_bqlog_godot_module(godot::ModuleInitializationLevel p_level)
     bq_godot::init_godot_console(is_editor_env);
 }
 
-void uninitialize_bqlog_godot_module(godot::ModuleInitializationLevel p_level)
+void uninitialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
 {
-    if (p_level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
+    if (level != godot::MODULE_INITIALIZATION_LEVEL_SCENE) {
         return;
     }
 
@@ -124,11 +83,11 @@ void uninitialize_bqlog_godot_module(godot::ModuleInitializationLevel p_level)
 
 extern "C" {
 GDExtensionBool GDE_EXPORT bqlog_godot_library_init(
-    GDExtensionInterfaceGetProcAddress p_get_proc_address,
-    const GDExtensionClassLibraryPtr p_library,
-    GDExtensionInitialization* r_initialization)
+    GDExtensionInterfaceGetProcAddress get_proc_address,
+    const GDExtensionClassLibraryPtr library,
+    GDExtensionInitialization* initialization)
 {
-    godot::GDExtensionBinding::InitObject init_obj(p_get_proc_address, p_library, r_initialization);
+    godot::GDExtensionBinding::InitObject init_obj(get_proc_address, library, initialization);
 
     init_obj.register_initializer(initialize_bqlog_godot_module);
     init_obj.register_terminator(uninitialize_bqlog_godot_module);

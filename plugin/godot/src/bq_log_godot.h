@@ -19,8 +19,8 @@
 #include <godot_cpp/variant/variant.hpp>
 #include "bq_log/bq_log.h"
 
-class BqLogCategory : public godot::RefCounted {
-    GDCLASS(BqLogCategory, godot::RefCounted)
+class bq_log_category : public godot::RefCounted {
+    GDCLASS(bq_log_category, godot::RefCounted)
 
 private:
     int32_t index_ = 0;
@@ -29,23 +29,23 @@ protected:
     static void _bind_methods();
 
 public:
-    BqLogCategory() = default;
-    explicit BqLogCategory(int32_t index)
+    bq_log_category() = default;
+    explicit bq_log_category(int32_t index)
         : index_(index)
     {
     }
 
-    static godot::Ref<BqLogCategory> create_category(int32_t index);
+    static godot::Ref<bq_log_category> create_category(int32_t index);
 
     void set_index(int32_t index) { index_ = index; }
     int32_t get_index() const { return index_; }
 };
 
-class BqLogBase : public godot::RefCounted {
-    GDCLASS(BqLogBase, godot::RefCounted)
+class bq_log_base : public godot::RefCounted {
+    GDCLASS(bq_log_base, godot::RefCounted)
 
 public:
-    enum LogLevel {
+    enum log_level_const {
         LOG_LEVEL_VERBOSE = static_cast<int32_t>(bq::log_level::verbose),
         LOG_LEVEL_DEBUG = static_cast<int32_t>(bq::log_level::debug),
         LOG_LEVEL_INFO = static_cast<int32_t>(bq::log_level::info),
@@ -54,7 +54,7 @@ public:
         LOG_LEVEL_FATAL = static_cast<int32_t>(bq::log_level::fatal)
     };
 
-    enum RecoveryCapability {
+    enum recovery_capability_const {
         RECOVERY_READY = static_cast<int32_t>(bq::recovery_capability::ready),
         RECOVERY_NO_MEMORY_MAP = static_cast<int32_t>(bq::recovery_capability::no_memory_map),
         RECOVERY_NO_INSTANCE_LOCK = static_cast<int32_t>(bq::recovery_capability::no_instance_lock)
@@ -79,9 +79,8 @@ protected:
         GDExtensionCallError& error) const;
 
 public:
-    BqLogBase() = default;
+    bq_log_base() = default;
 
-    // Static utility APIs shared across all log types
     static godot::String get_version();
     static void enable_auto_crash_handle();
     static int32_t get_recovery_capability();
@@ -97,7 +96,6 @@ public:
     static bool is_godot_console_redirect_enabled();
     static void console(int32_t level, const godot::String& str);
 
-    // Instance APIs
     bool is_valid() const { return log_id_ != 0u; }
     int64_t get_id() const { return static_cast<int64_t>(log_id_); }
     godot::String get_name() const { return name_; }
@@ -106,7 +104,6 @@ public:
     void force_flush() const;
     godot::String take_snapshot(const godot::String& time_zone_config) const;
 
-    // Vararg logging methods (zero GDScript Array allocation)
     godot::Variant verbose(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error);
     godot::Variant debug(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error);
     godot::Variant info(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error);
@@ -115,15 +112,15 @@ public:
     godot::Variant fatal(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error);
 };
 
-class BqLog : public BqLogBase {
-    GDCLASS(BqLog, BqLogBase)
+class bq_log : public bq_log_base {
+    GDCLASS(bq_log, bq_log_base)
 
 protected:
     static void _bind_methods();
 
 public:
-    BqLog() = default;
+    bq_log() = default;
 
-    static godot::Ref<BqLog> create_log(const godot::String& name, const godot::String& config);
-    static godot::Ref<BqLog> get_log_by_name(const godot::String& log_name);
+    static godot::Ref<bq_log> create_log(const godot::String& name, const godot::String& config);
+    static godot::Ref<bq_log> get_log_by_name(const godot::String& log_name);
 };

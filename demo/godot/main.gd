@@ -8,13 +8,13 @@ extends Control
 @onready var _btn_bench: Button = $VBox/Buttons/BtnBenchmark
 @onready var _btn_snapshot: Button = $VBox/Buttons/BtnSnapshot
 
-var _logger: BqLog
+var _logger: bq_log
 
 
 func _ready() -> void:
 	_title.text = "BqLog for Godot 4 Demo (v%s) | BaseDir: %s" % [
-		BqLog.get_version(),
-		BqLog.get_file_base_dir(0)
+		bq_log.get_version(),
+		bq_log.get_file_base_dir(0)
 	]
 
 	var config := """
@@ -31,7 +31,7 @@ func _ready() -> void:
 		snapshot.buffer_size=65536
 		snapshot.levels=[all]
 	"""
-	_logger = BqLog.create_log("godot_demo_log", config)
+	_logger = bq_log.create_log("godot_demo_log", config)
 
 	_btn_samples.pressed.connect(_on_write_samples)
 	_btn_bench.pressed.connect(_on_run_benchmark)

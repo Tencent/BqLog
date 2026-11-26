@@ -14,7 +14,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
 option(BQ_WERROR "Treat compiler warnings as errors in BqLogGodot sources" ON)
-option(BQLOG_GODOT_ENABLE_TEST_HELPER "Compile internal C++ adapter test helper class (test builds only)" OFF)
 set(GODOT_CPP_DIR "" CACHE PATH "Path to an existing godot-cpp checkout (optional; fetched if empty)")
 set(GODOT_CPP_GIT_TAG "godot-4.2-stable" CACHE STRING "godot-cpp git tag to fetch when GODOT_CPP_DIR is empty")
 set(BQLOG_LIB_PATH "" CACHE FILEPATH "Explicit path to the prebuilt BqLog shared library (or .lib on Windows)")
@@ -89,9 +88,6 @@ target_link_libraries(BqLogGodot
 )
 
 target_compile_definitions(BqLogGodot PRIVATE BQ_DYNAMIC_LIB_IMPORT)
-if(BQLOG_GODOT_ENABLE_TEST_HELPER)
-    target_compile_definitions(BqLogGodot PRIVATE BQLOG_GODOT_ENABLE_TEST_HELPER=1)
-endif()
 
 if(MSVC)
     # GDCLASS() macro expands unused parameters; suppress C4100 just like -Wno-unused-parameter on GCC/Clang.

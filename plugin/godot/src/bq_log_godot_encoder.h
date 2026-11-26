@@ -17,9 +17,8 @@
 
 namespace bq_godot {
 
-    // Zero-GC encoder: writes format string (UTF-32 -> UTF-8 directly into ring buffer)
-    // and Variant arguments (UTF-32 strings zero-transcoding, POD/math types stack-only)
-    // straight into BqLog's ring buffer via __api_log_write_begin / __api_log_write_finish.
+    // Zero-GC encoder: transcodes format string and Variant string arguments from UTF-32
+    // to UTF-16 directly into BqLog's ring buffer via __api_log_write_begin / __api_log_write_finish.
     bool write_godot_log_entry(
         uint64_t log_id,
         bq::log_level level,

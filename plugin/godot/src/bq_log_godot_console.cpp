@@ -18,29 +18,27 @@
 
 namespace bq_godot {
 
-    static std::mutex g_console_mutex;
-    static std::atomic<bool> g_redirect_enabled { false };
-    static std::atomic<bool> g_callback_registered { false };
+    static std::mutex console_mutex;
+    static std::atomic<bool> redirect_enabled { false };
+    static std::atomic<bool> callback_registered { false };
     // Never construct a godot::Callable at static-init time (DllMain runs before GDExtension init).
-    static godot::Callable* g_user_callback = nullptr;
+    static godot::Callable* user_callback = nullptr;
 
-    // Prevents infinite recursion if Godot's print/push_warning/push_error or a user
-    // console callback synchronously triggers another BqLog write on the same thread.
-    static thread_local bool t_in_console_callback = false;
+    static thread_local bool in_console_callback = false;
 
     struct console_reentrancy_guard {
         bool entered_ = false;
         console_reentrancy_guard()
         {
-            if (!t_in_console_callback) {
-                t_in_console_callback = true;
+            if (!in_console_callback) {
+                in_console_callback = true;
                 entered_ = true;
             }
         }
         ~console_reentrancy_guard()
         {
             if (entered_) {
-                t_in_console_callback = false;
+                in_console_callback = false;
             }
         }
     };
@@ -57,12 +55,12 @@ namespace bq_godot {
             return;
         }
 
-        const bool do_redirect = g_redirect_enabled.load(std::memory_order_relaxed);
+        const bool do_redirect = redirect_enabled.load(std::memory_order_relaxed);
         godot::Callable user_cb;
         {
-            std::lock_guard<std::mutex> lock(g_console_mutex);
-            if (g_user_callback && g_user_callback->is_valid()) {
-                user_cb = *g_user_callback;
+            std::lock_guard<std::mutex> lock(console_mutex);
+            if (user_callback && user_callback->is_valid()) {
+                user_cb = *user_callback;
             }
         }
 
@@ -124,68 +122,66 @@ namespace bq_godot {
             text);
     }
 
-    // Must be called with g_console_mutex held.
+    // Must be called with console_mutex held.
     static void sync_native_callback_registration_locked()
     {
-        const bool need_cb = g_redirect_enabled.load(std::memory_order_acquire)
-            || (g_user_callback && g_user_callback->is_valid());
-        const bool currently_registered = g_callback_registered.load(std::memory_order_acquire);
+        const bool need_cb = redirect_enabled.load(std::memory_order_acquire)
+            || (user_callback && user_callback->is_valid());
+        const bool currently_registered = callback_registered.load(std::memory_order_acquire);
         if (need_cb && !currently_registered) {
             bq::api::__api_register_console_callbacks(&on_bq_console_callback);
-            g_callback_registered.store(true, std::memory_order_release);
+            callback_registered.store(true, std::memory_order_release);
         } else if (!need_cb && currently_registered) {
             bq::api::__api_unregister_console_callbacks(&on_bq_console_callback);
-            g_callback_registered.store(false, std::memory_order_release);
+            callback_registered.store(false, std::memory_order_release);
         }
     }
 
     void init_godot_console(bool enable_editor_redirect)
     {
-        std::lock_guard<std::mutex> lock(g_console_mutex);
-        g_redirect_enabled.store(enable_editor_redirect, std::memory_order_release);
+        std::lock_guard<std::mutex> lock(console_mutex);
+        redirect_enabled.store(enable_editor_redirect, std::memory_order_release);
         sync_native_callback_registration_locked();
     }
 
     void shutdown_godot_console()
     {
-        {
-            std::lock_guard<std::mutex> lock(g_console_mutex);
-            delete g_user_callback;
-            g_user_callback = nullptr;
-            g_redirect_enabled.store(false, std::memory_order_release);
-            sync_native_callback_registration_locked();
-        }
+        std::lock_guard<std::mutex> lock(console_mutex);
+        delete user_callback;
+        user_callback = nullptr;
+        redirect_enabled.store(false, std::memory_order_release);
+        sync_native_callback_registration_locked();
     }
 
     void set_godot_console_redirect_enable(bool enable)
     {
-        std::lock_guard<std::mutex> lock(g_console_mutex);
-        g_redirect_enabled.store(enable, std::memory_order_release);
+        std::lock_guard<std::mutex> lock(console_mutex);
+        redirect_enabled.store(enable, std::memory_order_release);
         sync_native_callback_registration_locked();
     }
 
     bool is_godot_console_redirect_enabled()
     {
-        return g_redirect_enabled.load(std::memory_order_acquire);
+        return redirect_enabled.load(std::memory_order_acquire);
     }
 
     void register_user_console_callback(const godot::Callable& callback)
     {
-        std::lock_guard<std::mutex> lock(g_console_mutex);
-        if (!g_user_callback) {
-            g_user_callback = new godot::Callable(callback);
+        std::lock_guard<std::mutex> lock(console_mutex);
+        if (!user_callback) {
+            user_callback = new godot::Callable(callback);
         } else {
-            *g_user_callback = callback;
+            *user_callback = callback;
         }
         sync_native_callback_registration_locked();
     }
 
     void unregister_user_console_callback(const godot::Callable& callback)
     {
-        std::lock_guard<std::mutex> lock(g_console_mutex);
-        if (g_user_callback && (!callback.is_valid() || *g_user_callback == callback)) {
-            delete g_user_callback;
-            g_user_callback = nullptr;
+        std::lock_guard<std::mutex> lock(console_mutex);
+        if (user_callback && (!callback.is_valid() || *user_callback == callback)) {
+            delete user_callback;
+            user_callback = nullptr;
         }
         sync_native_callback_registration_locked();
     }
@@ -199,7 +195,7 @@ namespace bq_godot {
 
     bool is_in_console_callback()
     {
-        return t_in_console_callback;
+        return in_console_callback;
     }
 
 }

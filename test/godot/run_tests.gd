@@ -8,7 +8,7 @@ extends SceneTree
 var _failed: int = 0
 var _passed: int = 0
 var _console_events: Array = []
-var _reentrant_logger: BqLog = null
+var _reentrant_logger: bq_log = null
 var _reentrant_calls: int = 0
 var _done: bool = false
 var _exit_code: int = 1
@@ -50,12 +50,12 @@ func _initialize() -> void:
 	print("=== BqLog Godot AutoTest Start ===")
 	# Default redirect must match editor environment (OS.has_feature("editor")).
 	_assert_eq(
-		BqLog.is_godot_console_redirect_enabled(),
+		bq_log.is_godot_console_redirect_enabled(),
 		OS.has_feature("editor") or Engine.is_editor_hint(),
 		"default console redirect should only be enabled in editor"
 	)
 	# Disable default Godot console redirect during tests to keep stdout clean.
-	BqLog.set_godot_console_redirect_enable(false)
+	bq_log.set_godot_console_redirect_enable(false)
 
 	_test_basic_metadata()
 	_test_create_and_lookup()
@@ -68,7 +68,7 @@ func _initialize() -> void:
 	_test_cpp_adapter_interop()
 	_test_perf_and_zero_gc_smoke()
 
-	BqLog.force_flush_all_logs()
+	bq_log.force_flush_all_logs()
 	print("=== BqLog Godot AutoTest Done: passed=%d, failed=%d ===" % [_passed, _failed])
 	_exit_code = 0 if _failed == 0 else 1
 	_done = true
@@ -82,16 +82,16 @@ func _process(_delta: float) -> bool:
 
 
 func _test_basic_metadata() -> void:
-	var ver := BqLog.get_version()
+	var ver := bq_log.get_version()
 	_assert_true(not ver.is_empty(), "get_version() should not be empty")
-	_assert_true(BqLog.get_platform_capabilities() >= 0, "get_platform_capabilities() should be non-negative")
-	var base0 := BqLog.get_file_base_dir(0)
+	_assert_true(bq_log.get_platform_capabilities() >= 0, "get_platform_capabilities() should be non-negative")
+	var base0 := bq_log.get_file_base_dir(0)
 	_assert_true(not base0.is_empty(), "base_dir(0) should be initialized to user_data_dir")
 
 	var temp_dir := OS.get_user_data_dir().path_join("bqlog_autotest_dir")
 	DirAccess.make_dir_recursive_absolute(temp_dir)
-	BqLog.reset_base_dir(0, temp_dir)
-	_assert_eq(BqLog.get_file_base_dir(0), temp_dir, "reset_base_dir(0) should update base dir")
+	bq_log.reset_base_dir(0, temp_dir)
+	_assert_eq(bq_log.get_file_base_dir(0), temp_dir, "reset_base_dir(0) should update base dir")
 
 
 func _test_create_and_lookup() -> void:
@@ -100,20 +100,20 @@ func _test_create_and_lookup() -> void:
 		appenders_config.console.levels=[all]
 		log.thread_mode=sync
 	"""
-	var log_a := BqLog.create_log("godot_test_basic", cfg)
+	var log_a := bq_log.create_log("godot_test_basic", cfg)
 	_assert_true(log_a != null and log_a.is_valid(), "create_log should return valid BqLog")
 	_assert_eq(log_a.get_name(), "godot_test_basic", "get_name() should match")
 	_assert_true(log_a.get_id() != 0, "get_id() should be non-zero")
 
-	var found := BqLog.get_log_by_name("godot_test_basic")
+	var found := bq_log.get_log_by_name("godot_test_basic")
 	_assert_true(found != null and found.is_valid(), "get_log_by_name should find existing log")
 	_assert_eq(found.get_id(), log_a.get_id(), "get_log_by_name should return same log_id")
 
-	var missing := BqLog.get_log_by_name("non_existent_log_xyz")
+	var missing := bq_log.get_log_by_name("non_existent_log_xyz")
 	_assert_true(missing != null and not missing.is_valid(), "missing log should be invalid")
 
-	BqLog.enable_auto_crash_handle()
-	BqLog.console(BqLog.LOG_LEVEL_INFO, "direct_device_console_smoke")
+	bq_log.enable_auto_crash_handle()
+	bq_log.console(bq_log.LOG_LEVEL_INFO, "direct_device_console_smoke")
 
 
 func _test_thread_modes() -> void:
@@ -125,7 +125,7 @@ func _test_thread_modes() -> void:
 			snapshot.buffer_size=32768
 			snapshot.levels=[all]
 		""" % mode
-		var logger := BqLog.create_log("godot_test_mode_" + mode, cfg)
+		var logger := bq_log.create_log("godot_test_mode_" + mode, cfg)
 		_assert_true(logger.is_valid(), "thread_mode=%s logger should be valid" % mode)
 		for i in range(20):
 			logger.info("mode_{}_entry_{}", mode, i)
@@ -143,7 +143,7 @@ func _test_all_types_and_snapshot() -> void:
 		snapshot.buffer_size=65536
 		snapshot.levels=[all]
 	"""
-	var logger := BqLog.create_log("godot_test_types", cfg)
+	var logger := bq_log.create_log("godot_test_types", cfg)
 	_assert_true(logger.is_valid(), "types logger should be valid")
 
 	_assert_true(logger.verbose("v_only"), "verbose no args")
@@ -176,7 +176,7 @@ func _test_reset_config_and_appender() -> void:
 		appenders_config.console.levels=[error,fatal]
 		log.thread_mode=sync
 	"""
-	var logger := BqLog.create_log("godot_test_reset", cfg1)
+	var logger := bq_log.create_log("godot_test_reset", cfg1)
 	_assert_true(not logger.info("filtered out"), "info should be filtered when only error/fatal enabled")
 	_assert_true(logger.error("allowed error"), "error should pass")
 
@@ -198,14 +198,14 @@ func _test_console_buffer_and_callback() -> void:
 		appenders_config.console.levels=[info]
 		log.thread_mode=sync
 	"""
-	var logger := BqLog.create_log("godot_test_console", cfg)
+	var logger := bq_log.create_log("godot_test_console", cfg)
 
 	# Callback test
 	_console_events.clear()
 	var cb := Callable(self, "_on_console_event")
-	BqLog.register_console_callback(cb)
+	bq_log.register_console_callback(cb)
 	logger.info("cb_marker_123")
-	BqLog.unregister_console_callback(cb)
+	bq_log.unregister_console_callback(cb)
 	var found_cb := false
 	for ev in _console_events:
 		if String(ev["content"]).contains("cb_marker_123"):
@@ -215,12 +215,12 @@ func _test_console_buffer_and_callback() -> void:
 
 	# Console buffer test
 	_console_events.clear()
-	BqLog.set_console_buffer_enable(true)
+	bq_log.set_console_buffer_enable(true)
 	logger.info("buf_marker_456")
 	var fetched_count := 0
-	while BqLog.fetch_and_remove_console_buffer(cb):
+	while bq_log.fetch_and_remove_console_buffer(cb):
 		fetched_count += 1
-	BqLog.set_console_buffer_enable(false)
+	bq_log.set_console_buffer_enable(false)
 	_assert_true(fetched_count > 0, "console buffer should fetch at least one entry")
 	var found_buf := false
 	for ev in _console_events:
@@ -233,9 +233,9 @@ func _test_console_buffer_and_callback() -> void:
 	_reentrant_calls = 0
 	_reentrant_logger = logger
 	var reentrant_cb := Callable(self, "_on_reentrant_console_event")
-	BqLog.register_console_callback(reentrant_cb)
+	bq_log.register_console_callback(reentrant_cb)
 	logger.info("reentrant_outer_trigger")
-	BqLog.unregister_console_callback(reentrant_cb)
+	bq_log.unregister_console_callback(reentrant_cb)
 	_reentrant_logger = null
 	_assert_eq(_reentrant_calls, 1, "reentrancy guard should prevent infinite console callback loop")
 
@@ -252,13 +252,13 @@ func _test_text_and_compressed_file_output() -> void:
 
 		log.thread_mode=async
 	"""
-	var logger := BqLog.create_log("godot_test_files", cfg)
+	var logger := bq_log.create_log("godot_test_files", cfg)
 	_assert_true(logger.is_valid(), "file logger should be valid")
 	for i in range(50):
 		logger.info("file_line_#{}, text={}", i, "godot_bqlog_payload")
 	logger.force_flush()
 
-	var out_dir := BqLog.get_file_base_dir(0).path_join("file_out")
+	var out_dir := bq_log.get_file_base_dir(0).path_join("file_out")
 	var da := DirAccess.open(out_dir)
 	_assert_true(da != null, "file_out directory should exist")
 	var found_txt := false
@@ -281,8 +281,8 @@ func _test_text_and_compressed_file_output() -> void:
 
 
 func _test_cpp_adapter_interop() -> void:
-	if not ClassDB.class_exists(&"BqLogGodotCppTestHelper"):
-		print("[INFO] Skipping C++ adapter test (built without BQLOG_GODOT_ENABLE_TEST_HELPER)")
+	if not ClassDB.class_exists(&"bq_godot_cpp_test_helper"):
+		print("[INFO] Skipping C++ adapter test (cpp_adapter_test extension not loaded)")
 		return
 	var cfg := """
 		appenders_config.console.type=console
@@ -291,10 +291,10 @@ func _test_cpp_adapter_interop() -> void:
 		snapshot.buffer_size=65536
 		snapshot.levels=[all]
 	"""
-	var ok: bool = ClassDB.instantiate(&"BqLogGodotCppTestHelper").call("run_cpp_adapter_interop", "godot_cpp_shared_log", cfg)
+	var ok: bool = ClassDB.instantiate(&"bq_godot_cpp_test_helper").call("run_cpp_adapter_interop", "godot_cpp_shared_log", cfg)
 	_assert_true(ok, "C++ adapter interop helper should succeed")
 
-	var shared := BqLog.get_log_by_name("godot_cpp_shared_log")
+	var shared := bq_log.get_log_by_name("godot_cpp_shared_log")
 	_assert_true(shared != null and shared.is_valid(), "GDScript should find log created by C++ bq::log")
 	shared.info("gdscript_side_entry {}", 888)
 	shared.force_flush()
@@ -346,7 +346,7 @@ func _test_perf_and_zero_gc_smoke() -> void:
 		appenders_config.comp.levels=[warning,error,fatal]
 		log.thread_mode=async
 	"""
-	var logger := BqLog.create_log("godot_test_perf", cfg)
+	var logger := bq_log.create_log("godot_test_perf", cfg)
 	_assert_true(logger.is_valid(), "perf logger should be valid")
 
 	var t0 := Time.get_ticks_usec()

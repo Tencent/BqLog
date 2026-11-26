@@ -16,7 +16,7 @@ namespace bq {
     bq::string category_log_template_gdscript::get_node_type_name(const category_node& node) const
     {
         bq::string mangled = node.full_name().replace(".", "_");
-        return "_Cat_" + mangled;
+        return "_cat_" + mangled;
     }
 
     bq::string category_log_template_gdscript::format(const bq::string& template_string, const category_node& root_node) const
@@ -63,7 +63,7 @@ namespace bq {
         }
 
         const bq::string type_name = get_node_type_name(node);
-        code += "class " + type_name + " extends BqLogCategory:\n";
+        code += "class " + type_name + " extends bq_log_category:\n";
         for (const auto& child : node.get_all_children()) {
             const bq::string child_type = get_node_type_name(*child);
             code += "\tvar " + child->name() + ": " + child_type + " = " + child_type + ".new()";
@@ -85,7 +85,7 @@ namespace bq {
             code += get_category_classes_code_recursive(*child, index);
         }
 
-        code += "class _CategoryRoot extends RefCounted:\n";
+        code += "class _category_root extends RefCounted:\n";
         if (root_node.get_all_children().is_empty()) {
             code += "\tpass\n";
         } else {
@@ -121,31 +121,31 @@ namespace bq {
 #   my_log.info(my_log.cat.ModuleA.SystemA, "with category {}", "ok")
 
 class_name ${CLASS_NAME}
-extends BqCategoryLog
+extends bq_category_log
 
 ${CATEGORY_CLASSES}
 
 static var _category_names: PackedStringArray = ${CATEGORY_NAMES}
 
-var cat: _CategoryRoot = _CategoryRoot.new()
+var cat: _category_root = _category_root.new()
 
 
-func _init(p_log_id: int = 0) -> void:
-	if p_log_id > 0:
-		init_with_log_id(p_log_id)
+func _init(log_id: int = 0) -> void:
+	if log_id > 0:
+		init_with_log_id(log_id)
 
 
-static func create_log(p_name: String, p_config: String) -> ${CLASS_NAME}:
+static func create_log(name: String, config: String) -> ${CLASS_NAME}:
 	var count := _category_names.size()
-	var log_id := BqCategoryLog.call_api_create_category_log(p_name, p_config, count, _category_names)
+	var log_id := bq_category_log.call_api_create_category_log(name, config, count, _category_names)
 	var result := ${CLASS_NAME}.new(log_id)
 	if result.get_categories_count() != count:
 		return ${CLASS_NAME}.new(0)
 	return result
 
 
-static func get_log_by_name(p_log_name: String) -> ${CLASS_NAME}:
-	var base_log := BqLog.get_log_by_name(p_log_name)
+static func get_log_by_name(log_name: String) -> ${CLASS_NAME}:
+	var base_log := bq_log.get_log_by_name(log_name)
 	if base_log == null or not base_log.is_valid():
 		return ${CLASS_NAME}.new(0)
 	var result := ${CLASS_NAME}.new(base_log.get_id())

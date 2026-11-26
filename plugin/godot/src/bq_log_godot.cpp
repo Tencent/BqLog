@@ -16,24 +16,23 @@
 #include "bq_log_godot_console.h"
 #include "bq_log_godot_encoder.h"
 
-void BqLogCategory::_bind_methods()
+void bq_log_category::_bind_methods()
 {
-    godot::ClassDB::bind_static_method("BqLogCategory", godot::D_METHOD("create_category", "index"), &BqLogCategory::create_category);
-    godot::ClassDB::bind_method(godot::D_METHOD("set_index", "index"), &BqLogCategory::set_index);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_index"), &BqLogCategory::get_index);
+    godot::ClassDB::bind_static_method("bq_log_category", godot::D_METHOD("create_category", "index"), &bq_log_category::create_category);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_index", "index"), &bq_log_category::set_index);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_index"), &bq_log_category::get_index);
 }
 
-godot::Ref<BqLogCategory> BqLogCategory::create_category(int32_t index)
+godot::Ref<bq_log_category> bq_log_category::create_category(int32_t index)
 {
-    godot::Ref<BqLogCategory> cat;
+    godot::Ref<bq_log_category> cat;
     cat.instantiate();
     cat->set_index(index);
     return cat;
 }
 
-void BqLogBase::_bind_methods()
+void bq_log_base::_bind_methods()
 {
-    // Constants
     BIND_CONSTANT(LOG_LEVEL_VERBOSE);
     BIND_CONSTANT(LOG_LEVEL_DEBUG);
     BIND_CONSTANT(LOG_LEVEL_INFO);
@@ -45,41 +44,38 @@ void BqLogBase::_bind_methods()
     BIND_CONSTANT(RECOVERY_NO_MEMORY_MAP);
     BIND_CONSTANT(RECOVERY_NO_INSTANCE_LOCK);
 
-    // Static utility methods (inherited by BqLog and BqCategoryLog)
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("get_version"), &BqLogBase::get_version);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("enable_auto_crash_handle"), &BqLogBase::enable_auto_crash_handle);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("get_recovery_capability"), &BqLogBase::get_recovery_capability);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("get_platform_capabilities"), &BqLogBase::get_platform_capabilities);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("get_file_base_dir", "base_dir_type"), &BqLogBase::get_file_base_dir);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("reset_base_dir", "base_dir_type", "dir"), &BqLogBase::reset_base_dir);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("force_flush_all_logs"), &BqLogBase::force_flush_all_logs);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("register_console_callback", "callback"), &BqLogBase::register_console_callback);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("unregister_console_callback", "callback"), &BqLogBase::unregister_console_callback);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("set_console_buffer_enable", "enable"), &BqLogBase::set_console_buffer_enable);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("fetch_and_remove_console_buffer", "callback"), &BqLogBase::fetch_and_remove_console_buffer);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("set_godot_console_redirect_enable", "enable"), &BqLogBase::set_godot_console_redirect_enable);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("is_godot_console_redirect_enabled"), &BqLogBase::is_godot_console_redirect_enabled);
-    godot::ClassDB::bind_static_method("BqLogBase", godot::D_METHOD("console", "level", "str"), &BqLogBase::console);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("get_version"), &bq_log_base::get_version);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("enable_auto_crash_handle"), &bq_log_base::enable_auto_crash_handle);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("get_recovery_capability"), &bq_log_base::get_recovery_capability);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("get_platform_capabilities"), &bq_log_base::get_platform_capabilities);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("get_file_base_dir", "base_dir_type"), &bq_log_base::get_file_base_dir);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("reset_base_dir", "base_dir_type", "dir"), &bq_log_base::reset_base_dir);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("force_flush_all_logs"), &bq_log_base::force_flush_all_logs);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("register_console_callback", "callback"), &bq_log_base::register_console_callback);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("unregister_console_callback", "callback"), &bq_log_base::unregister_console_callback);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("set_console_buffer_enable", "enable"), &bq_log_base::set_console_buffer_enable);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("fetch_and_remove_console_buffer", "callback"), &bq_log_base::fetch_and_remove_console_buffer);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("set_godot_console_redirect_enable", "enable"), &bq_log_base::set_godot_console_redirect_enable);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("is_godot_console_redirect_enabled"), &bq_log_base::is_godot_console_redirect_enabled);
+    godot::ClassDB::bind_static_method("bq_log_base", godot::D_METHOD("console", "level", "str"), &bq_log_base::console);
 
-    // Instance methods
-    godot::ClassDB::bind_method(godot::D_METHOD("is_valid"), &BqLogBase::is_valid);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_id"), &BqLogBase::get_id);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_name"), &BqLogBase::get_name);
-    godot::ClassDB::bind_method(godot::D_METHOD("reset_config", "config"), &BqLogBase::reset_config);
-    godot::ClassDB::bind_method(godot::D_METHOD("set_appender_enable", "appender_name", "enable"), &BqLogBase::set_appender_enable);
-    godot::ClassDB::bind_method(godot::D_METHOD("force_flush"), &BqLogBase::force_flush);
-    godot::ClassDB::bind_method(godot::D_METHOD("take_snapshot", "time_zone_config"), &BqLogBase::take_snapshot);
+    godot::ClassDB::bind_method(godot::D_METHOD("is_valid"), &bq_log_base::is_valid);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_id"), &bq_log_base::get_id);
+    godot::ClassDB::bind_method(godot::D_METHOD("get_name"), &bq_log_base::get_name);
+    godot::ClassDB::bind_method(godot::D_METHOD("reset_config", "config"), &bq_log_base::reset_config);
+    godot::ClassDB::bind_method(godot::D_METHOD("set_appender_enable", "appender_name", "enable"), &bq_log_base::set_appender_enable);
+    godot::ClassDB::bind_method(godot::D_METHOD("force_flush"), &bq_log_base::force_flush);
+    godot::ClassDB::bind_method(godot::D_METHOD("take_snapshot", "time_zone_config"), &bq_log_base::take_snapshot);
 
-    // Vararg log methods
-    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "verbose", &BqLogBase::verbose, godot::MethodInfo("verbose"));
-    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "debug", &BqLogBase::debug, godot::MethodInfo("debug"));
-    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "info", &BqLogBase::info, godot::MethodInfo("info"));
-    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "warning", &BqLogBase::warning, godot::MethodInfo("warning"));
-    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "error", &BqLogBase::error, godot::MethodInfo("error"));
-    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "fatal", &BqLogBase::fatal, godot::MethodInfo("fatal"));
+    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "verbose", &bq_log_base::verbose, godot::MethodInfo("verbose"));
+    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "debug", &bq_log_base::debug, godot::MethodInfo("debug"));
+    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "info", &bq_log_base::info, godot::MethodInfo("info"));
+    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "warning", &bq_log_base::warning, godot::MethodInfo("warning"));
+    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "error", &bq_log_base::error, godot::MethodInfo("error"));
+    godot::ClassDB::bind_vararg_method(godot::METHOD_FLAGS_DEFAULT, "fatal", &bq_log_base::fatal, godot::MethodInfo("fatal"));
 }
 
-void BqLogBase::init_by_id(uint64_t log_id)
+void bq_log_base::init_by_id(uint64_t log_id)
 {
     log_id_ = 0u;
     name_ = godot::String();
@@ -117,7 +113,7 @@ void BqLogBase::init_by_id(uint64_t log_id)
     categories_mask_array_ = bq::api::__api_get_log_category_masks_array_by_log_id(log_id);
 }
 
-bool BqLogBase::is_enabled_for_fast(uint32_t category_index, bq::log_level level) const
+bool bq_log_base::is_enabled_for_fast(uint32_t category_index, bq::log_level level) const
 {
     if (log_id_ == 0u || !merged_log_level_bitmap_ || !categories_mask_array_) {
         return false;
@@ -131,7 +127,7 @@ bool BqLogBase::is_enabled_for_fast(uint32_t category_index, bq::log_level level
     return true;
 }
 
-godot::Variant BqLogBase::do_log_vararg(
+godot::Variant bq_log_base::do_log_vararg(
     bq::log_level level,
     const godot::Variant** args,
     GDExtensionInt arg_count,
@@ -147,7 +143,7 @@ godot::Variant BqLogBase::do_log_vararg(
 
     if (args[0]->get_type() == godot::Variant::OBJECT) {
         godot::Object* obj = *args[0];
-        if (const auto* cat = godot::Object::cast_to<BqLogCategory>(obj)) {
+        if (const auto* cat = godot::Object::cast_to<bq_log_category>(obj)) {
             const int32_t idx = cat->get_index();
             if (idx < 0) {
                 return false;
@@ -186,81 +182,81 @@ godot::Variant BqLogBase::do_log_vararg(
         value_arg_count);
 }
 
-godot::String BqLogBase::get_version()
+godot::String bq_log_base::get_version()
 {
     const char* ver = bq::api::__api_get_log_version();
     return ver ? godot::String::utf8(ver) : godot::String();
 }
 
-void BqLogBase::enable_auto_crash_handle()
+void bq_log_base::enable_auto_crash_handle()
 {
     bq::api::__api_enable_auto_crash_handler();
 }
 
-int32_t BqLogBase::get_recovery_capability()
+int32_t bq_log_base::get_recovery_capability()
 {
     return static_cast<int32_t>(bq::api::__api_get_recovery_capability());
 }
 
-int64_t BqLogBase::get_platform_capabilities()
+int64_t bq_log_base::get_platform_capabilities()
 {
     return static_cast<int64_t>(bq::api::__api_get_platform_capabilities());
 }
 
-godot::String BqLogBase::get_file_base_dir(int32_t base_dir_type)
+godot::String bq_log_base::get_file_base_dir(int32_t base_dir_type)
 {
     const char* dir = bq::api::__api_get_file_base_dir(base_dir_type);
     return dir ? godot::String::utf8(dir) : godot::String();
 }
 
-void BqLogBase::reset_base_dir(int32_t base_dir_type, const godot::String& dir)
+void bq_log_base::reset_base_dir(int32_t base_dir_type, const godot::String& dir)
 {
     const godot::CharString utf8 = dir.utf8();
     bq::api::__api_reset_base_dir(base_dir_type, utf8.get_data());
 }
 
-void BqLogBase::force_flush_all_logs()
+void bq_log_base::force_flush_all_logs()
 {
     bq::api::__api_force_flush(0u);
 }
 
-void BqLogBase::register_console_callback(const godot::Callable& callback)
+void bq_log_base::register_console_callback(const godot::Callable& callback)
 {
     bq_godot::register_user_console_callback(callback);
 }
 
-void BqLogBase::unregister_console_callback(const godot::Callable& callback)
+void bq_log_base::unregister_console_callback(const godot::Callable& callback)
 {
     bq_godot::unregister_user_console_callback(callback);
 }
 
-void BqLogBase::set_console_buffer_enable(bool enable)
+void bq_log_base::set_console_buffer_enable(bool enable)
 {
     bq::api::__api_set_console_buffer_enable(enable);
 }
 
-bool BqLogBase::fetch_and_remove_console_buffer(const godot::Callable& callback)
+bool bq_log_base::fetch_and_remove_console_buffer(const godot::Callable& callback)
 {
     return bq_godot::fetch_and_remove_godot_console_buffer(callback);
 }
 
-void BqLogBase::set_godot_console_redirect_enable(bool enable)
+void bq_log_base::set_godot_console_redirect_enable(bool enable)
 {
     bq_godot::set_godot_console_redirect_enable(enable);
 }
 
-bool BqLogBase::is_godot_console_redirect_enabled()
+bool bq_log_base::is_godot_console_redirect_enabled()
 {
     return bq_godot::is_godot_console_redirect_enabled();
 }
 
-void BqLogBase::console(int32_t level, const godot::String& str)
+void bq_log_base::console(int32_t level, const godot::String& str)
 {
     const godot::CharString utf8 = str.utf8();
     bq::api::__api_log_device_console(static_cast<bq::log_level>(level), utf8.get_data());
 }
 
-bool BqLogBase::reset_config(const godot::String& config)
+bool bq_log_base::reset_config(const godot::String& config)
 {
     if (log_id_ == 0u || config.is_empty()) {
         return false;
@@ -270,7 +266,7 @@ bool BqLogBase::reset_config(const godot::String& config)
     return bq::api::__api_log_reset_config(name_utf8.get_data(), config_utf8.get_data());
 }
 
-void BqLogBase::set_appender_enable(const godot::String& appender_name, bool enable)
+void bq_log_base::set_appender_enable(const godot::String& appender_name, bool enable)
 {
     if (log_id_ == 0u) {
         return;
@@ -279,7 +275,7 @@ void BqLogBase::set_appender_enable(const godot::String& appender_name, bool ena
     bq::api::__api_set_appender_enable(log_id_, utf8.get_data(), enable);
 }
 
-void BqLogBase::force_flush() const
+void bq_log_base::force_flush() const
 {
     if (log_id_ == 0u) {
         return;
@@ -287,7 +283,7 @@ void BqLogBase::force_flush() const
     bq::api::__api_force_flush(log_id_);
 }
 
-godot::String BqLogBase::take_snapshot(const godot::String& time_zone_config) const
+godot::String bq_log_base::take_snapshot(const godot::String& time_zone_config) const
 {
     if (log_id_ == 0u) {
         return godot::String();
@@ -302,45 +298,45 @@ godot::String BqLogBase::take_snapshot(const godot::String& time_zone_config) co
     return result;
 }
 
-godot::Variant BqLogBase::verbose(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
+godot::Variant bq_log_base::verbose(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
 {
     return do_log_vararg(bq::log_level::verbose, args, arg_count, error);
 }
 
-godot::Variant BqLogBase::debug(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
+godot::Variant bq_log_base::debug(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
 {
     return do_log_vararg(bq::log_level::debug, args, arg_count, error);
 }
 
-godot::Variant BqLogBase::info(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
+godot::Variant bq_log_base::info(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
 {
     return do_log_vararg(bq::log_level::info, args, arg_count, error);
 }
 
-godot::Variant BqLogBase::warning(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
+godot::Variant bq_log_base::warning(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
 {
     return do_log_vararg(bq::log_level::warning, args, arg_count, error);
 }
 
-godot::Variant BqLogBase::error(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
+godot::Variant bq_log_base::error(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
 {
     return do_log_vararg(bq::log_level::error, args, arg_count, error);
 }
 
-godot::Variant BqLogBase::fatal(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
+godot::Variant bq_log_base::fatal(const godot::Variant** args, GDExtensionInt arg_count, GDExtensionCallError& error)
 {
     return do_log_vararg(bq::log_level::fatal, args, arg_count, error);
 }
 
-void BqLog::_bind_methods()
+void bq_log::_bind_methods()
 {
-    godot::ClassDB::bind_static_method("BqLog", godot::D_METHOD("create_log", "name", "config"), &BqLog::create_log);
-    godot::ClassDB::bind_static_method("BqLog", godot::D_METHOD("get_log_by_name", "log_name"), &BqLog::get_log_by_name);
+    godot::ClassDB::bind_static_method("bq_log", godot::D_METHOD("create_log", "name", "config"), &bq_log::create_log);
+    godot::ClassDB::bind_static_method("bq_log", godot::D_METHOD("get_log_by_name", "log_name"), &bq_log::get_log_by_name);
 }
 
-godot::Ref<BqLog> BqLog::create_log(const godot::String& name, const godot::String& config)
+godot::Ref<bq_log> bq_log::create_log(const godot::String& name, const godot::String& config)
 {
-    godot::Ref<BqLog> result;
+    godot::Ref<bq_log> result;
     result.instantiate();
     if (config.is_empty()) {
         return result;
@@ -352,9 +348,9 @@ godot::Ref<BqLog> BqLog::create_log(const godot::String& name, const godot::Stri
     return result;
 }
 
-godot::Ref<BqLog> BqLog::get_log_by_name(const godot::String& log_name)
+godot::Ref<bq_log> bq_log::get_log_by_name(const godot::String& log_name)
 {
-    godot::Ref<BqLog> result;
+    godot::Ref<bq_log> result;
     result.instantiate();
     if (log_name.is_empty()) {
         return result;
