@@ -2,6 +2,14 @@
 
 [English](CHANGELOG.md)
 
+## [v2.8.4] - 2026-11-26
+- **Godot 4 支持（GDExtension）**：正式提供 Godot 4.2+ 的 `addons/bqlog` 原生插件，覆盖 Windows（`x86_64`、`arm64`）、macOS（`universal`）、Linux（`x86_64`、`arm64`）、Android（`arm64-v8a`、`armeabi-v7a`、`x86_64`、`x86`）、HarmonyOS / OpenHarmony（`arm64-v8a`、`armeabi-v7a`、`x86_64`）与 iOS（动态 `.xcframework`）。
+  - 面向 GDScript 的低开销/零 GC 热路径：原生变参绑定（无临时 `Array`）、O(1) 级别/Category 位图剪枝，以及直接写入 Ring Buffer 的 UTF-32→UTF-8 编码；
+  - 动态链接共享 `BqLog` 核心库，使 GDScript、Godot C#（NuGet）与 C++（`godot-cpp`）在同一进程内无缝共享唯一 Log 单例；
+  - 自动将默认相对日志目录绑定至 `OS.get_user_data_dir()`（`user://`），并自动将日志输出重定向到 Godot 控制台；
+  - `BqLog_CategoryLogGenerator` 新增生成 `<ClassName>.gd`，提供 Godot 4 强类型 Category 自动补全；
+  - 新增 Godot 4 示例工程（`demo/godot`）与 Headless 自动化测试 CI（`test/godot`）。
+
 ## [v2.8.3] - 2026-11-23
 - **问题修复**：加密日志：2.8.0 与 2.8.1 中哈希存在两处错误导致跨平台 RSA 公钥指纹不一致——软件 CRC32C 查表有两项错误（影响 Android、HarmonyOS、iOS/tvOS 真机、ARM Linux/Windows 及无 SSE4.2 的 x86）以及 ARM 硬件路径误用了 IEEE 802.3 CRC32 多项式（影响 Apple Silicon Mac、Apple 模拟器、watchOS `arm64_32`、visionOS），跨平台解码会报 `private key does not match the public key this file was encrypted with`。现在所有平台统一算出标准 CRC32C 指纹，同时解码与崩溃恢复兼容 2.8.0/2.8.1 的两种旧指纹，已有加密日志在任何平台上都能正常解开（[#96](https://github.com/Tencent/BqLog/issues/96)、[#101](https://github.com/Tencent/BqLog/issues/101)）。
 - **问题修复**：`capacity_limit` 与 `expire_time_*` 会把同目录下另一个 appender 的文件也算进额度并删掉，只要那个 appender 的 `file_name` 是本 appender 的 `file_name` 加 `_` 开头（`logs/app` 会删 `logs/app_error` 的文件）。现在每个 appender 只清理自己写出的文件。感谢 [@0z5a](https://github.com/0z5a) 的报告与修复（[#97](https://github.com/Tencent/BqLog/issues/97)、[#98](https://github.com/Tencent/BqLog/pull/98)）。

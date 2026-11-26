@@ -245,6 +245,53 @@ Unreal 插件会自动将所有 BqLog 输出转接到 Unreal 的 Output Log，�
 
 ---
 
+## Godot 4（GDExtension）
+
+### 支持的引擎版本与平台
+
+- **Godot 版本**：Godot **4.2+**（基于向前兼容的 GDExtension ABI，一份产物通吃 4.2 / 4.3 / 4.4 / 4.5+）。
+- **平台**：Windows（`x86_64`、`arm64`）、macOS（`universal`）、Linux（`x86_64`、`arm64`）、Android（`arm64-v8a`、`armeabi-v7a`、`x86_64`、`x86`）、HarmonyOS / OpenHarmony（`arm64-v8a`、`armeabi-v7a`、`x86_64`）、iOS（动态 `.xcframework`）。Web/HTML5 导出暂不支持。
+
+### 集成方式
+
+1. 在 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `godot_plugin_{version}.zip`（或通过 Godot Asset Library 安装 **BqLog**）；
+2. 将压缩包中的 `addons/bqlog` 解压到 Godot 项目根目录（`res://addons/bqlog`）；
+3. 重新打开工程（或在 CI 中执行一次 `godot --headless --import --quit`）让 Godot 注册 `bqlog.gdextension`。
+
+> **说明**：插件初始化时会自动将 BqLog 的相对目录 `base_dir` 设为 `OS.get_user_data_dir()`（`user://`）。仅在 Godot 编辑器（及编辑器内 F5 调试运行）环境下默认将 Console Appender 输出重定向到 Godot 的 Output / Errors 面板（带防重入死循环保护）；导出后的正式包默认不接管，直接走原生平台通道（stdout / Logcat / NSLog），也可通过 `BqLog.set_godot_console_redirect_enable(bool)` 手动开关。
+
+### 使用方式（GDScript）
+
+```gdscript
+var config := """
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+    appenders_config.file.type=compressed_file
+    appenders_config.file.file_name=game
+    appenders_config.file.levels=[all]
+"""
+var logger := BqLog.create_log("game_log", config)
+logger.info("Player {} moved to {}", player_name, position)
+logger.force_flush()
+```
+
+### Category 日志（GDScript）
+
+`BqLog_CategoryLogGenerator` 会同步生成 `<ClassName>.gd`，放入工程即可获得强类型 Category 与编辑器自动补全：
+
+```gdscript
+var biz := business_log.create_log("biz_log", config)
+biz.info(biz.cat.Shop.Seller, "sold item {}, price {}", item_id, price)
+```
+
+### GDScript / Godot C#（.NET）/ C++ 混用
+
+`BqLogGodot` 动态链接共享的 `BqLog` 核心库。Godot .NET 项目可直接引用 `BqLog` NuGet 包获得零 GC 的 C# 日志通道，且 GDScript、C# 与 C++（`addons/bqlog/include/bq_log_godot_adapter.h`）在同进程内共享唯一 BqLog 单例，可通过 `get_log_by_name` 无缝互通。
+
+完整可运行示例请参考仓库的 `demo/godot` 目录。
+
+---
+
 ## 接下来
 
 - [集成指南](./INTEGRATION_GUIDE_CHS.md) — 所有平台和语言的集成步骤

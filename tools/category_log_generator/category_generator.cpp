@@ -20,6 +20,7 @@
 #include "template/category_log_template_go.h"
 #include "template/category_log_template_unreal.h"
 #include "template/category_log_template_verse.h"
+#include "template/category_log_template_gdscript.h"
 
 namespace bq {
     bool category_generator::parse_config_file(const bq::string& file_path, category_node& category_root)
@@ -141,6 +142,11 @@ namespace bq {
         code = verse.generate(root_node);
         bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".verse"), code);
         bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".verse").c_str());
+
+        category_log_template_gdscript gdscript(class_name);
+        code = gdscript.generate(root_node);
+        bq::file_manager::instance().write_all_text(bq::file_manager::combine_path(abs_dir, class_name + ".gd"), code);
+        bq::util::log_device_console(log_level::info, "code generated:%s", bq::file_manager::combine_path(abs_dir, class_name + ".gd").c_str());
 
         return true;
     }

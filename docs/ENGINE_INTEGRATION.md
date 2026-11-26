@@ -248,6 +248,53 @@ Behaviour to know about:
 
 ---
 
+## Godot 4 (GDExtension)
+
+### Supported Engine Versions & Platforms
+
+- **Godot versions**: Godot **4.2+** (4.2, 4.3, 4.4, 4.5+ via forward-compatible GDExtension ABI).
+- **Platforms**: Windows (`x86_64`, `arm64`), macOS (`universal`), Linux (`x86_64`, `arm64`), Android (`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`), HarmonyOS / OpenHarmony (`arm64-v8a`, `armeabi-v7a`, `x86_64`), iOS (dynamic `.xcframework`). Web/HTML5 export is not currently supported.
+
+### Integration
+
+1. Download `godot_plugin_{version}.zip` from the [Releases page](https://github.com/Tencent/BqLog/releases) (or install **BqLog** from the Godot Asset Library).
+2. Extract the `addons/bqlog` directory into your Godot project root (`res://addons/bqlog`).
+3. Reopen the project (or run `godot --headless --import --quit` in CI) so Godot registers `bqlog.gdextension`.
+
+> **Note:** On initialization, the plugin automatically binds BqLog's relative `base_dir` to `OS.get_user_data_dir()` (`user://`). In the Godot Editor (and projects launched from it via F5), console appender output is automatically redirected to Godot's Output/Errors panel with reentrancy protection; in exported runtime builds, redirection is disabled by default so BqLog outputs directly via native platform channels (stdout / Logcat / NSLog). You can override this at runtime with `BqLog.set_godot_console_redirect_enable(bool)`.
+
+### Usage (GDScript)
+
+```gdscript
+var config := """
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+    appenders_config.file.type=compressed_file
+    appenders_config.file.file_name=game
+    appenders_config.file.levels=[all]
+"""
+var logger := BqLog.create_log("game_log", config)
+logger.info("Player {} moved to {}", player_name, position)
+logger.force_flush()
+```
+
+### Category Logs (GDScript)
+
+`BqLog_CategoryLogGenerator` also generates `<ClassName>.gd`. Drop it into your Godot project and use strongly-typed categories with editor autocomplete:
+
+```gdscript
+var biz := business_log.create_log("biz_log", config)
+biz.info(biz.cat.Shop.Seller, "sold item {}, price {}", item_id, price)
+```
+
+### Mixing GDScript, Godot C# (.NET), and C++
+
+`BqLogGodot` dynamically links against the shared `BqLog` core library. In Godot .NET projects, add the `BqLog` NuGet package for zero-GC C# logging; GDScript, C#, and C++ (`addons/bqlog/include/bq_log_godot_adapter.h`) share the exact same in-process BqLog singleton and can look up each other's logs via `get_log_by_name`.
+
+For a runnable sample, see the `demo/godot` directory.
+
+---
+
 ## Next Steps
 
 - [Integration Guide](./INTEGRATION_GUIDE.md) — Integration for all platforms and languages

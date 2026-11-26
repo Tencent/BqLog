@@ -2422,3 +2422,132 @@ jobs:
             grep -q '^TARGET_PLATFORM:STRING=ps5$' build_ps5/CMakeCache.txt
             cmake --build build_ps5 -j 4
             ./build_ps5/BqLogUnitTest
+
+  godot_plugin_tests:
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-22.04, windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "8.0.x"
+
+      - name: Build and test Godot plugin via build_linux.sh (Linux)
+        if: matrix.os == 'ubuntu-22.04'
+        run: |
+          set -euo pipefail
+          cmake -S src -B build_bqlog -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_LIB_TYPE=dynamic_lib -DTARGET_PLATFORM=linux
+          cmake --build build_bqlog --parallel "$(nproc)"
+          cmake -S tools/category_log_generator -B build_catgen -DCMAKE_BUILD_TYPE=Release -DTARGET_PLATFORM=linux
+          cmake --build build_catgen --parallel "$(nproc)"
+
+          BQLOG_SO=$(find artifacts/dynamic_lib -name "libBqLog.so" | head -n 1)
+          mkdir -p staged_lib
+          cp -Lf "$BQLOG_SO" staged_lib/libBqLog.so
+          BQLOG_GODOT_CMAKE_ARGS="-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON" \
+            bash build/plugin/godot/build_linux.sh "$(pwd)/staged_lib/libBqLog.so" x86_64
+
+          mkdir -p test/godot/addons/bqlog/bin/linux/x86_64 test/godot/generated
+          cp plugin/godot/addons/bqlog/plugin.cfg plugin/godot/addons/bqlog/bqlog.gdextension test/godot/addons/bqlog/
+          cp -Lf staged_lib/libBqLog.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLog.so
+          cp -Lf build/plugin/godot/out/linux/x86_64/libBqLogGodot.so test/godot/addons/bqlog/bin/linux/x86_64/libBqLogGodot.so
+          ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
+
+          curl -fsSL -o godot_mono.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_linux_x86_64.zip"
+          unzip -q godot_mono.zip -d godot_bin
+          GODOT_EXE=$(find godot_bin -maxdepth 2 -type f -name "Godot_v4.2.2-stable_mono_linux.x86_64" | head -n 1)
+          chmod +x "$GODOT_EXE"
+
+          "$GODOT_EXE" --headless --path test/godot --import --quit
+          "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
+
+          # Godot C# (.NET) + GDScript shared-singleton interop test
+          mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64
+          cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
+          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
+          LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
+            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit
+          LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
+            "$GODOT_EXE" --headless --path test/godot_csharp
+
+      - name: Build and test Godot plugin via build_win64.bat (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          cmake -S src -B build_bqlog -A x64 -DBUILD_LIB_TYPE=dynamic_lib -DTARGET_PLATFORM=win64
+          cmake --build build_bqlog --config RelWithDebInfo --parallel
+          cmake -S tools/category_log_generator -B build_catgen -A x64 -DTARGET_PLATFORM=win64
+          cmake --build build_catgen --config Release --parallel
+
+          $bqLib = (Get-Item "artifacts\dynamic_lib\lib\RelWithDebInfo\BqLog.lib").FullName
+          $bqDll = (Get-Item "artifacts\dynamic_lib\lib\RelWithDebInfo\BqLog.dll").FullName
+          $env:BQLOG_GODOT_CMAKE_ARGS = "-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON"
+          cmd /c "build\plugin\godot\build_win64.bat `"$bqLib`" x64"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          New-Item -ItemType Directory -Force test\godot\addons\bqlog\bin\windows\x86_64, test\godot\generated | Out-Null
+          Copy-Item plugin\godot\addons\bqlog\plugin.cfg, plugin\godot\addons\bqlog\bqlog.gdextension test\godot\addons\bqlog\ -Force
+          Copy-Item $bqDll, build\plugin\godot\out\windows\x86_64\BqLogGodot.dll test\godot\addons\bqlog\bin\windows\x86_64\ -Force
+          & artifacts\tools\bin\Release\BqLog_CategoryLogGenerator.exe test_category_log test\godot\test_category.cfg test\godot\generated
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          Invoke-WebRequest -Uri "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_win64.zip" -OutFile godot_mono.zip
+          Expand-Archive -Path godot_mono.zip -DestinationPath godot_bin -Force
+          $godotExe = (Get-ChildItem -Recurse godot_bin -Filter "*win64_console.exe" | Select-Object -First 1).FullName
+
+          & $godotExe --headless --path test\godot --import --quit
+          & $godotExe --headless --path test\godot --script res://run_tests.gd
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Godot C# (.NET) + GDScript shared-singleton interop test
+          Copy-Item -Recurse -Force test\godot\addons test\godot_csharp\
+          Copy-Item $bqDll test\godot_csharp\ -Force
+          dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $env:PATH = "$(Resolve-Path test\godot_csharp\addons\bqlog\bin\windows\x86_64);$env:PATH"
+          & $godotExe --headless --path test\godot_csharp --import --quit
+          & $godotExe --headless --path test\godot_csharp
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+      - name: Build and test Godot plugin via build_macos.sh (macOS)
+        if: matrix.os == 'macos-latest'
+        run: |
+          set -euo pipefail
+          cmake -S src -B build_bqlog -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_LIB_TYPE=dynamic_lib \
+            -DAPPLE_LIB_FORMAT=dylib -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" -DTARGET_PLATFORM=mac
+          cmake --build build_bqlog --parallel "$(sysctl -n hw.ncpu)"
+          cmake -S tools/category_log_generator -B build_catgen -DCMAKE_BUILD_TYPE=Release -DTARGET_PLATFORM=mac
+          cmake --build build_catgen --parallel "$(sysctl -n hw.ncpu)"
+
+          BQLOG_DYLIB=$(find artifacts/dynamic_lib -name "libBqLog*.dylib" | head -n 1)
+          mkdir -p staged_mac
+          cp -Lf "$BQLOG_DYLIB" staged_mac/libBqLog.dylib
+          BQLOG_GODOT_CMAKE_ARGS="-DBQLOG_GODOT_ENABLE_TEST_HELPER=ON" \
+            bash build/plugin/godot/build_macos.sh "$(pwd)/staged_mac/libBqLog.dylib"
+
+          mkdir -p test/godot/addons/bqlog/bin/macos test/godot/generated
+          cp plugin/godot/addons/bqlog/plugin.cfg plugin/godot/addons/bqlog/bqlog.gdextension test/godot/addons/bqlog/
+          cp -Lf staged_mac/libBqLog.dylib test/godot/addons/bqlog/bin/macos/libBqLog.dylib
+          cp -Lf build/plugin/godot/out/macos/libBqLogGodot.macos.universal.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodot.macos.universal.dylib
+          ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
+
+          curl -fsSL -o godot_mono.zip "https://github.com/godotengine/godot/releases/download/4.2.2-stable/Godot_v4.2.2-stable_mono_macos.universal.zip"
+          unzip -q godot_mono.zip -d godot_bin
+          GODOT_EXE="./godot_bin/Godot_mono.app/Contents/MacOS/Godot"
+
+          "$GODOT_EXE" --headless --path test/godot --import --quit
+          "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
+
+          # Godot C# (.NET) + GDScript shared-singleton interop test
+          mkdir -p test/godot_csharp/addons/bqlog/bin/macos
+          cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
+          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
+          DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
+            "$GODOT_EXE" --headless --path test/godot_csharp --import --quit
+          DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
+            "$GODOT_EXE" --headless --path test/godot_csharp

@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (扁鹊日志) V 2.8.3
+# BqLog (扁鹊日志) V 2.8.4
 
 [English](./README.md) | **简体中文**
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.8.3-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.8.3-orange.svg?style=flat)](CHANGELOG_CHS.md)
+[![Release Version](https://img.shields.io/badge/release-2.8.4-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_更新日志-v2.8.4-orange.svg?style=flat)](CHANGELOG_CHS.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -54,9 +54,11 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_下载-Release_2.8.3-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_下载-Release_2.8.4-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
 ## 📋 v2.8.x 更新亮点
+
+- **Godot 4 支持（v2.8.4+，GDExtension）**：自 2.8.4 起正式提供 Godot 4.2+ 的 `addons/bqlog` 原生插件（Windows / macOS / Linux / Android / HarmonyOS & OpenHarmony / iOS），支持零 GC GDScript 写日志、Category Log `.gd` 生成以及 GDScript / Godot C# / C++ 进程内共享唯一单例，详见[引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md#godot-4gdextension)。
 
 - **新的加密日志格式**：加密方案升级，可以抵抗已知明文攻击和 AI 分析。
 - **工具兼容性**：`BqLog_LogDecoder` 可以解码 2.x 全系列版本写出的压缩日志。
@@ -126,6 +128,7 @@
 | [**Go modules**](docs/INTEGRATION_GUIDE_CHS.md#go)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — | [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) |
 | [**Unity**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UPM tarball | *从 tarball 安装* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
 | [**Unreal Engine**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
+| [**Godot 4**](docs/ENGINE_INTEGRATION_CHS.md#godot-4gdextension)<br>Godot 4.2+ (GDExtension) | *放进 `addons/bqlog`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
 
 > [!IMPORTANT]
 > **表格里没有你的平台？** iOS、tvOS 等 Apple 平台不走包管理器，需要通过 Xcode 或 CMake 集成 —— 见[集成指南：iOS / Apple 平台](docs/INTEGRATION_GUIDE_CHS.md#ios--apple-平台c--objective-c)。嵌入式 Linux、各类 BSD、以及从源码构建的情况，同样见[集成指南](docs/INTEGRATION_GUIDE_CHS.md)与 [release 页面](https://github.com/Tencent/BqLog/releases)的预编译包。

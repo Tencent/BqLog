@@ -1,0 +1,7 @@
+.godot/
+addons/
+bin/
+obj/
+BqLog.dll
+libBqLog.so
+libBqLog.dylib

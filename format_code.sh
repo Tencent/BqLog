@@ -11,7 +11,7 @@ CLANG_FORMAT="${CLANG_FORMAT:-clang-format}"
     exit 1
 }
 
-DIRS=("src" "include" "demo" "benchmark" "test" "tools")
+DIRS=("src" "include" "demo" "benchmark" "test" "tools" "plugin/godot" "plugin/unreal")
 
 export CLANG_FORMAT
 

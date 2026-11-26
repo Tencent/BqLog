@@ -7,7 +7,7 @@ rem of them. Refusing to run on the other one would make this depend on the inst
 
 set "root_dir=%~dp0"
 
-set "dirs=src include demo benchmark test tools"
+set "dirs=src include demo benchmark test tools plugin\godot plugin\unreal"
 
 
 for %%d in (%dirs%) do (

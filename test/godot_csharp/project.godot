@@ -1,0 +1,12 @@
+; Engine configuration file.
+config_version=5
+
+[application]
+
+config/name="BqLog Godot CSharp Interop Test"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.2", "C#")
+
+[dotnet]
+
+project/assembly_name="BqLogGodotCSharpTest"

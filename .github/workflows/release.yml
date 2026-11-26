@@ -776,3 +776,57 @@ jobs:
           if [[ "$HTTP_CODE" != "201" ]]; then
             echo "::error::Upload failed with HTTP $HTTP_CODE" >&2; exit 1
           fi
+
+  publish_godot_asset_library:
+    runs-on: ubuntu-latest
+    needs: [build, release]
+    # Runs automatically once GODOT_RELEASE_REPO_TOKEN is configured in repository secrets.
+    # Optionally submits version update to Godot Asset Library REST API when GODOT_ASSET_ID
+    # and GODOT_ASSETLIB_USER / GODOT_ASSETLIB_PASS are configured.
+    if: ${{ secrets.GODOT_RELEASE_REPO_TOKEN != '' }}
+    steps:
+      - name: Download Godot plugin artifact
+        uses: actions/download-artifact@v8
+        with:
+          name: godot_plugin_${{ needs.build.outputs.version }}
+          path: godot_plugin_artifact
+
+      - name: Push addons/bqlog to Godot distribution repository
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          GODOT_RELEASE_REPO: ${{ vars.GODOT_RELEASE_REPO || 'pippocao/BqLogGodotRelease' }}
+          GH_TOKEN: ${{ secrets.GODOT_RELEASE_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${GODOT_RELEASE_REPO}.git" godot_dist_repo
+          cd godot_dist_repo
+          rm -rf addons
+          cp -R ../godot_plugin_artifact/addons ./addons
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --cached --quiet; then
+            git commit -m "Release BqLog Godot Plugin v${VERSION}"
+          fi
+          git tag -f "v${VERSION}"
+          git push origin HEAD:main
+          git push origin -f "v${VERSION}"
+
+      - name: Submit update to Godot Asset Library API
+        if: ${{ vars.GODOT_ASSET_ID != '' && secrets.GODOT_ASSETLIB_USER != '' && secrets.GODOT_ASSETLIB_PASS != '' }}
+        env:
+          VERSION: ${{ needs.build.outputs.version }}
+          ASSET_ID: ${{ vars.GODOT_ASSET_ID }}
+          ASSETLIB_USER: ${{ secrets.GODOT_ASSETLIB_USER }}
+          ASSETLIB_PASS: ${{ secrets.GODOT_ASSETLIB_PASS }}
+        run: |
+          set -euo pipefail
+          TOKEN=$(curl -fsSL -X POST "https://godotengine.org/asset-library/api/login" \
+            -H "Content-Type: application/json" \
+            -d "{\"username\":\"${ASSETLIB_USER}\",\"password\":\"${ASSETLIB_PASS}\"}" \
+            | jq -r '.token')
+          test -n "$TOKEN" && test "$TOKEN" != "null" || { echo "Godot AssetLib login failed" >&2; exit 1; }
+
+          curl -fsSL -X POST "https://godotengine.org/asset-library/api/asset/${ASSET_ID}" \
+            -H "Content-Type: application/json" \
+            -d "{\"token\":\"${TOKEN}\",\"version_string\":\"${VERSION}\",\"godot_version\":\"4.2\",\"download_commit\":\"v${VERSION}\"}"

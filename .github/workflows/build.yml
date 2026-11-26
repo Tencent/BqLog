@@ -7873,3 +7873,282 @@ jobs:
             -DCMAKE_BUILD_TYPE=Release
           grep -q '^TARGET_PLATFORM:STRING=switch$' build_switch_test/CMakeCache.txt
           cmake --build build_switch_test -j 4
+
+  #########################################################Godot 4 Plugin Build######################################################
+  godot_plugin_build_windows:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x64
+            out_arch: x86_64
+            lib_pattern: "win_x86_64_msvc_libs_*"
+          - arch: arm64
+            out_arch: arm64
+            lib_pattern: "win_arm64_msvc_libs_*"
+    needs:
+      - extract_version
+      - build_windows_x86_64_lib_MSVC
+      - build_windows_arm64_lib_MSVC
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download prebuilt BqLog Windows library
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ matrix.lib_pattern }}
+          path: downloaded_artifacts
+      - name: Build BqLogGodot (Windows ${{ matrix.out_arch }})
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $bqLib = Get-ChildItem -Recurse downloaded_artifacts -Filter "BqLog.lib" | Where-Object { $_.FullName -match "dynamic_lib.*RelWithDebInfo" } | Select-Object -First 1
+          if (-not $bqLib) { throw "BqLog.lib not found in downloaded_artifacts" }
+          $bqDll = Join-Path $bqLib.DirectoryName "BqLog.dll"
+          cmd /c "build\plugin\godot\build_win64.bat `"$($bqLib.FullName)`" ${{ matrix.arch }}"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Copy-Item $bqDll "build\plugin\godot\out\windows\${{ matrix.out_arch }}\" -Force
+      - name: Upload Godot Windows (${{ matrix.out_arch }}) plugin binaries
+        uses: actions/upload-artifact@v6
+        with:
+          name: _godot_bin_windows_${{ matrix.out_arch }}
+          path: build/plugin/godot/out/windows/${{ matrix.out_arch }}
+
+  godot_plugin_build_linux:
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: x86_64
+            runner: ubuntu-22.04
+            lib_pattern: "linux_x86_64_gcc_libs_*"
+          - arch: arm64
+            runner: ubuntu-22.04-arm
+            lib_pattern: "linux_arm64_gcc_libs_*"
+    needs:
+      - extract_version
+      - build_ubuntu_x86_64_lib_GCC
+      - build_ubuntu_arm64_lib_GCC
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download prebuilt BqLog Linux library
+        uses: actions/download-artifact@v8
+        with:
+          pattern: ${{ matrix.lib_pattern }}
+          path: downloaded_artifacts
+      - name: Build BqLogGodot (Linux ${{ matrix.arch }})
+        run: |
+          set -euo pipefail
+          BQLOG_SO=$(find downloaded_artifacts -type f -path "*/dynamic_lib/lib/RelWithDebInfo/libBqLog.so*" | sort | head -n 1)
+          test -n "$BQLOG_SO" || { echo "libBqLog.so not found" >&2; exit 1; }
+          mkdir -p staged_lib
+          cp -Lf "$BQLOG_SO" staged_lib/libBqLog.so
+          bash build/plugin/godot/build_linux.sh "$(pwd)/staged_lib/libBqLog.so" "${{ matrix.arch }}"
+          cp -Lf staged_lib/libBqLog.so "build/plugin/godot/out/linux/${{ matrix.arch }}/libBqLog.so"
+      - name: Upload Godot Linux (${{ matrix.arch }}) plugin binaries
+        uses: actions/upload-artifact@v6
+        with:
+          name: _godot_bin_linux_${{ matrix.arch }}
+          path: build/plugin/godot/out/linux/${{ matrix.arch }}
+
+  godot_plugin_build_macos:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    needs:
+      - extract_version
+      - build_mac_lib
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download prebuilt BqLog macOS library
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "macos_universal_binary_libs_*"
+          path: downloaded_artifacts
+      - name: Build BqLogGodot (macOS universal)
+        run: |
+          set -euo pipefail
+          BQLOG_DYLIB=$(find downloaded_artifacts -type f -path "*/dynamic_lib/lib/RelWithDebInfo/libBqLog*.dylib" | sort | head -n 1)
+          test -n "$BQLOG_DYLIB" || { echo "libBqLog.dylib not found" >&2; exit 1; }
+          mkdir -p staged_lib
+          cp -Lf "$BQLOG_DYLIB" staged_lib/libBqLog.dylib
+          bash build/plugin/godot/build_macos.sh "$(pwd)/staged_lib/libBqLog.dylib"
+          cp -Lf staged_lib/libBqLog.dylib build/plugin/godot/out/macos/libBqLog.dylib
+      - name: Upload Godot macOS universal plugin binaries
+        uses: actions/upload-artifact@v6
+        with:
+          name: _godot_bin_macos
+          path: build/plugin/godot/out/macos
+
+  godot_plugin_build_android:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    needs:
+      - extract_version
+      - build_linux_android
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download prebuilt BqLog Android library
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "android_libs_*"
+          path: downloaded_artifacts
+      - name: Build BqLogGodot (Android all ABIs)
+        run: |
+          set -euo pipefail
+          AAR=$(find downloaded_artifacts -type f -name "*bqlog-release.aar" | head -n 1)
+          test -n "$AAR" || { echo "bqlog-release.aar not found" >&2; exit 1; }
+          mkdir -p staged_android
+          unzip -q "$AAR" "jni/*" -d staged_android
+          NDK_ROOT="${ANDROID_NDK_LATEST_HOME:-${ANDROID_NDK_HOME:-}}"
+          test -n "$NDK_ROOT" || { echo "Android NDK not found" >&2; exit 1; }
+          bash build/plugin/godot/build_android.sh "$NDK_ROOT" "$(pwd)/staged_android/jni"
+          for ABI in arm64-v8a armeabi-v7a x86_64 x86; do
+            cp -Lf "staged_android/jni/${ABI}/libBqLog.so" "build/plugin/godot/out/android/${ABI}/libBqLog.so"
+          done
+      - name: Upload Godot Android plugin binaries
+        uses: actions/upload-artifact@v6
+        with:
+          name: _godot_bin_android
+          path: build/plugin/godot/out/android
+
+  godot_plugin_build_ios:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    needs:
+      - extract_version
+      - build_ios_lib
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download prebuilt BqLog iOS xcframework
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "ios_libs_*"
+          path: downloaded_artifacts
+      - name: Build BqLogGodot (iOS xcframework)
+        run: |
+          set -euo pipefail
+          BQLOG_XCFW=$(find downloaded_artifacts -type d -path "*/dynamic_lib/lib/RelWithDebInfo/BqLog.xcframework" | head -n 1)
+          test -d "$BQLOG_XCFW" || { echo "BqLog.xcframework not found" >&2; exit 1; }
+          bash build/plugin/godot/build_ios.sh "$(cd "$BQLOG_XCFW" && pwd)"
+          cp -R "$BQLOG_XCFW" build/plugin/godot/out/ios/BqLog.xcframework
+      - name: Upload Godot iOS plugin binaries
+        uses: actions/upload-artifact@v6
+        with:
+          name: _godot_bin_ios
+          path: build/plugin/godot/out/ios
+
+  godot_plugin_build_ohos:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    needs:
+      - extract_version
+      - build_harmony_os_on_mac
+    env:
+      REPO: pippocao/Images
+      TAG: OHOS_Mac_Arm64_CommandLineTool_6.0.0
+      ZIP_NAME: commandline-tools-mac-arm64-6.0.0.858.zip
+      TOOL_NAME: ohos-commandline-tools
+      TOOL_VERSION: 6.0.0.858
+      INSTALL_DIR: ${{ github.workspace }}/.toolcache/ohos/commandline-tools/6.0.0.858
+    steps:
+      - uses: actions/checkout@v5
+      - name: Restore OpenHarmony SDK cache
+        id: cache-restore
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.INSTALL_DIR }}
+          key: macos-arm64-${{ env.TOOL_NAME }}-${{ env.TOOL_VERSION }}
+      - name: Download OpenHarmony SDK on cache miss
+        if: steps.cache-restore.outputs.cache-hit != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p "${RUNNER_TEMP}" "${INSTALL_DIR}"
+          gh release download "${TAG}" --repo "${REPO}" --pattern "${ZIP_NAME}" --dir "${RUNNER_TEMP}"
+          unzip -q "${RUNNER_TEMP}/${ZIP_NAME}" -d "${INSTALL_DIR}"
+      - name: Download prebuilt BqLog OpenHarmony library
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "harmony_os_libs_*"
+          path: downloaded_artifacts
+      - name: Build BqLogGodot (OpenHarmony / HarmonyOS)
+        run: |
+          set -euo pipefail
+          OHOS_SDK="${INSTALL_DIR}/command-line-tools/sdk/default/openharmony"
+          mkdir -p staged_ohos
+          for ABI in arm64-v8a armeabi-v7a x86_64; do
+            SO=$(find downloaded_artifacts -type f -path "*/dynamic_lib/lib/RelWithDebInfo/${ABI}/libBqLog.so" | head -n 1)
+            test -f "$SO" || { echo "Missing OpenHarmony libBqLog.so for ${ABI}" >&2; exit 1; }
+            mkdir -p "staged_ohos/${ABI}"
+            cp -Lf "$SO" "staged_ohos/${ABI}/libBqLog.so"
+          done
+          bash build/plugin/godot/build_ohos.sh "$OHOS_SDK" "$(pwd)/staged_ohos"
+          for ABI in arm64-v8a armeabi-v7a x86_64; do
+            cp -Lf "staged_ohos/${ABI}/libBqLog.so" "build/plugin/godot/out/ohos/${ABI}/libBqLog.so"
+          done
+      - name: Upload Godot OpenHarmony plugin binaries
+        uses: actions/upload-artifact@v6
+        with:
+          name: _godot_bin_ohos
+          path: build/plugin/godot/out/ohos
+
+  godot_plugin_pack:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 30
+    needs:
+      - extract_version
+      - godot_plugin_build_windows
+      - godot_plugin_build_linux
+      - godot_plugin_build_macos
+      - godot_plugin_build_android
+      - godot_plugin_build_ios
+      - godot_plugin_build_ohos
+    steps:
+      - uses: actions/checkout@v5
+      - name: Download Godot plugin binaries
+        uses: actions/download-artifact@v8
+        with:
+          pattern: "_godot_bin_*"
+          path: godot_bins
+      - name: Assemble addons/bqlog package
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          STAGE="dist/godot_plugin"
+          rm -rf "$STAGE"
+          mkdir -p "$STAGE/addons/bqlog/bin/windows/x86_64" \
+                   "$STAGE/addons/bqlog/bin/windows/arm64" \
+                   "$STAGE/addons/bqlog/bin/linux/x86_64" \
+                   "$STAGE/addons/bqlog/bin/linux/arm64" \
+                   "$STAGE/addons/bqlog/bin/macos" \
+                   "$STAGE/addons/bqlog/bin/android" \
+                   "$STAGE/addons/bqlog/bin/ohos" \
+                   "$STAGE/addons/bqlog/bin/ios" \
+                   "$STAGE/addons/bqlog/include"
+
+          cp plugin/godot/addons/bqlog/plugin.cfg "$STAGE/addons/bqlog/"
+          sed -i "s/^version=.*/version=\"${VERSION}\"/" "$STAGE/addons/bqlog/plugin.cfg"
+          cp plugin/godot/addons/bqlog/bqlog.gdextension "$STAGE/addons/bqlog/"
+          cp plugin/godot/include/bq_log_godot_adapter.h "$STAGE/addons/bqlog/include/"
+          cp LICENSE.txt "$STAGE/addons/bqlog/LICENSE.txt"
+
+          cp -R godot_bins/_godot_bin_windows_x86_64/. "$STAGE/addons/bqlog/bin/windows/x86_64/"
+          cp -R godot_bins/_godot_bin_windows_arm64/. "$STAGE/addons/bqlog/bin/windows/arm64/"
+          cp -R godot_bins/_godot_bin_linux_x86_64/. "$STAGE/addons/bqlog/bin/linux/x86_64/"
+          cp -R godot_bins/_godot_bin_linux_arm64/. "$STAGE/addons/bqlog/bin/linux/arm64/"
+          cp -R godot_bins/_godot_bin_macos/. "$STAGE/addons/bqlog/bin/macos/"
+          cp -R godot_bins/_godot_bin_android/. "$STAGE/addons/bqlog/bin/android/"
+          cp -R godot_bins/_godot_bin_ohos/. "$STAGE/addons/bqlog/bin/ohos/"
+          cp -R godot_bins/_godot_bin_ios/. "$STAGE/addons/bqlog/bin/ios/"
+
+          find "$STAGE/addons/bqlog" -maxdepth 5 | sort
+      - name: Upload Godot plugin artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: godot_plugin_${{ needs.extract_version.outputs.version }}
+          path: dist/godot_plugin

@@ -2,13 +2,13 @@
   <img src="banner.jpg" alt="BqLog Banner" width="100%">
 </p>
 
-# BqLog (BianQue Log) V 2.8.3
+# BqLog (BianQue Log) V 2.8.4
 
 **English** | [简体中文](./README_CHS.md)
 
 [![license](https://img.shields.io/badge/license-APACHE2.0-brightgreen.svg?style=flat)](LICENSE.txt)
-[![Release Version](https://img.shields.io/badge/release-2.8.3-red.svg)](https://github.com/Tencent/BqLog/releases)
-[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.8.3-orange.svg?style=flat)](CHANGELOG.md)
+[![Release Version](https://img.shields.io/badge/release-2.8.4-red.svg)](https://github.com/Tencent/BqLog/releases)
+[![ChangeLog](https://img.shields.io/badge/📋_ChangeLog-v2.8.4-orange.svg?style=flat)](CHANGELOG.md)
 [![GitHub Stars](https://img.shields.io/github/stars/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/stargazers)
 [![GitHub Forks](https://img.shields.io/github/forks/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/network/members)
 [![GitHub Issues](https://img.shields.io/github/issues/Tencent/BqLog?style=flat&logo=github)](https://github.com/Tencent/BqLog/issues)
@@ -55,9 +55,11 @@
 
 ---
 
-[![Download](https://img.shields.io/badge/⬇_Download-Release_2.8.3-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
+[![Download](https://img.shields.io/badge/⬇_Download-Release_2.8.4-blue.svg?style=for-the-badge)](https://github.com/Tencent/BqLog/releases)
 
 ## 📋 What's New in v2.8.x
+
+- **Godot 4 support (v2.8.4+, GDExtension)**: official `addons/bqlog` plugin for Godot 4.2+ (Windows, macOS, Linux, Android, HarmonyOS / OpenHarmony, iOS) with zero-GC GDScript logging, Category Log `.gd` generation, and shared in-process singleton across GDScript, Godot C#, and C++. See the [engine integration guide](docs/ENGINE_INTEGRATION.md#godot-4-gdextension).
 
 - **New encrypted log format**: an upgraded encryption scheme that resists known-plaintext attacks and AI-assisted analysis.
 - **Tool compatibility**: `BqLog_LogDecoder` now decodes compressed logs written by every 2.x release.
@@ -127,6 +129,7 @@
 | [**Go modules**](docs/INTEGRATION_GUIDE.md#go)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — | [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) |
 | [**Unity**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine)<br>UPM tarball | *Install package from tarball* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) |
 | [**Unreal Engine**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine)<br>UE4 · UE5 | *copy into `Plugins/`* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
+| [**Godot 4**](docs/ENGINE_INTEGRATION.md#godot-4-gdextension)<br>Godot 4.2+ (GDExtension) | *copy into `addons/bqlog`* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) |
 
 > [!IMPORTANT]
 > **Not in the table?** iOS, tvOS and the other Apple platforms are integrated through Xcode or CMake instead of a package manager — start at [iOS / Apple platforms](docs/INTEGRATION_GUIDE.md#ios--apple-platforms-c--objective-c). Embedded Linux, the BSD family and plain source builds are covered by the same [Integration Guide](docs/INTEGRATION_GUIDE.md) and by the prebuilt archives on the [release page](https://github.com/Tencent/BqLog/releases).
