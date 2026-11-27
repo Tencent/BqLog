@@ -1,7 +1,7 @@
 {
-  "version": "2.8.3",
+  "version": "2.8.4",
   "module": "github.com/Tencent/BqLog/go/v2",
-  "source_commit": "fd4c97e45a2e54c183044c9832df9761dfbaebd9",
+  "source_commit": "04d77bf025abd11e4205f979fa8ef5b221591286",
   "sources": [
     {
       "path": "include/bq_common/bq_common_public_include.h",
@@ -533,7 +533,7 @@
     },
     {
       "path": "src/bq_log/global/version.cpp",
-      "sha256": "048d96108fae97e7dd125e67549cf0ffaf7667c95b9235c4d69acd75aef95192"
+      "sha256": "89c22a657b4ee995ca759220113c77c938c0dc3400250725c4019c7fe3a94c81"
     },
     {
       "path": "src/bq_log/global/version.h",
