@@ -15,8 +15,6 @@
 #include <godot_cpp/classes/os.hpp>
 #include <godot_cpp/core/defs.hpp>
 #include <godot_cpp/godot.hpp>
-#include <godot_cpp/variant/char_string.hpp>
-#include <godot_cpp/variant/string.hpp>
 #include "bq_category_log_godot.h"
 #include "bq_log/bq_log.h"
 #include "bq_log_godot.h"
@@ -36,15 +34,8 @@ void initialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
     godot::ClassDB::register_class<bq::bq_log>();
     godot::ClassDB::register_class<bq::bq_category_log>();
 
-    // Route default relative log paths to Godot's writable user:// directory.
     bool is_editor_env = false;
     if (godot::OS* os = godot::OS::get_singleton()) {
-        const godot::String user_dir = os->get_user_data_dir();
-        if (!user_dir.is_empty()) {
-            const godot::CharString utf8 = user_dir.utf8();
-            bq::api::__api_reset_base_dir(0, utf8.get_data());
-            bq::api::__api_reset_base_dir(1, utf8.get_data());
-        }
         is_editor_env = os->has_feature("editor");
     }
     if (!is_editor_env) {

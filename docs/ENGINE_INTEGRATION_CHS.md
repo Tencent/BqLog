@@ -258,7 +258,7 @@ Unreal 插件会自动将所有 BqLog 输出转接到 Unreal 的 Output Log，�
 2. 将压缩包中的 `addons/bqlog` 解压到 Godot 项目根目录（`res://addons/bqlog`）；
 3. 重新打开工程（或在 CI 中执行一次 `godot --headless --import --quit`）让 Godot 注册 `bqlog.gdextension`。
 
-> **说明**：插件初始化时会自动将 BqLog 的相对目录 `base_dir` 设为 `OS.get_user_data_dir()`（`user://`）。仅在 Godot 编辑器（及编辑器内 F5 调试运行）环境下默认将 Console Appender 输出重定向到 Godot 的 Output / Errors 面板（带防重入死循环保护）；导出后的正式包默认不接管，直接走原生平台通道（stdout / Logcat / NSLog），也可通过 `bq_log.set_godot_console_redirect_enable(bool)` 手动开关。
+> **说明**：Godot 插件保留 BqLog 各平台原生的默认 `base_dir`（与标准版 BqLog 以及启动日志打印的 `base_dir=...` 完全一致；如希望写到 Godot 的 `user://`，可在创建日志前手动调用 `bq_log.reset_base_dir(0, OS.get_user_data_dir())`）。仅在 Godot 编辑器（及编辑器内 F5 调试运行）环境下默认将 Console Appender 输出重定向到 Godot 的 Output / Errors 面板（带防重入死循环保护）；导出后的正式包默认不接管，直接走原生平台通道（stdout / Logcat / NSLog），也可通过 `bq_log.set_godot_console_redirect_enable(bool)` 手动开关。
 
 ### 使用方式（GDScript）
 

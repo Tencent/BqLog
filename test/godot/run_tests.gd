@@ -86,7 +86,7 @@ func _test_basic_metadata() -> void:
 	_assert_true(not ver.is_empty(), "get_version() should not be empty")
 	_assert_true(bq_log.get_platform_capabilities() >= 0, "get_platform_capabilities() should be non-negative")
 	var base0 := bq_log.get_file_base_dir(0)
-	_assert_true(not base0.is_empty(), "base_dir(0) should be initialized to user_data_dir")
+	_assert_true(not base0.is_empty(), "base_dir(0) should not be empty")
 
 	var temp_dir := OS.get_user_data_dir().path_join("bqlog_autotest_dir")
 	DirAccess.make_dir_recursive_absolute(temp_dir)

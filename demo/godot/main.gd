@@ -51,7 +51,7 @@ func _on_write_samples() -> void:
 	_logger.warning("Low HP warning: {} / {}", 15, 100)
 	_logger.error("Connection timeout after {} ms", 3000)
 	_logger.force_flush()
-	_append_ui("Wrote 5 sample log entries (check Godot Output & user://bqlog_demo/).")
+	_append_ui("Wrote 5 sample log entries (check Godot Output & %s)." % bq_log.get_file_base_dir(0).path_join("bqlog_demo"))
 
 
 func _on_run_benchmark() -> void:

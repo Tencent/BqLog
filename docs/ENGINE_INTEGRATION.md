@@ -261,7 +261,7 @@ Behaviour to know about:
 2. Extract the `addons/bqlog` directory into your Godot project root (`res://addons/bqlog`).
 3. Reopen the project (or run `godot --headless --import --quit` in CI) so Godot registers `bqlog.gdextension`.
 
-> **Note:** On initialization, the plugin automatically binds BqLog's relative `base_dir` to `OS.get_user_data_dir()` (`user://`). In the Godot Editor (and projects launched from it via F5), console appender output is automatically redirected to Godot's Output/Errors panel with reentrancy protection; in exported runtime builds, redirection is disabled by default so BqLog outputs directly via native platform channels (stdout / Logcat / NSLog). You can override this at runtime with `bq_log.set_godot_console_redirect_enable(bool)`.
+> **Note:** The Godot plugin keeps BqLog's native default `base_dir` on every platform (identical to standalone BqLog and matching the `base_dir=...` printed at startup; you can optionally call `bq_log.reset_base_dir(0, OS.get_user_data_dir())` before creating logs if you prefer Godot's `user://`). In the Godot Editor (and projects launched from it via F5), console appender output is automatically redirected to Godot's Output/Errors panel with reentrancy protection; in exported runtime builds, redirection is disabled by default so BqLog outputs directly via native platform channels (stdout / Logcat / NSLog). You can override this at runtime with `bq_log.set_godot_console_redirect_enable(bool)`.
 
 ### Usage (GDScript)
 
