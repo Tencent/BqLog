@@ -2577,7 +2577,7 @@ jobs:
           cp test/godot_cpp/cpp_adapter_test.gdextension test/godot/
           printf "res://addons/bqlog/bqlog.gdextension\nres://cpp_adapter_test.gdextension\n" > test/godot/.godot/extension_list.cfg
           cp -Lf staged_mac/libBqLog.dylib test/godot/addons/bqlog/bin/macos/libBqLog.dylib
-          cp -Lf build/plugin/godot/out/macos/libBqLogGodot.macos.universal.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodot.macos.universal.dylib
+          cp -Lf build/plugin/godot/out/macos/libBqLogGodot.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodot.dylib
           cp -Lf build_godot_cpp_test/libBqLogGodotCppTest.dylib test/godot/addons/bqlog/bin/macos/libBqLogGodotCppTest.dylib
           ./artifacts/tools/bin/Release/BqLog_CategoryLogGenerator test_category_log test/godot/test_category.cfg test/godot/generated
 

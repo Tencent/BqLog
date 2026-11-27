@@ -23,20 +23,20 @@ cmake -S "${PLUGIN_DIR}" -B "${BUILD_DIR}" \
     -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
     -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0 \
     -DBQLOG_LIB_PATH="${BQLOG_LIB}" \
-    -DBQLOG_GODOT_OUTPUT_NAME=BqLogGodot.macos.universal \
+    -DBQLOG_GODOT_OUTPUT_NAME=BqLogGodot \
     ${EXTRA_ARGS[@]+"${EXTRA_ARGS[@]}"}
 
 cmake --build "${BUILD_DIR}" --parallel "$(sysctl -n hw.ncpu)"
 
 mkdir -p "${OUT_DIR}"
-cp -Lf "${BUILD_DIR}/libBqLogGodot.macos.universal.dylib" "${OUT_DIR}/libBqLogGodot.macos.universal.dylib"
+cp -Lf "${BUILD_DIR}/libBqLogGodot.dylib" "${OUT_DIR}/libBqLogGodot.dylib"
 
 # Normalize install_name of linked libBqLog (e.g. @rpath/libBqLog.2.dylib) to @loader_path/libBqLog.dylib.
 # Exclude the binary's own ID line (libBqLogGodot.*) and re-sign ad-hoc for Apple Silicon.
-BQLOG_DEP="$(otool -L "${OUT_DIR}/libBqLogGodot.macos.universal.dylib" | awk '!/libBqLogGodot/ && /libBqLog/{print $1; exit}')"
+BQLOG_DEP="$(otool -L "${OUT_DIR}/libBqLogGodot.dylib" | awk '!/libBqLogGodot/ && /libBqLog/{print $1; exit}')"
 if [[ -n "${BQLOG_DEP}" && "${BQLOG_DEP}" != "@loader_path/libBqLog.dylib" ]]; then
-    install_name_tool -change "${BQLOG_DEP}" "@loader_path/libBqLog.dylib" "${OUT_DIR}/libBqLogGodot.macos.universal.dylib"
-    codesign --force --sign - "${OUT_DIR}/libBqLogGodot.macos.universal.dylib"
+    install_name_tool -change "${BQLOG_DEP}" "@loader_path/libBqLog.dylib" "${OUT_DIR}/libBqLogGodot.dylib"
+    codesign --force --sign - "${OUT_DIR}/libBqLogGodot.dylib"
 fi
 
 echo "Built macOS universal Godot plugin in ${OUT_DIR}"

@@ -146,6 +146,10 @@ func _test_all_types_and_snapshot() -> void:
 	var logger := bq_log.create_log("godot_test_types", cfg)
 	_assert_true(logger.is_valid(), "types logger should be valid")
 
+	_console_events.clear()
+	var cb := Callable(self, "_on_console_event")
+	bq_log.register_console_callback(cb)
+
 	_assert_true(logger.verbose("v_only"), "verbose no args")
 	_assert_true(logger.debug("null={}, bool_t={}, bool_f={}", null, true, false), "debug null/bool")
 	_assert_true(logger.info("int={}, neg={}, float={}", 9223372036854775807, -42, 3.14159), "info int/float")
@@ -161,13 +165,21 @@ func _test_all_types_and_snapshot() -> void:
 	), "34 args should succeed")
 
 	logger.force_flush()
+	bq_log.unregister_console_callback(cb)
+
+	var cb_joined := ""
+	for ev in _console_events:
+		cb_joined += String(ev["content"]) + "\n"
+	_assert_true(cb_joined.contains("v_only"), "callback contains v_only")
+	_assert_true(cb_joined.contains("9223372036854775807"), "callback contains int64 max")
+	_assert_true(cb_joined.contains("你好BqLog🚀"), "callback contains unicode")
+	_assert_true(cb_joined.contains("FastName"), "callback contains StringName")
+	_assert_true(cb_joined.contains("(1, 2, 3)"), "callback contains Vector3")
+	_assert_true(cb_joined.contains("33,34"), "callback contains >32 args")
+
 	var snap := logger.take_snapshot("UTC+0")
 	_assert_true(snap.contains("v_only"), "snapshot contains v_only")
-	_assert_true(snap.contains("9223372036854775807"), "snapshot contains int64 max")
-	_assert_true(snap.contains("你好BqLog🚀"), "snapshot contains utf32 unicode")
-	_assert_true(snap.contains("FastName"), "snapshot contains StringName")
-	_assert_true(snap.contains("(1, 2, 3)"), "snapshot contains Vector3")
-	_assert_true(snap.contains("33,34"), "snapshot contains >32 args")
+	_assert_true(snap.contains("你好BqLog🚀"), "snapshot contains unicode")
 
 
 func _test_reset_config_and_appender() -> void:
@@ -300,8 +312,8 @@ func _test_cpp_adapter_interop() -> void:
 	shared.force_flush()
 
 	var snap := shared.take_snapshot("UTC+0")
-	_assert_true(snap.contains("cpp_adapter: str=cpp_gd_str_你好, sn=cpp_gd_sname"), "snapshot contains C++ godot::String & StringName")
-	_assert_true(snap.contains("cpp_fast_mode: str=cpp_gd_str_你好, num=777"), "snapshot contains C++ BQ_LOG_FAST_INFO")
+	_assert_true(snap.contains("cpp_adapter: str=cpp_gd_str_你好, sn=cpp_gd_sname, np=/root/Main/Player"), "snapshot contains C++ godot::String, StringName & NodePath")
+	_assert_true(snap.contains("cpp_fast_mode: str=cpp_gd_str_你好, v3=(1, 2, 3), num=777"), "snapshot contains C++ BQ_LOG_FAST_INFO")
 	_assert_true(snap.contains("gdscript_side_entry 888"), "snapshot contains GDScript write on shared log")
 
 
@@ -325,9 +337,21 @@ func _test_category_log() -> void:
 	_assert_true(cat_log != null and cat_log.is_valid(), "generated category log should be valid")
 	_assert_true(cat_log.get_categories_count() >= 5, "categories count should match")
 
+	_console_events.clear()
+	var cb := Callable(self, "_on_console_event")
+	bq_log.register_console_callback(cb)
+
 	_assert_true(cat_log.info(cat_log.cat.ModuleA.SystemA, "allowed_cat_a {}", 101), "ModuleA.SystemA should be allowed")
 	_assert_true(not cat_log.info(cat_log.cat.ModuleA.SystemB, "blocked_cat_b {}", 202), "ModuleA.SystemB should be filtered out")
 	_assert_true(cat_log.warning(cat_log.cat.ModuleB.Network, "allowed_net {}", "ok"), "ModuleB.Network should be allowed")
+
+	bq_log.unregister_console_callback(cb)
+	var cb_joined := ""
+	for ev in _console_events:
+		cb_joined += String(ev["content"]) + "\n"
+	_assert_true(cb_joined.contains("allowed_cat_a 101"), "category callback contains allowed_cat_a")
+	_assert_true(not cb_joined.contains("blocked_cat_b"), "category callback excludes blocked_cat_b")
+	_assert_true(cb_joined.contains("allowed_net ok"), "category callback contains allowed_net")
 
 	var found = cls.get_log_by_name("godot_test_cat")
 	_assert_true(found != null and found.is_valid(), "category get_log_by_name should succeed")

@@ -286,7 +286,9 @@ biz.info(biz.cat.Shop.Seller, "sold item {}, price {}", item_id, price)
 
 ### GDScript / Godot C#（.NET）/ C++ 混用
 
-`BqLogGodot` 动态链接共享的 `BqLog` 核心库。Godot .NET 项目可直接引用 `BqLog` NuGet 包获得零 GC 的 C# 日志通道，且 GDScript、C# 与 C++（`addons/bqlog/include/bq_log_godot_adapter.h`）在同进程内共享唯一 BqLog 单例，可通过 `get_log_by_name` 无缝互通。
+`BqLogGodot` 动态链接共享的 `BqLog` 核心库。Godot .NET 项目可直接引用 `BqLog` NuGet 包获得零 GC 的 C# 日志通道，且 GDScript、C# 与 C++（`godot-cpp`）在同进程内共享唯一 BqLog 单例，可通过 `get_log_by_name` 无缝互通。
+
+> **在 Godot C++（`godot-cpp`）中只需包含 `"bq_log_godot_adapter.h"`，不要再单独包含 `"bq_log/bq_log.h"`**——`"bq_log_godot_adapter.h"` 内部已自动包含 `"bq_log/bq_log.h"`，并内置 `godot::String`、`godot::StringName`、`godot::NodePath`、`Vector2/2i/3/3i/4/4i`、`Color`、`Quaternion`、`Rect2/2i` 的零堆分配适配（同时支持 `BQ_LOG_FAST_*`）。
 
 完整可运行示例请参考仓库的 `demo/godot` 目录。
 

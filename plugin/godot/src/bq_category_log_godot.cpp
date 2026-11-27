@@ -15,49 +15,53 @@
 #include <godot_cpp/variant/char_string.hpp>
 #include "bq_log/bq_log.h"
 
-void bq_category_log::_bind_methods()
-{
-    godot::ClassDB::bind_method(godot::D_METHOD("init_with_log_id", "log_id"), &bq_category_log::init_with_log_id);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_categories_count"), &bq_category_log::get_categories_count);
-    godot::ClassDB::bind_method(godot::D_METHOD("get_categories_name_array"), &bq_category_log::get_categories_name_array);
-    godot::ClassDB::bind_static_method(
-        "bq_category_log",
-        godot::D_METHOD("call_api_create_category_log", "name", "config", "categories_count", "categories"),
-        &bq_category_log::call_api_create_category_log);
-}
+namespace bq {
 
-void bq_category_log::init_with_log_id(int64_t log_id)
-{
-    init_by_id(log_id > 0 ? static_cast<uint64_t>(log_id) : 0u);
-}
-
-int64_t bq_category_log::call_api_create_category_log(
-    const godot::String& name,
-    const godot::String& config,
-    int64_t categories_count,
-    const godot::PackedStringArray& categories)
-{
-    if (config.is_empty() || categories_count <= 0 || categories.size() < categories_count) {
-        return 0;
+    void bq_category_log::_bind_methods()
+    {
+        godot::ClassDB::bind_method(godot::D_METHOD("init_with_log_id", "log_id"), &bq_category_log::init_with_log_id);
+        godot::ClassDB::bind_method(godot::D_METHOD("get_categories_count"), &bq_category_log::get_categories_count);
+        godot::ClassDB::bind_method(godot::D_METHOD("get_categories_name_array"), &bq_category_log::get_categories_name_array);
+        godot::ClassDB::bind_static_method(
+            "bq_category_log",
+            godot::D_METHOD("call_api_create_category_log", "name", "config", "categories_count", "categories"),
+            &bq_category_log::call_api_create_category_log);
     }
 
-    const godot::CharString name_utf8 = name.utf8();
-    const godot::CharString config_utf8 = config.utf8();
-
-    std::vector<godot::CharString> utf8_storage;
-    std::vector<const char*> ptrs;
-    utf8_storage.reserve(static_cast<size_t>(categories_count));
-    ptrs.reserve(static_cast<size_t>(categories_count));
-
-    for (int64_t i = 0; i < categories_count; ++i) {
-        utf8_storage.push_back(categories[static_cast<int32_t>(i)].utf8());
-        ptrs.push_back(utf8_storage.back().get_data());
+    void bq_category_log::init_with_log_id(int64_t log_id)
+    {
+        init_by_id(log_id > 0 ? static_cast<uint64_t>(log_id) : 0u);
     }
 
-    const uint64_t log_id = bq::api::__api_create_log(
-        name_utf8.get_data(),
-        config_utf8.get_data(),
-        static_cast<uint32_t>(categories_count),
-        ptrs.data());
-    return static_cast<int64_t>(log_id);
+    int64_t bq_category_log::call_api_create_category_log(
+        const godot::String& name,
+        const godot::String& config,
+        int64_t categories_count,
+        const godot::PackedStringArray& categories)
+    {
+        if (config.is_empty() || categories_count <= 0 || categories.size() < categories_count) {
+            return 0;
+        }
+
+        const godot::CharString name_utf8 = name.utf8();
+        const godot::CharString config_utf8 = config.utf8();
+
+        std::vector<godot::CharString> utf8_storage;
+        std::vector<const char*> ptrs;
+        utf8_storage.reserve(static_cast<size_t>(categories_count));
+        ptrs.reserve(static_cast<size_t>(categories_count));
+
+        for (int64_t i = 0; i < categories_count; ++i) {
+            utf8_storage.push_back(categories[static_cast<int32_t>(i)].utf8());
+            ptrs.push_back(utf8_storage.back().get_data());
+        }
+
+        const uint64_t log_id = bq::api::__api_create_log(
+            name_utf8.get_data(),
+            config_utf8.get_data(),
+            static_cast<uint32_t>(categories_count),
+            ptrs.data());
+        return static_cast<int64_t>(log_id);
+    }
+
 }

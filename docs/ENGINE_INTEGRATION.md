@@ -289,7 +289,9 @@ biz.info(biz.cat.Shop.Seller, "sold item {}, price {}", item_id, price)
 
 ### Mixing GDScript, Godot C# (.NET), and C++
 
-`BqLogGodot` dynamically links against the shared `BqLog` core library. In Godot .NET projects, add the `BqLog` NuGet package for zero-GC C# logging; GDScript, C#, and C++ (`addons/bqlog/include/bq_log_godot_adapter.h`) share the exact same in-process BqLog singleton and can look up each other's logs via `get_log_by_name`.
+`BqLogGodot` dynamically links against the shared `BqLog` core library. In Godot .NET projects, add the `BqLog` NuGet package for zero-GC C# logging; GDScript, C#, and C++ (`godot-cpp`) share the exact same in-process BqLog singleton and can look up each other's logs via `get_log_by_name`.
+
+> **Inside Godot C++ (`godot-cpp`), include `"bq_log_godot_adapter.h"`, not `"bq_log/bq_log.h"`** — `"bq_log_godot_adapter.h"` already includes `"bq_log/bq_log.h"` and adds zero-heap-allocation adapters for `godot::String`, `godot::StringName`, `godot::NodePath`, `Vector2/2i/3/3i/4/4i`, `Color`, `Quaternion`, and `Rect2/2i` (including `BQ_LOG_FAST_*`).
 
 For a runnable sample, see the `demo/godot` directory.
 

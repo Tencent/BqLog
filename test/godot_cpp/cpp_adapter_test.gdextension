@@ -6,9 +6,6 @@ reloadable = false
 
 [libraries]
 
-windows.debug.x86_64 = "res://addons/bqlog/bin/windows/x86_64/BqLogGodotCppTest.dll"
-windows.release.x86_64 = "res://addons/bqlog/bin/windows/x86_64/BqLogGodotCppTest.dll"
-linux.debug.x86_64 = "res://addons/bqlog/bin/linux/x86_64/libBqLogGodotCppTest.so"
-linux.release.x86_64 = "res://addons/bqlog/bin/linux/x86_64/libBqLogGodotCppTest.so"
-macos.debug = "res://addons/bqlog/bin/macos/libBqLogGodotCppTest.dylib"
-macos.release = "res://addons/bqlog/bin/macos/libBqLogGodotCppTest.dylib"
+windows.x86_64 = "res://addons/bqlog/bin/windows/x86_64/BqLogGodotCppTest.dll"
+linux.x86_64 = "res://addons/bqlog/bin/linux/x86_64/libBqLogGodotCppTest.so"
+macos = "res://addons/bqlog/bin/macos/libBqLogGodotCppTest.dylib"

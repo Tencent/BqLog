@@ -4,15 +4,6 @@ if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
     include("${CMAKE_CURRENT_SOURCE_DIR}/../../CMake_utils.txt")
 endif()
 
-bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
-
-project(BqLogGodot VERSION ${BQ_VERSION} LANGUAGES CXX)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_CXX_EXTENSIONS OFF)
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-
 option(BQ_WERROR "Treat compiler warnings as errors in BqLogGodot sources" ON)
 set(GODOT_CPP_DIR "" CACHE PATH "Path to an existing godot-cpp checkout (optional; fetched if empty)")
 set(GODOT_CPP_GIT_TAG "godot-4.2-stable" CACHE STRING "godot-cpp git tag to fetch when GODOT_CPP_DIR is empty")
@@ -21,7 +12,22 @@ set(BQLOG_LIB_DIR "" CACHE PATH "Directory containing prebuilt BqLog shared libr
 set(BQLOG_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../include" CACHE PATH "Path to BqLog public headers")
 set(BQLOG_GODOT_OUTPUT_NAME "BqLogGodot" CACHE STRING "Output base name of the GDExtension library")
 
-# Pull in godot-cpp (local checkout or FetchContent).
+# Parse version from version.cpp
+bq_parse_version_from_cpp("${CMAKE_CURRENT_SOURCE_DIR}/../../src/bq_log/global/version.cpp")
+
+project(BqLogGodot VERSION ${BQ_VERSION} LANGUAGES CXX)
+BQ_DETECT_ARCH(DETECTED_ARCH)
+
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+set(CMAKE_CXX_VISIBILITY_PRESET hidden)
+set(CMAKE_VISIBILITY_INLINES_HIDDEN ON)
+set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+
+############################################################
+# Dependencies (godot-cpp & prebuilt BqLog)
+############################################################
 if(GODOT_CPP_DIR AND EXISTS "${GODOT_CPP_DIR}/CMakeLists.txt")
     message(STATUS "Using local godot-cpp from: ${GODOT_CPP_DIR}")
     add_subdirectory("${GODOT_CPP_DIR}" "${CMAKE_CURRENT_BINARY_DIR}/godot-cpp" EXCLUDE_FROM_ALL)
@@ -35,7 +41,6 @@ else()
     FetchContent_MakeAvailable(godot-cpp)
 endif()
 
-# Locate the BqLog dynamic library to link against (shared singleton across GDScript/C#/C++).
 if(BQLOG_LIB_PATH AND EXISTS "${BQLOG_LIB_PATH}")
     set(BQLOG_LINK_LIB "${BQLOG_LIB_PATH}")
 else()
@@ -54,26 +59,30 @@ if(NOT BQLOG_LINK_LIB)
 endif()
 message(STATUS "Linking BqLogGodot against BqLog: ${BQLOG_LINK_LIB}")
 
+############################################################
+# Config Source & Include Dirs
+############################################################
 set(SRC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/src")
 set(PUB_INC_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${SRC_DIR}")
+COLLECT_INCLUDE_DIRS(ALL_INC_DIRS "${PUB_INC_DIR}")
+
 COLLECT_SRC_FILES(SRC_LIST "${SRC_DIR}")
 COLLECT_SRC_FILES(INC_LIST "${PUB_INC_DIR}")
+
 GROUP_FOR_IDE("${SRC_LIST}" "src")
 GROUP_FOR_IDE("${INC_LIST}" "include")
 
+############################################################
+# Target Definition
+############################################################
 add_library(BqLogGodot SHARED ${SRC_LIST} ${INC_LIST})
 
-target_include_directories(BqLogGodot
-    PRIVATE
-        "${CMAKE_CURRENT_SOURCE_DIR}/src"
-        "${CMAKE_CURRENT_SOURCE_DIR}/include"
-)
-# Mark BqLog public headers as SYSTEM so strict -Werror in BqLogGodot (e.g. Android NDK 30
-# fortify diagnose_if warnings in array_impl.h) does not fail on third-party/upstream headers.
-target_include_directories(BqLogGodot
-    SYSTEM PRIVATE
-        "${BQLOG_INCLUDE_DIR}"
-)
+target_include_directories(BqLogGodot PRIVATE ${ALL_INC_DIRS})
+# Mark BqLog public headers as SYSTEM so strict -Werror in BqLogGodot does not fail
+# on platform-specific fortify warnings in upstream headers (e.g. Android NDK 30).
+target_include_directories(BqLogGodot SYSTEM PRIVATE "${BQLOG_INCLUDE_DIR}")
 
 target_link_libraries(BqLogGodot
     PRIVATE
@@ -105,8 +114,6 @@ endif()
 
 set_target_properties(BqLogGodot PROPERTIES
     OUTPUT_NAME "${BQLOG_GODOT_OUTPUT_NAME}"
-    CXX_VISIBILITY_PRESET hidden
-    VISIBILITY_INLINES_HIDDEN ON
 )
 
 if(APPLE)

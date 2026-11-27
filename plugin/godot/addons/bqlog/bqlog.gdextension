@@ -6,68 +6,32 @@ reloadable = false
 
 [libraries]
 
-macos.debug = "res://addons/bqlog/bin/macos/libBqLogGodot.macos.universal.dylib"
-macos.release = "res://addons/bqlog/bin/macos/libBqLogGodot.macos.universal.dylib"
-
-windows.debug.x86_64 = "res://addons/bqlog/bin/windows/x86_64/BqLogGodot.dll"
-windows.release.x86_64 = "res://addons/bqlog/bin/windows/x86_64/BqLogGodot.dll"
-windows.debug.arm64 = "res://addons/bqlog/bin/windows/arm64/BqLogGodot.dll"
-windows.release.arm64 = "res://addons/bqlog/bin/windows/arm64/BqLogGodot.dll"
-
-linux.debug.x86_64 = "res://addons/bqlog/bin/linux/x86_64/libBqLogGodot.so"
-linux.release.x86_64 = "res://addons/bqlog/bin/linux/x86_64/libBqLogGodot.so"
-linux.debug.arm64 = "res://addons/bqlog/bin/linux/arm64/libBqLogGodot.so"
-linux.release.arm64 = "res://addons/bqlog/bin/linux/arm64/libBqLogGodot.so"
-
-android.debug.arm64 = "res://addons/bqlog/bin/android/arm64-v8a/libBqLogGodot.so"
-android.release.arm64 = "res://addons/bqlog/bin/android/arm64-v8a/libBqLogGodot.so"
-android.debug.arm32 = "res://addons/bqlog/bin/android/armeabi-v7a/libBqLogGodot.so"
-android.release.arm32 = "res://addons/bqlog/bin/android/armeabi-v7a/libBqLogGodot.so"
-android.debug.x86_64 = "res://addons/bqlog/bin/android/x86_64/libBqLogGodot.so"
-android.release.x86_64 = "res://addons/bqlog/bin/android/x86_64/libBqLogGodot.so"
-android.debug.x86_32 = "res://addons/bqlog/bin/android/x86/libBqLogGodot.so"
-android.release.x86_32 = "res://addons/bqlog/bin/android/x86/libBqLogGodot.so"
-
-ohos.debug.arm64 = "res://addons/bqlog/bin/ohos/arm64-v8a/libBqLogGodot.so"
-ohos.release.arm64 = "res://addons/bqlog/bin/ohos/arm64-v8a/libBqLogGodot.so"
-ohos.debug.arm32 = "res://addons/bqlog/bin/ohos/armeabi-v7a/libBqLogGodot.so"
-ohos.release.arm32 = "res://addons/bqlog/bin/ohos/armeabi-v7a/libBqLogGodot.so"
-ohos.debug.x86_64 = "res://addons/bqlog/bin/ohos/x86_64/libBqLogGodot.so"
-ohos.release.x86_64 = "res://addons/bqlog/bin/ohos/x86_64/libBqLogGodot.so"
-
-ios.debug = "res://addons/bqlog/bin/ios/BqLogGodot.xcframework"
-ios.release = "res://addons/bqlog/bin/ios/BqLogGodot.xcframework"
+macos = "res://addons/bqlog/bin/macos/libBqLogGodot.dylib"
+windows.x86_64 = "res://addons/bqlog/bin/windows/x86_64/BqLogGodot.dll"
+windows.arm64 = "res://addons/bqlog/bin/windows/arm64/BqLogGodot.dll"
+linux.x86_64 = "res://addons/bqlog/bin/linux/x86_64/libBqLogGodot.so"
+linux.arm64 = "res://addons/bqlog/bin/linux/arm64/libBqLogGodot.so"
+android.arm64 = "res://addons/bqlog/bin/android/arm64-v8a/libBqLogGodot.so"
+android.arm32 = "res://addons/bqlog/bin/android/armeabi-v7a/libBqLogGodot.so"
+android.x86_64 = "res://addons/bqlog/bin/android/x86_64/libBqLogGodot.so"
+android.x86_32 = "res://addons/bqlog/bin/android/x86/libBqLogGodot.so"
+ohos.arm64 = "res://addons/bqlog/bin/ohos/arm64-v8a/libBqLogGodot.so"
+ohos.arm32 = "res://addons/bqlog/bin/ohos/armeabi-v7a/libBqLogGodot.so"
+ohos.x86_64 = "res://addons/bqlog/bin/ohos/x86_64/libBqLogGodot.so"
+ios = "res://addons/bqlog/bin/ios/BqLogGodot.xcframework"
 
 [dependencies]
 
-macos.debug = { "res://addons/bqlog/bin/macos/libBqLog.dylib" : "" }
-macos.release = { "res://addons/bqlog/bin/macos/libBqLog.dylib" : "" }
-
-windows.debug.x86_64 = { "res://addons/bqlog/bin/windows/x86_64/BqLog.dll" : "" }
-windows.release.x86_64 = { "res://addons/bqlog/bin/windows/x86_64/BqLog.dll" : "" }
-windows.debug.arm64 = { "res://addons/bqlog/bin/windows/arm64/BqLog.dll" : "" }
-windows.release.arm64 = { "res://addons/bqlog/bin/windows/arm64/BqLog.dll" : "" }
-
-linux.debug.x86_64 = { "res://addons/bqlog/bin/linux/x86_64/libBqLog.so" : "" }
-linux.release.x86_64 = { "res://addons/bqlog/bin/linux/x86_64/libBqLog.so" : "" }
-linux.debug.arm64 = { "res://addons/bqlog/bin/linux/arm64/libBqLog.so" : "" }
-linux.release.arm64 = { "res://addons/bqlog/bin/linux/arm64/libBqLog.so" : "" }
-
-android.debug.arm64 = { "res://addons/bqlog/bin/android/arm64-v8a/libBqLog.so" : "" }
-android.release.arm64 = { "res://addons/bqlog/bin/android/arm64-v8a/libBqLog.so" : "" }
-android.debug.arm32 = { "res://addons/bqlog/bin/android/armeabi-v7a/libBqLog.so" : "" }
-android.release.arm32 = { "res://addons/bqlog/bin/android/armeabi-v7a/libBqLog.so" : "" }
-android.debug.x86_64 = { "res://addons/bqlog/bin/android/x86_64/libBqLog.so" : "" }
-android.release.x86_64 = { "res://addons/bqlog/bin/android/x86_64/libBqLog.so" : "" }
-android.debug.x86_32 = { "res://addons/bqlog/bin/android/x86/libBqLog.so" : "" }
-android.release.x86_32 = { "res://addons/bqlog/bin/android/x86/libBqLog.so" : "" }
-
-ohos.debug.arm64 = { "res://addons/bqlog/bin/ohos/arm64-v8a/libBqLog.so" : "" }
-ohos.release.arm64 = { "res://addons/bqlog/bin/ohos/arm64-v8a/libBqLog.so" : "" }
-ohos.debug.arm32 = { "res://addons/bqlog/bin/ohos/armeabi-v7a/libBqLog.so" : "" }
-ohos.release.arm32 = { "res://addons/bqlog/bin/ohos/armeabi-v7a/libBqLog.so" : "" }
-ohos.debug.x86_64 = { "res://addons/bqlog/bin/ohos/x86_64/libBqLog.so" : "" }
-ohos.release.x86_64 = { "res://addons/bqlog/bin/ohos/x86_64/libBqLog.so" : "" }
-
-ios.debug = { "res://addons/bqlog/bin/ios/BqLog.xcframework" : "" }
-ios.release = { "res://addons/bqlog/bin/ios/BqLog.xcframework" : "" }
+macos = { "res://addons/bqlog/bin/macos/libBqLog.dylib" : "" }
+windows.x86_64 = { "res://addons/bqlog/bin/windows/x86_64/BqLog.dll" : "" }
+windows.arm64 = { "res://addons/bqlog/bin/windows/arm64/BqLog.dll" : "" }
+linux.x86_64 = { "res://addons/bqlog/bin/linux/x86_64/libBqLog.so" : "" }
+linux.arm64 = { "res://addons/bqlog/bin/linux/arm64/libBqLog.so" : "" }
+android.arm64 = { "res://addons/bqlog/bin/android/arm64-v8a/libBqLog.so" : "" }
+android.arm32 = { "res://addons/bqlog/bin/android/armeabi-v7a/libBqLog.so" : "" }
+android.x86_64 = { "res://addons/bqlog/bin/android/x86_64/libBqLog.so" : "" }
+android.x86_32 = { "res://addons/bqlog/bin/android/x86/libBqLog.so" : "" }
+ohos.arm64 = { "res://addons/bqlog/bin/ohos/arm64-v8a/libBqLog.so" : "" }
+ohos.arm32 = { "res://addons/bqlog/bin/ohos/armeabi-v7a/libBqLog.so" : "" }
+ohos.x86_64 = { "res://addons/bqlog/bin/ohos/x86_64/libBqLog.so" : "" }
+ios = { "res://addons/bqlog/bin/ios/BqLog.xcframework" : "" }

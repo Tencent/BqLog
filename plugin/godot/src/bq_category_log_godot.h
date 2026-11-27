@@ -15,22 +15,26 @@
 #include <godot_cpp/variant/string.hpp>
 #include "bq_log_godot.h"
 
-class bq_category_log : public bq_log_base {
-    GDCLASS(bq_category_log, bq_log_base)
+namespace bq {
 
-protected:
-    static void _bind_methods();
+    class bq_category_log : public bq_log_base {
+        GDCLASS(bq_category_log, bq_log_base)
 
-public:
-    bq_category_log() = default;
+    protected:
+        static void _bind_methods();
 
-    void init_with_log_id(int64_t log_id);
-    int64_t get_categories_count() const { return static_cast<int64_t>(categories_count_); }
-    godot::PackedStringArray get_categories_name_array() const { return categories_name_array_; }
+    public:
+        bq_category_log() = default;
 
-    static int64_t call_api_create_category_log(
-        const godot::String& name,
-        const godot::String& config,
-        int64_t categories_count,
-        const godot::PackedStringArray& categories);
-};
+        void init_with_log_id(int64_t log_id);
+        int64_t get_categories_count() const { return static_cast<int64_t>(categories_count_); }
+        godot::PackedStringArray get_categories_name_array() const { return categories_name_array_; }
+
+        static int64_t call_api_create_category_log(
+            const godot::String& name,
+            const godot::String& config,
+            int64_t categories_count,
+            const godot::PackedStringArray& categories);
+    };
+
+}

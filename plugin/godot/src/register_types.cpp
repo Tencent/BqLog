@@ -31,10 +31,10 @@ void initialize_bqlog_godot_module(godot::ModuleInitializationLevel level)
 
     bq_godot::retain_bqlog_runtime();
 
-    godot::ClassDB::register_class<bq_log_category>();
-    godot::ClassDB::register_class<bq_log_base>();
-    godot::ClassDB::register_class<bq_log>();
-    godot::ClassDB::register_class<bq_category_log>();
+    godot::ClassDB::register_class<bq::bq_log_category>();
+    godot::ClassDB::register_class<bq::bq_log_base>();
+    godot::ClassDB::register_class<bq::bq_log>();
+    godot::ClassDB::register_class<bq::bq_category_log>();
 
     // Route default relative log paths to Godot's writable user:// directory.
     bool is_editor_env = false;
