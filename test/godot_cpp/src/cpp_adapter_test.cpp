@@ -98,6 +98,9 @@ namespace bq {
             cpp_log.info("cpp_math_a: v2={}, v2i={}, v3={}, v3i={}", gd_v2, gd_v2i, gd_v3, gd_v3i);
             cpp_log.info("cpp_math_b: v4={}, v4i={}, col={}, quat={}", gd_v4, gd_v4i, gd_col, gd_quat);
             cpp_log.info("cpp_rect: r2={}, r2i={}", gd_r2, gd_r2i);
+            // Exercise >8 math arguments in a single call to cover both TLS cache hits and fallback path.
+            cpp_log.info("cpp_many: {},{},{},{},{},{},{},{},{},{}",
+                gd_v2, gd_v2i, gd_v3, gd_v3i, gd_v4, gd_v4i, gd_col, gd_quat, gd_r2, gd_r2i);
             BQ_LOG_FAST_INFO(cpp_log, "cpp_fast_mode: str={}, v3={}, num={}", gd_str, gd_v3, 777);
             cpp_log.force_flush();
 
@@ -114,6 +117,7 @@ namespace bq {
             ok = check_captured_contains(captured, "cpp_math_a: v2=(1.5, -2.5), v2i=(10, -20), v3=(1, 2, 3), v3i=(4, 5, 6)") && ok;
             ok = check_captured_contains(captured, "cpp_math_b: v4=(1, 2, 3, 4), v4i=(7, 8, 9, 10), col=(0.5, 0.25, 1, 1), quat=(0, 0, 0, 1)") && ok;
             ok = check_captured_contains(captured, "cpp_rect: r2=[P: (1, 2), S: (3, 4)], r2i=[P: (5, 6), S: (7, 8)]") && ok;
+            ok = check_captured_contains(captured, "cpp_many: (1.5, -2.5),(10, -20),(1, 2, 3),(4, 5, 6),(1, 2, 3, 4),(7, 8, 9, 10),(0.5, 0.25, 1, 1),(0, 0, 0, 1),[P: (1, 2), S: (3, 4)],[P: (5, 6), S: (7, 8)]") && ok;
             ok = check_captured_contains(captured, "cpp_fast_mode: str=cpp_gd_str_你好, v3=(1, 2, 3), num=777") && ok;
             return ok;
         }
