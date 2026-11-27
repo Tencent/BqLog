@@ -10,6 +10,7 @@
  */
 #include "bq_log_godot_encoder.h"
 
+#include <new>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -58,6 +59,9 @@ namespace bq_godot {
         }
     }
 
+    // Trivially default-constructible and trivially destructible slot:
+    // godot::String is constructed on demand via placement-new only for string arguments,
+    // avoiding 32 FFI string construct/destroy pairs on every log call.
     struct godot_arg_slot {
         enum class arg_kind : uint8_t {
             null_val,
@@ -68,127 +72,152 @@ namespace bq_godot {
             inline_utf8_val
         };
 
-        arg_kind kind_ = arg_kind::null_val;
+        arg_kind kind_;
+        bool has_str_;
+        uint32_t byte_len_;
+        uint32_t storage_size_;
         union {
             bool bool_val_;
             int64_t int64_val_;
             double double_val_;
-        } pod_ = { false };
-        godot::String str_holder_; // Holds CoW reference for STRING / STRING_NAME / fallback stringify
-        uint32_t byte_len_ = 0u;
+        } pod_;
+        alignas(godot::String) uint8_t str_storage_[sizeof(godot::String)];
         char inline_utf8_[inline_utf8_capacity];
+
+        godot::String& str_ref()
+        {
+            return *reinterpret_cast<godot::String*>(str_storage_);
+        }
+
+        const godot::String& str_ref() const
+        {
+            return *reinterpret_cast<const godot::String*>(str_storage_);
+        }
+
+        void init_str(const godot::String& s)
+        {
+            new (str_storage_) godot::String(s);
+            has_str_ = true;
+        }
+
+        void destroy_str()
+        {
+            if (has_str_) {
+                str_ref().~String();
+                has_str_ = false;
+            }
+        }
     };
+
+    static void destroy_arg_slots(godot_arg_slot* slots, int64_t count)
+    {
+        for (int64_t i = 0; i < count; ++i) {
+            slots[i].destroy_str();
+        }
+    }
+
+    static void set_inline_utf8_len(godot_arg_slot& slot, int32_t n)
+    {
+        slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
+        slot.byte_len_ = (n > 0)
+            ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u)
+            : 0u;
+        slot.storage_size_ = align4(8u + slot.byte_len_);
+    }
 
     static void prepare_arg_slot(const godot::Variant& v, godot_arg_slot& slot)
     {
+        slot.has_str_ = false;
         switch (v.get_type()) {
         case godot::Variant::NIL:
             slot.kind_ = godot_arg_slot::arg_kind::null_val;
+            slot.byte_len_ = 0u;
+            slot.storage_size_ = 4u;
             break;
         case godot::Variant::BOOL:
             slot.kind_ = godot_arg_slot::arg_kind::bool_val;
             slot.pod_.bool_val_ = static_cast<bool>(v);
+            slot.byte_len_ = 0u;
+            slot.storage_size_ = 4u;
             break;
         case godot::Variant::INT:
             slot.kind_ = godot_arg_slot::arg_kind::int64_val;
             slot.pod_.int64_val_ = static_cast<int64_t>(v);
+            slot.byte_len_ = 0u;
+            slot.storage_size_ = 12u;
             break;
         case godot::Variant::FLOAT:
             slot.kind_ = godot_arg_slot::arg_kind::double_val;
             slot.pod_.double_val_ = static_cast<double>(v);
+            slot.byte_len_ = 0u;
+            slot.storage_size_ = 12u;
             break;
         case godot::Variant::STRING: {
             slot.kind_ = godot_arg_slot::arg_kind::str16_from_godot_val;
-            slot.str_holder_ = v;
-            slot.byte_len_ = calc_utf32_to_utf16_bytes(slot.str_holder_.ptr(), slot.str_holder_.length());
+            slot.init_str(v);
+            const godot::String& s = slot.str_ref();
+            slot.byte_len_ = calc_utf32_to_utf16_bytes(s.ptr(), s.length());
+            slot.storage_size_ = align4(8u + slot.byte_len_);
             break;
         }
         case godot::Variant::STRING_NAME: {
             slot.kind_ = godot_arg_slot::arg_kind::str16_from_godot_val;
-            godot::StringName sn = v;
-            slot.str_holder_ = godot::String(sn);
-            slot.byte_len_ = calc_utf32_to_utf16_bytes(slot.str_holder_.ptr(), slot.str_holder_.length());
+            const godot::StringName sn = v;
+            slot.init_str(godot::String(sn));
+            const godot::String& s = slot.str_ref();
+            slot.byte_len_ = calc_utf32_to_utf16_bytes(s.ptr(), s.length());
+            slot.storage_size_ = align4(8u + slot.byte_len_);
             break;
         }
         case godot::Variant::VECTOR2: {
             const godot::Vector2 vec = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g)", static_cast<double>(vec.x), static_cast<double>(vec.y));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g)", static_cast<double>(vec.x), static_cast<double>(vec.y)));
             break;
         }
         case godot::Variant::VECTOR2I: {
             const godot::Vector2i vec = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%d, %d)", static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%d, %d)", static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y)));
             break;
         }
         case godot::Variant::VECTOR3: {
             const godot::Vector3 vec = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g)", static_cast<double>(vec.x), static_cast<double>(vec.y), static_cast<double>(vec.z));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g)", static_cast<double>(vec.x), static_cast<double>(vec.y), static_cast<double>(vec.z)));
             break;
         }
         case godot::Variant::VECTOR3I: {
             const godot::Vector3i vec = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%d, %d, %d)", static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y), static_cast<int32_t>(vec.z));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%d, %d, %d)", static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y), static_cast<int32_t>(vec.z)));
             break;
         }
         case godot::Variant::VECTOR4: {
             const godot::Vector4 vec = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g, %g)", static_cast<double>(vec.x), static_cast<double>(vec.y), static_cast<double>(vec.z), static_cast<double>(vec.w));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g, %g)", static_cast<double>(vec.x), static_cast<double>(vec.y), static_cast<double>(vec.z), static_cast<double>(vec.w)));
             break;
         }
         case godot::Variant::VECTOR4I: {
             const godot::Vector4i vec = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%d, %d, %d, %d)", static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y), static_cast<int32_t>(vec.z), static_cast<int32_t>(vec.w));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%d, %d, %d, %d)", static_cast<int32_t>(vec.x), static_cast<int32_t>(vec.y), static_cast<int32_t>(vec.z), static_cast<int32_t>(vec.w)));
             break;
         }
         case godot::Variant::COLOR: {
             const godot::Color c = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g, %g)", static_cast<double>(c.r), static_cast<double>(c.g), static_cast<double>(c.b), static_cast<double>(c.a));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g, %g)", static_cast<double>(c.r), static_cast<double>(c.g), static_cast<double>(c.b), static_cast<double>(c.a)));
             break;
         }
         case godot::Variant::QUATERNION: {
             const godot::Quaternion q = v;
-            const int32_t n = snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g, %g)", static_cast<double>(q.x), static_cast<double>(q.y), static_cast<double>(q.z), static_cast<double>(q.w));
-            slot.kind_ = godot_arg_slot::arg_kind::inline_utf8_val;
-            slot.byte_len_ = (n > 0) ? (static_cast<uint32_t>(n) < inline_utf8_capacity ? static_cast<uint32_t>(n) : inline_utf8_capacity - 1u) : 0u;
+            set_inline_utf8_len(slot, snprintf(slot.inline_utf8_, inline_utf8_capacity, "(%g, %g, %g, %g)", static_cast<double>(q.x), static_cast<double>(q.y), static_cast<double>(q.z), static_cast<double>(q.w)));
             break;
         }
         default: {
             slot.kind_ = godot_arg_slot::arg_kind::str16_from_godot_val;
-            slot.str_holder_ = v.stringify();
-            slot.byte_len_ = calc_utf32_to_utf16_bytes(slot.str_holder_.ptr(), slot.str_holder_.length());
+            slot.init_str(v.stringify());
+            const godot::String& s = slot.str_ref();
+            slot.byte_len_ = calc_utf32_to_utf16_bytes(s.ptr(), s.length());
+            slot.storage_size_ = align4(8u + slot.byte_len_);
             break;
         }
         }
-    }
-
-    static uint32_t calc_slot_storage_size(const godot_arg_slot& slot)
-    {
-        switch (slot.kind_) {
-        case godot_arg_slot::arg_kind::null_val:
-        case godot_arg_slot::arg_kind::bool_val:
-            return 4u;
-        case godot_arg_slot::arg_kind::int64_val:
-        case godot_arg_slot::arg_kind::double_val:
-            return 12u;
-        case godot_arg_slot::arg_kind::str16_from_godot_val:
-        case godot_arg_slot::arg_kind::inline_utf8_val:
-            return align4(8u + slot.byte_len_);
-        }
-        return 0u;
     }
 
     static void write_slot_to_buffer(const godot_arg_slot& slot, uint8_t* dst)
@@ -226,7 +255,7 @@ namespace bq_godot {
             dst[2] = 0u;
             dst[3] = 0u;
             memcpy(dst + 4, &slot.byte_len_, sizeof(uint32_t));
-            copy_utf32_to_utf16(dst + 8, slot.str_holder_.ptr(), slot.byte_len_);
+            copy_utf32_to_utf16(dst + 8, slot.str_ref().ptr(), slot.byte_len_);
             break;
         case godot_arg_slot::arg_kind::inline_utf8_val:
             dst[0] = type_str8;
@@ -252,22 +281,41 @@ namespace bq_godot {
         const char32_t* fmt_ptr = format_str.ptr();
         const uint32_t fmt_utf16_bytes = calc_utf32_to_utf16_bytes(fmt_ptr, format_str.length());
 
+        // Fast path for zero-argument logs: skip slot stack frame and loops completely.
+        if (arg_count <= 0 || !args) {
+            bq::_api_log_write_handle handle = bq::api::__api_log_write_begin(
+                log_id,
+                static_cast<uint8_t>(level),
+                category_index,
+                type_str16,
+                fmt_utf16_bytes,
+                nullptr,
+                0u);
+            if (handle.result != bq::enum_buffer_result_code::success) {
+                return false;
+            }
+            copy_utf32_to_utf16(handle.format_data_addr, fmt_ptr, fmt_utf16_bytes);
+            bq::api::__api_log_write_finish(log_id, handle);
+            return true;
+        }
+
         godot_arg_slot stack_slots[stack_arg_capacity];
         godot_arg_slot* slots = stack_slots;
         bool heap_slots = false;
         if (arg_count > static_cast<int64_t>(stack_arg_capacity)) {
-            slots = new godot_arg_slot[static_cast<size_t>(arg_count)];
+            slots = static_cast<godot_arg_slot*>(malloc(sizeof(godot_arg_slot) * static_cast<size_t>(arg_count)));
+            if (!slots) {
+                return false;
+            }
             heap_slots = true;
         }
 
         uint32_t total_args_bytes = 0u;
         for (int64_t i = 0; i < arg_count; ++i) {
             prepare_arg_slot(*args[i], slots[i]);
-            total_args_bytes += calc_slot_storage_size(slots[i]);
+            total_args_bytes += slots[i].storage_size_;
         }
 
-        // Pass nullptr for format_str_data so BqLog reserves the slot without extra copy,
-        // then convert UTF-32 -> UTF-16 directly into handle.format_data_addr.
         bq::_api_log_write_handle handle = bq::api::__api_log_write_begin(
             log_id,
             static_cast<uint8_t>(level),
@@ -278,8 +326,9 @@ namespace bq_godot {
             total_args_bytes);
 
         if (handle.result != bq::enum_buffer_result_code::success) {
+            destroy_arg_slots(slots, arg_count);
             if (heap_slots) {
-                delete[] slots;
+                free(slots);
             }
             return false;
         }
@@ -289,13 +338,14 @@ namespace bq_godot {
         uint8_t* arg_cursor = handle.format_data_addr + align4(fmt_utf16_bytes);
         for (int64_t i = 0; i < arg_count; ++i) {
             write_slot_to_buffer(slots[i], arg_cursor);
-            arg_cursor += calc_slot_storage_size(slots[i]);
+            arg_cursor += slots[i].storage_size_;
         }
 
         bq::api::__api_log_write_finish(log_id, handle);
 
+        destroy_arg_slots(slots, arg_count);
         if (heap_slots) {
-            delete[] slots;
+            free(slots);
         }
         return true;
     }

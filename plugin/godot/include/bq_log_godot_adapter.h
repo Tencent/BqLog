@@ -38,23 +38,88 @@ namespace godot {
     namespace bq_detail {
         constexpr uint32_t format_cache_slots = 8u;
         constexpr size_t format_buf_capacity = 128u;
+        constexpr size_t format_raw_capacity = 32u; // Covers both float and double (REAL_T_IS_DOUBLE) builds
 
+        enum math_type_tag : uint8_t {
+            tag_none = 0u,
+            tag_vec2 = 1u,
+            tag_vec2i = 2u,
+            tag_vec3 = 3u,
+            tag_vec3i = 4u,
+            tag_vec4 = 5u,
+            tag_vec4i = 6u,
+            tag_color = 7u,
+            tag_quat = 8u,
+            tag_rect2 = 9u,
+            tag_rect2i = 10u
+        };
+
+        template <typename T>
+        struct math_type_traits {
+            static constexpr uint8_t tag = tag_none;
+        };
+        template <>
+        struct math_type_traits<Vector2> {
+            static constexpr uint8_t tag = tag_vec2;
+        };
+        template <>
+        struct math_type_traits<Vector2i> {
+            static constexpr uint8_t tag = tag_vec2i;
+        };
+        template <>
+        struct math_type_traits<Vector3> {
+            static constexpr uint8_t tag = tag_vec3;
+        };
+        template <>
+        struct math_type_traits<Vector3i> {
+            static constexpr uint8_t tag = tag_vec3i;
+        };
+        template <>
+        struct math_type_traits<Vector4> {
+            static constexpr uint8_t tag = tag_vec4;
+        };
+        template <>
+        struct math_type_traits<Vector4i> {
+            static constexpr uint8_t tag = tag_vec4i;
+        };
+        template <>
+        struct math_type_traits<Color> {
+            static constexpr uint8_t tag = tag_color;
+        };
+        template <>
+        struct math_type_traits<Quaternion> {
+            static constexpr uint8_t tag = tag_quat;
+        };
+        template <>
+        struct math_type_traits<Rect2> {
+            static constexpr uint8_t tag = tag_rect2;
+        };
+        template <>
+        struct math_type_traits<Rect2i> {
+            static constexpr uint8_t tag = tag_rect2i;
+        };
+
+        // Pure trivial POD so BQ_TLS is zero-initialized in .tbss with zero runtime guard overhead.
         struct format_cache_slot {
-            const void* addr_ = nullptr;
-            size_t len_ = 0u;
+            const void* addr_;
+            size_t len_;
+            uint8_t type_tag_;
+            uint8_t raw_[format_raw_capacity];
             char buf_[format_buf_capacity];
         };
 
         struct format_cache {
             format_cache_slot slots_[format_cache_slots];
-            uint32_t next_idx_ = 0u;
+            uint32_t next_idx_;
         };
 
-        inline format_cache& get_format_cache()
-        {
-            static thread_local format_cache cache;
-            return cache;
-        }
+        template <typename DUMMY = void>
+        struct format_cache_holder {
+            static BQ_TLS format_cache cache_;
+        };
+
+        template <typename DUMMY>
+        BQ_TLS format_cache format_cache_holder<DUMMY>::cache_ = {};
 
         inline size_t clamp_snprintf_len(int32_t n)
         {
@@ -63,6 +128,27 @@ namespace godot {
             }
             const size_t len = static_cast<size_t>(n);
             return (len < format_buf_capacity) ? len : (format_buf_capacity - 1u);
+        }
+
+        inline size_t string_utf16_chars(const String& str)
+        {
+            const int64_t len = str.length();
+            if (len <= 0 || !str.ptr()) {
+                return 0u;
+            }
+            return bq::tools::_serialize_str_helper_by_encode<char32_t>::get_c_style_string_storage_size(
+                       str.ptr(), static_cast<size_t>(len))
+                >> 1u;
+        }
+
+        inline void string_utf16_copy(const String& str, char16_t* dest, size_t max_chars)
+        {
+            const int64_t len = str.length();
+            if (len <= 0 || !str.ptr() || !dest || max_chars == 0u) {
+                return;
+            }
+            bq::tools::_serialize_str_helper_by_encode<char32_t>::c_style_string_copy(
+                dest, str.ptr(), max_chars * sizeof(char16_t));
         }
 
         inline int32_t format_value(const Vector2& v, char* buf, size_t cap)
@@ -119,34 +205,40 @@ namespace godot {
                 static_cast<int32_t>(r.size.x), static_cast<int32_t>(r.size.y));
         }
 
-        // Format once in pass 1 (size) and reuse via thread_local ring cache in pass 2 (copy).
-        template <typename T>
+        // Format once in pass 1 (size), recording address + type tag + raw POD bytes,
+        // and verify + consume in pass 2 (copy) via zero-init BQ_TLS ring cache.
+        template <uint8_t TAG, typename T>
         inline size_t cached_format_size(const T& val)
         {
-            format_cache& cache = get_format_cache();
+            static_assert(sizeof(T) <= format_raw_capacity, "Godot math type exceeds format_raw_capacity");
+            format_cache& cache = format_cache_holder<>::cache_;
             format_cache_slot& slot = cache.slots_[cache.next_idx_ & (format_cache_slots - 1u)];
             ++cache.next_idx_;
             const size_t len = clamp_snprintf_len(format_value(val, slot.buf_, format_buf_capacity));
             slot.addr_ = static_cast<const void*>(&val);
             slot.len_ = len;
+            slot.type_tag_ = TAG;
+            memcpy(slot.raw_, &val, sizeof(T));
             return len;
         }
 
-        template <typename T>
+        template <uint8_t TAG, typename T>
         inline void cached_format_copy(const T& val, char* dest, size_t max_chars)
         {
+            static_assert(sizeof(T) <= format_raw_capacity, "Godot math type exceeds format_raw_capacity");
             if (!dest || max_chars == 0u) {
                 return;
             }
             const void* addr = static_cast<const void*>(&val);
-            format_cache& cache = get_format_cache();
+            format_cache& cache = format_cache_holder<>::cache_;
             for (uint32_t i = 1u; i <= format_cache_slots; ++i) {
-                const format_cache_slot& slot = cache.slots_[(cache.next_idx_ - i) & (format_cache_slots - 1u)];
-                if (slot.addr_ == addr) {
-                    const size_t copy_len = (slot.len_ < max_chars) ? slot.len_ : max_chars;
-                    if (copy_len > 0u) {
-                        memcpy(dest, slot.buf_, copy_len);
-                    }
+                format_cache_slot& slot = cache.slots_[(cache.next_idx_ - i) & (format_cache_slots - 1u)];
+                if (slot.type_tag_ == TAG
+                    && slot.addr_ == addr
+                    && slot.len_ == max_chars
+                    && memcmp(slot.raw_, &val, sizeof(T)) == 0) {
+                    slot.type_tag_ = tag_none;
+                    memcpy(dest, slot.buf_, max_chars);
                     return;
                 }
             }
@@ -159,77 +251,48 @@ namespace godot {
         }
     }
 
-    // String types: reuse BqLog's 4-wide unrolled UTF-32 -> UTF-16 fast path.
-    inline size_t bq_log_format_str_size(const String& str)
+    // Exact-type SFINAE prevents implicit conversions (e.g. godot::Color(const String&))
+    // from matching both char* and char16_t* partial specializations in _custom_type_helper.
+    template <typename T>
+    inline bq::enable_if_t<bq::is_same<bq::decay_t<T>, String>::value, size_t>
+    bq_log_format_str_size(const T& str)
     {
-        const int64_t len = str.length();
-        if (len <= 0 || !str.ptr()) {
-            return 0u;
-        }
-        return bq::tools::_serialize_str_helper_by_encode<char32_t>::get_c_style_string_storage_size(
-                   str.ptr(), static_cast<size_t>(len))
-            >> 1u;
+        return bq_detail::string_utf16_chars(str);
     }
 
-    inline void bq_log_custom_format(const String& str, char16_t* dest, size_t max_chars)
+    template <typename T>
+    inline bq::enable_if_t<bq::is_same<bq::decay_t<T>, String>::value, void>
+    bq_log_custom_format(const T& str, char16_t* dest, size_t max_chars)
     {
-        const int64_t len = str.length();
-        if (len <= 0 || !str.ptr() || !dest || max_chars == 0u) {
-            return;
-        }
-        bq::tools::_serialize_str_helper_by_encode<char32_t>::c_style_string_copy(
-            dest, str.ptr(), max_chars * sizeof(char16_t));
+        bq_detail::string_utf16_copy(str, dest, max_chars);
     }
 
-    inline size_t bq_log_format_str_size(const StringName& str_name)
+    template <typename T>
+    inline bq::enable_if_t<bq::is_same<bq::decay_t<T>, StringName>::value || bq::is_same<bq::decay_t<T>, NodePath>::value, size_t>
+    bq_log_format_str_size(const T& val)
     {
-        return bq_log_format_str_size(String(str_name));
+        return bq_detail::string_utf16_chars(String(val));
     }
 
-    inline void bq_log_custom_format(const StringName& str_name, char16_t* dest, size_t max_chars)
+    template <typename T>
+    inline bq::enable_if_t<bq::is_same<bq::decay_t<T>, StringName>::value || bq::is_same<bq::decay_t<T>, NodePath>::value, void>
+    bq_log_custom_format(const T& val, char16_t* dest, size_t max_chars)
     {
-        bq_log_custom_format(String(str_name), dest, max_chars);
+        bq_detail::string_utf16_copy(String(val), dest, max_chars);
     }
 
-    inline size_t bq_log_format_str_size(const NodePath& path)
+    template <typename T>
+    inline bq::enable_if_t<bq_detail::math_type_traits<bq::decay_t<T>>::tag != bq_detail::tag_none, size_t>
+    bq_log_format_str_size(const T& val)
     {
-        return bq_log_format_str_size(String(path));
+        return bq_detail::cached_format_size<bq_detail::math_type_traits<bq::decay_t<T>>::tag>(val);
     }
 
-    inline void bq_log_custom_format(const NodePath& path, char16_t* dest, size_t max_chars)
+    template <typename T>
+    inline bq::enable_if_t<bq_detail::math_type_traits<bq::decay_t<T>>::tag != bq_detail::tag_none, void>
+    bq_log_custom_format(const T& val, char* dest, size_t max_chars)
     {
-        bq_log_custom_format(String(path), dest, max_chars);
+        bq_detail::cached_format_copy<bq_detail::math_type_traits<bq::decay_t<T>>::tag>(val, dest, max_chars);
     }
-
-    // Math and geometry types: single-pass snprintf cached across size + copy phases.
-    inline size_t bq_log_format_str_size(const Vector2& v) { return bq_detail::cached_format_size(v); }
-    inline void bq_log_custom_format(const Vector2& v, char* dest, size_t max_chars) { bq_detail::cached_format_copy(v, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Vector2i& v) { return bq_detail::cached_format_size(v); }
-    inline void bq_log_custom_format(const Vector2i& v, char* dest, size_t max_chars) { bq_detail::cached_format_copy(v, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Vector3& v) { return bq_detail::cached_format_size(v); }
-    inline void bq_log_custom_format(const Vector3& v, char* dest, size_t max_chars) { bq_detail::cached_format_copy(v, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Vector3i& v) { return bq_detail::cached_format_size(v); }
-    inline void bq_log_custom_format(const Vector3i& v, char* dest, size_t max_chars) { bq_detail::cached_format_copy(v, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Vector4& v) { return bq_detail::cached_format_size(v); }
-    inline void bq_log_custom_format(const Vector4& v, char* dest, size_t max_chars) { bq_detail::cached_format_copy(v, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Vector4i& v) { return bq_detail::cached_format_size(v); }
-    inline void bq_log_custom_format(const Vector4i& v, char* dest, size_t max_chars) { bq_detail::cached_format_copy(v, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Color& c) { return bq_detail::cached_format_size(c); }
-    inline void bq_log_custom_format(const Color& c, char* dest, size_t max_chars) { bq_detail::cached_format_copy(c, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Quaternion& q) { return bq_detail::cached_format_size(q); }
-    inline void bq_log_custom_format(const Quaternion& q, char* dest, size_t max_chars) { bq_detail::cached_format_copy(q, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Rect2& r) { return bq_detail::cached_format_size(r); }
-    inline void bq_log_custom_format(const Rect2& r, char* dest, size_t max_chars) { bq_detail::cached_format_copy(r, dest, max_chars); }
-
-    inline size_t bq_log_format_str_size(const Rect2i& r) { return bq_detail::cached_format_size(r); }
-    inline void bq_log_custom_format(const Rect2i& r, char* dest, size_t max_chars) { bq_detail::cached_format_copy(r, dest, max_chars); }
 
 }
