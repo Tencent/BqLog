@@ -2,13 +2,14 @@
 
 [简体中文](CHANGELOG_CHS.md)
 
-## [v2.8.4] - 2026-11-26
+## [v2.8.4] - 2026-11-27
 - **Godot 4 support (GDExtension)**: official `addons/bqlog` plugin for Godot 4.2+ covering Windows (`x86_64`, `arm64`), macOS (`universal`), Linux (`x86_64`, `arm64`), Android (`arm64-v8a`, `armeabi-v7a`, `x86_64`, `x86`), HarmonyOS / OpenHarmony (`arm64-v8a`, `armeabi-v7a`, `x86_64`), and iOS (dynamic `.xcframework`).
-  - Zero-GC GDScript logging path via native vararg bindings, O(1) level/category fast filtering, and direct UTF-32-to-UTF-8 ring buffer encoding;
+  - Zero-GC GDScript logging path via native vararg bindings, O(1) level/category fast filtering, lazy string slot construction, and direct UTF-32-to-UTF-16 ring buffer encoding;
   - Dynamic linking against the shared `BqLog` core library so GDScript, Godot C# (NuGet), and C++ (`godot-cpp`) share a single in-process log instance seamlessly;
-  - Automatic routing of relative log paths to `OS.get_user_data_dir()` (`user://`) and automatic Godot Output console redirection;
+  - Single-header C++ adapter (`bq_log_godot_adapter.h`) with single-pass formatting for `godot::String`, `StringName`, `NodePath`, `Vector2/2i/3/3i/4/4i`, `Color`, `Quaternion`, and `Rect2/2i` (including `BQ_LOG_FAST_*`);
+  - Preserves BqLog's native default `base_dir` on every platform and automatically redirects console output to Godot's Output/Errors panel in Editor environments (with reentrancy protection);
   - `BqLog_CategoryLogGenerator` now emits `<ClassName>.gd` for Godot 4 strongly-typed category logs;
-  - Includes a Godot 4 demo (`demo/godot`) and automated headless CI test suite (`test/godot`).
+  - Includes a Godot 4 demo (`demo/godot`) and automated CI test suites covering GDScript, C++, and C# interop (`test/godot`, `test/godot_cpp`, `test/godot_csharp`).
 
 ## [v2.8.3] - 2026-11-23
 - **Bug fix**: encrypted logs: RSA key fingerprints disagreed across platforms in 2.8.0 and 2.8.1 due to two hash bugs — two wrong entries in the software CRC32C table (Android, HarmonyOS, iOS/tvOS devices, ARM Linux/Windows, x86 without SSE4.2) and IEEE 802.3 CRC32 instead of CRC32C on the ARM hardware path (Apple Silicon Macs, Apple simulators, watchOS `arm64_32`, visionOS) — causing cross-platform decoding to fail with `private key does not match the public key this file was encrypted with`. Every platform now computes the same CRC32C fingerprint, and existing 2.8.0/2.8.1 files decode and recover everywhere ([#96](https://github.com/Tencent/BqLog/issues/96), [#101](https://github.com/Tencent/BqLog/issues/101)).

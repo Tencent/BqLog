@@ -77,6 +77,11 @@ jobs:
             name="$(basename "$artifact_dir")"
             echo "=== Processing artifact: $name ==="
 
+            if [[ "$name" == _godot_bin_* ]]; then
+              echo "  Skipped (internal staging artifact)"
+              continue
+            fi
+
             file_count=$(find "$artifact_dir" -type f | wc -l)
             if (( file_count == 0 )); then
               echo "  Skipped (empty)"
