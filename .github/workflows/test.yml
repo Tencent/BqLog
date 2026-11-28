@@ -2481,13 +2481,50 @@ jobs:
           "$GODOT_EXE" --headless --path test/godot --import --quit || true
           "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
 
-          # Godot C# (.NET) + GDScript shared-singleton interop test
-          mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64 test/godot_csharp/.godot
+          # Godot C# (.NET) + GDScript shared-singleton interop test (no LD_LIBRARY_PATH hack)
+          mkdir -p test/godot_csharp/addons/bqlog/bin/linux/x86_64 test/godot_csharp/addons/bqlog/csharp test/godot_csharp/.godot
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
           echo "res://addons/bqlog/bqlog.gdextension" > test/godot_csharp/.godot/extension_list.cfg
-          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
-          LD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/linux/x86_64:${LD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
+
+          # Build managed DLL into addon (same as build.yml godot_plugin_pack)
+          dotnet build pack/nuget/BqLog.csproj -c Release -p:Version=2.8.99-ci -o dist_godot_csharp
+          cp dist_godot_csharp/BqLog.Managed.dll test/godot_csharp/addons/bqlog/csharp/BqLog.Managed.dll
+
+          # Mode 1: Addon bundled BqLog.Managed.dll (no AllowUnsafeBlocks, no LD_LIBRARY_PATH)
+          echo "=== [Linux] Godot C# Test Mode 1: Addon DLL ==="
+          rm -rf test/godot_csharp/obj test/godot_csharp/bin test/godot_csharp/.godot/mono/temp
+          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj -p:BqLogMode=addon
+          "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
+
+          # Mode 2: Local NuGet package install simulation (no AllowUnsafeBlocks, no LD_LIBRARY_PATH)
+          echo "=== [Linux] Godot C# Test Mode 2: Local NuGet Package ==="
+          rm -rf pack/nuget/runtimes local_nuget_feed
+          mkdir -p pack/nuget/runtimes/linux-x64/native local_nuget_feed
+          cp -Lf staged_lib/libBqLog.so pack/nuget/runtimes/linux-x64/native/libBqLog.so
+          dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=2.8.99-ci -o local_nuget_feed
+          rm -rf pack/nuget/runtimes
+          cat > test/godot_csharp/NuGet.Config <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local-bqlog" value="__FEED__" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="local-bqlog">
+                <package pattern="BqLog" />
+              </packageSource>
+              <packageSource key="nuget.org">
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          python3 -c "import os,pathlib; p=pathlib.Path('test/godot_csharp/NuGet.Config'); p.write_text(p.read_text().replace('__FEED__', os.path.abspath('local_nuget_feed')))"
+          rm -rf test/godot_csharp/obj test/godot_csharp/bin test/godot_csharp/.godot/mono/temp
+          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj -p:BqLogMode=nuget -p:BqLogVersion=2.8.99-ci
+          "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
 
       - name: Build and test Godot plugin via build_win64.bat (Windows)
         if: matrix.os == 'windows-latest'
@@ -2535,13 +2572,57 @@ jobs:
           Expand-Archive -Path godot_mono.zip -DestinationPath godot_bin -Force
           $godotExe = (Get-ChildItem -Recurse godot_bin -Filter "*win64_console.exe" | Select-Object -First 1).FullName
 
+          # Godot C# (.NET) + GDScript shared-singleton interop test (no PATH / root DLL copy hack)
           Copy-Item -Recurse -Force test\godot\addons test\godot_csharp\
-          Copy-Item $bqDll test\godot_csharp\ -Force
+          New-Item -ItemType Directory -Force test\godot_csharp\addons\bqlog\csharp | Out-Null
           New-Item -ItemType Directory -Force test\godot_csharp\.godot | Out-Null
           Set-Content -Path test\godot_csharp\.godot\extension_list.cfg -Value "res://addons/bqlog/bqlog.gdextension" -Encoding ascii
-          dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj
+
+          # Build managed DLL into addon (same as build.yml godot_plugin_pack)
+          dotnet build pack\nuget\BqLog.csproj -c Release -p:Version=2.8.99-ci -o dist_godot_csharp
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          $env:PATH = "$(Resolve-Path test\godot_csharp\addons\bqlog\bin\windows\x86_64);$env:PATH"
+          Copy-Item dist_godot_csharp\BqLog.Managed.dll test\godot_csharp\addons\bqlog\csharp\BqLog.Managed.dll -Force
+
+          # Mode 1: Addon bundled BqLog.Managed.dll (no AllowUnsafeBlocks, no PATH hack)
+          Write-Host "=== [Windows] Godot C# Test Mode 1: Addon DLL ==="
+          Remove-Item -Recurse -Force test\godot_csharp\obj,test\godot_csharp\bin,test\godot_csharp\.godot\mono\temp -ErrorAction SilentlyContinue
+          dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj -p:BqLogMode=addon
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & $godotExe --headless --path test\godot_csharp --quit-after 120
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+          # Mode 2: Local NuGet package install simulation (no AllowUnsafeBlocks, no PATH hack)
+          Write-Host "=== [Windows] Godot C# Test Mode 2: Local NuGet Package ==="
+          Remove-Item -Recurse -Force pack\nuget\runtimes,local_nuget_feed -ErrorAction SilentlyContinue
+          New-Item -ItemType Directory -Force pack\nuget\runtimes\win-x64\native | Out-Null
+          New-Item -ItemType Directory -Force local_nuget_feed | Out-Null
+          Copy-Item $bqDll pack\nuget\runtimes\win-x64\native\BqLog.dll -Force
+          dotnet pack pack\nuget\BqLog.csproj -c Release -p:Version=2.8.99-ci -o local_nuget_feed
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          Remove-Item -Recurse -Force pack\nuget\runtimes -ErrorAction SilentlyContinue
+          $feedPath = (Resolve-Path local_nuget_feed).Path
+          $nugetXml = @(
+            '<?xml version="1.0" encoding="utf-8"?>'
+            '<configuration>'
+            '  <packageSources>'
+            '    <clear />'
+            "    <add key=`"local-bqlog`" value=`"$feedPath`" />"
+            '    <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />'
+            '  </packageSources>'
+            '  <packageSourceMapping>'
+            '    <packageSource key="local-bqlog">'
+            '      <package pattern="BqLog" />'
+            '    </packageSource>'
+            '    <packageSource key="nuget.org">'
+            '      <package pattern="*" />'
+            '    </packageSource>'
+            '  </packageSourceMapping>'
+            '</configuration>'
+          ) -join "`n"
+          Set-Content -Path test\godot_csharp\NuGet.Config -Value $nugetXml -Encoding utf8
+          Remove-Item -Recurse -Force test\godot_csharp\obj,test\godot_csharp\bin,test\godot_csharp\.godot\mono\temp -ErrorAction SilentlyContinue
+          dotnet build test\godot_csharp\BqLogGodotCSharpTest.csproj -p:BqLogMode=nuget -p:BqLogVersion=2.8.99-ci
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           & $godotExe --headless --path test\godot_csharp --quit-after 120
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
@@ -2588,10 +2669,48 @@ jobs:
           "$GODOT_EXE" --headless --path test/godot --import --quit || true
           "$GODOT_EXE" --headless --path test/godot --script res://run_tests.gd
 
-          # Godot C# (.NET) + GDScript shared-singleton interop test
-          mkdir -p test/godot_csharp/addons/bqlog/bin/macos test/godot_csharp/.godot
+          # Godot C# (.NET) + GDScript shared-singleton interop test (no DYLD_LIBRARY_PATH hack)
+          mkdir -p test/godot_csharp/addons/bqlog/bin/macos test/godot_csharp/addons/bqlog/csharp test/godot_csharp/.godot
           cp -R test/godot/addons/bqlog/. test/godot_csharp/addons/bqlog/
           echo "res://addons/bqlog/bqlog.gdextension" > test/godot_csharp/.godot/extension_list.cfg
-          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj
-          DYLD_LIBRARY_PATH="$(pwd)/test/godot_csharp/addons/bqlog/bin/macos:${DYLD_LIBRARY_PATH:-}" \
-            "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
+
+          # Build managed DLL into addon (same as build.yml godot_plugin_pack)
+          dotnet build pack/nuget/BqLog.csproj -c Release -p:Version=2.8.99-ci -o dist_godot_csharp
+          cp dist_godot_csharp/BqLog.Managed.dll test/godot_csharp/addons/bqlog/csharp/BqLog.Managed.dll
+
+          # Mode 1: Addon bundled BqLog.Managed.dll (no AllowUnsafeBlocks, no DYLD_LIBRARY_PATH)
+          echo "=== [macOS] Godot C# Test Mode 1: Addon DLL ==="
+          rm -rf test/godot_csharp/obj test/godot_csharp/bin test/godot_csharp/.godot/mono/temp
+          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj -p:BqLogMode=addon
+          "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120
+
+          # Mode 2: Local NuGet package install simulation (no AllowUnsafeBlocks, no DYLD_LIBRARY_PATH)
+          echo "=== [macOS] Godot C# Test Mode 2: Local NuGet Package ==="
+          rm -rf pack/nuget/runtimes local_nuget_feed
+          mkdir -p pack/nuget/runtimes/osx-arm64/native pack/nuget/runtimes/osx-x64/native local_nuget_feed
+          cp -Lf staged_mac/libBqLog.dylib pack/nuget/runtimes/osx-arm64/native/libBqLog.dylib
+          cp -Lf staged_mac/libBqLog.dylib pack/nuget/runtimes/osx-x64/native/libBqLog.dylib
+          dotnet pack pack/nuget/BqLog.csproj -c Release -p:Version=2.8.99-ci -o local_nuget_feed
+          rm -rf pack/nuget/runtimes
+          cat > test/godot_csharp/NuGet.Config <<'EOF'
+          <?xml version="1.0" encoding="utf-8"?>
+          <configuration>
+            <packageSources>
+              <clear />
+              <add key="local-bqlog" value="__FEED__" />
+              <add key="nuget.org" value="https://api.nuget.org/v3/index.json" />
+            </packageSources>
+            <packageSourceMapping>
+              <packageSource key="local-bqlog">
+                <package pattern="BqLog" />
+              </packageSource>
+              <packageSource key="nuget.org">
+                <package pattern="*" />
+              </packageSource>
+            </packageSourceMapping>
+          </configuration>
+          EOF
+          python3 -c "import os,pathlib; p=pathlib.Path('test/godot_csharp/NuGet.Config'); p.write_text(p.read_text().replace('__FEED__', os.path.abspath('local_nuget_feed')))"
+          rm -rf test/godot_csharp/obj test/godot_csharp/bin test/godot_csharp/.godot/mono/temp
+          dotnet build test/godot_csharp/BqLogGodotCSharpTest.csproj -p:BqLogMode=nuget -p:BqLogVersion=2.8.99-ci
+          "$GODOT_EXE" --headless --path test/godot_csharp --quit-after 120

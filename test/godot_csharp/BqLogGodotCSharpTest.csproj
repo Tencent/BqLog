@@ -2,10 +2,13 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <Nullable>disable</Nullable>
+    <BqLogMode Condition="'$(BqLogMode)' == ''">addon</BqLogMode>
+    <BqLogVersion Condition="'$(BqLogVersion)' == ''">2.8.99-ci</BqLogVersion>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="..\..\wrapper\csharp\src\bq\**\*.cs" LinkBase="bq" />
+  <ItemGroup Condition="'$(BqLogMode)' == 'addon'">
+    <Reference Include="addons/bqlog/csharp/BqLog.Managed.dll" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(BqLogMode)' == 'nuget'">
+    <PackageReference Include="BqLog" Version="$(BqLogVersion)" />
   </ItemGroup>
 </Project>
