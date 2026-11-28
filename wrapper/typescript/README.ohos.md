@@ -24,7 +24,7 @@
 ## 特性
 
 - **极致性能** -- 工业级无锁队列，对UTF16环境极致优化
-- **工业级品质** -- 腾讯生产环境上亿用户验证，适用于游戏引擎（Unity、Unreal）、移动应用及高并发服务端
+- **工业级品质** -- 腾讯生产环境上亿用户验证，适用于游戏引擎（Unity、团结引擎、Unreal、Godot）、移动应用及高并发服务端
 - **压缩加密 Appender** -- `compressed_file` 生成最小体积的日志文件，几乎零开销，支持 RSA + AES 混合非对称加密
 - **同步与异步模式** -- 按需选择线程模型，平衡延迟与吞吐
 - **分类日志** -- 为日志条目附加分类标签，支持分类掩码过滤
@@ -154,7 +154,7 @@ BqLog 的性能持续领先于主流日志库。详细基准测试结果请参�
 
 支持所有语言的完整文档和示例：
 
-**C++ | Java | C# | Python | TypeScript | Go | Unreal Engine | Unity | HarmonyOS**
+**C++ | Java | C# | Python | TypeScript | Go | Unreal Engine | Unity | Godot | HarmonyOS**
 
 👉 **[github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
 

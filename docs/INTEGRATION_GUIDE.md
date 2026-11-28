@@ -339,14 +339,15 @@ Refer to `/demo/python` directory under the repository.
 
 ---
 
-## Unity / Tuanjie Engine / Unreal Engine
+## Unity / Tuanjie Engine / Unreal Engine / Godot 4
 
 See the dedicated **[Game Engine Integration Guide](./ENGINE_INTEGRATION.md)** for:
 - Unity and Tuanjie Engine package import
 - Unreal Engine plugin via [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf), prebuilt, or source (UE4, UE5, and current UE6 development builds; UE6 is GitHub Release only)
-- `FString` / `FName` / `FText` support
-- Redirect BqLog output to Unreal's Output Log window
-- Blueprint usage
+- Godot 4 GDExtension plugin (`addons/bqlog`) for Godot 4.2+ (GDScript, Godot C#, and C++ `godot-cpp` sharing one in-process singleton)
+- `FString` / `FName` / `FText` and Godot builtin type adapters
+- Redirect BqLog output to the engine Output Log window
+- Blueprint and Category Log usage
 
 ---
 

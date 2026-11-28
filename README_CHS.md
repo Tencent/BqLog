@@ -16,7 +16,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS%20%7C%20OpenHarmony%20%7C%20Unix%20%7C%20PS4%2F5%20%7C%20Switch-lightgrey.svg?style=flat)]()
 [![PlayStation 4/5](https://img.shields.io/badge/PlayStation_4%2F5-experimental-lightgrey?logo=playstation&style=flat)]()
 [![Nintendo Switch](https://img.shields.io/badge/Switch-experimental-lightgrey?logo=nintendoswitch&style=flat)]()
-[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
+[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go%20%7C%20GDScript-blue.svg?style=flat)]()
 [![Homebrew](https://img.shields.io/homebrew/v/bqlog?logo=homebrew&logoColor=white&label=homebrew&style=flat)](https://formulae.brew.sh/formula/bqlog)
 [![NuGet](https://img.shields.io/nuget/v/BqLog?logo=nuget&label=nuget&style=flat)](https://www.nuget.org/packages/BqLog)
 [![Maven Central](https://img.shields.io/maven-central/v/com.tencent.bqlog/java?label=maven%20java&style=flat)](https://central.sonatype.com/artifact/com.tencent.bqlog/java)
@@ -28,6 +28,7 @@
 [![vcpkg](https://img.shields.io/vcpkg/v/bqlog?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
 [![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
 [![Unreal](https://img.shields.io/badge/Unreal-Fab-0E1128?logo=unrealengine&style=flat)](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)
+[![Godot](https://img.shields.io/badge/Godot-GDExtension-478CBF?logo=godotengine&logoColor=white&style=flat)](https://github.com/Tencent/BqLog/releases)
 
 > BqLog 是一个轻量级、高性能的工业级日志系统，已在线上广泛应用于《王者荣耀》等项目。
 
@@ -39,7 +40,7 @@
   - 性能足够好（日志要少写）
   - 节约存储空间（日志最好就别写）
 - 如果您是后台服务开发者，现有日志库在**高并发场景**下性能不足，导致日志丢失或程序阻塞。
-- 如果您的编程语言是 C++、Java、C#、Kotlin、TypeScript、JavaScript、Python、Go 之一，或者同时使用多种语言，希望有一套**统一的跨语言日志解决方案**。
+- 如果您的编程语言是 C++、Java、C#、Kotlin、TypeScript、JavaScript、Python、Go、GDScript 之一，或者同时使用多种语言，希望有一套**统一的跨语言日志解决方案**。
 
 ---
 
@@ -48,7 +49,7 @@
 **极限性能是 BqLog 的起点，而不是全部。** 它是一个成熟的工业级组件，为要发布上线的产品而生：
 
 - **甘心做配角。** 一台现代设备上，日志系统要尽可能少占用系统资源。不管是日志线程还是消费者线程，都要尽量少占用 CPU、内存和磁盘 I/O。我们不是单纯为了跑分，我们所有的优化都针对实际应用场景。
-- **跑在哪里都兼容。** Windows、macOS、Linux、iOS、Android、HarmonyOS、OpenHarmony 和各类 Unix；C++、Java/Kotlin、C#、Python、TypeScript/ArkTS、Go 共用同一个内核，甚至可以共用同一个日志对象；游戏引擎、不带 STL 的移动端工具链、开着 `-Werror` 的严格构建都没问题。
+- **跑在哪里都兼容。** Windows、macOS、Linux、iOS、Android、HarmonyOS、OpenHarmony 和各类 Unix；C++、Java/Kotlin、C#、Python、TypeScript/ArkTS、Go、GDScript 共用同一个内核，甚至可以共用同一个日志对象；游戏引擎（Unity、团结引擎、Unreal、Godot）、不带 STL 的移动端工具链、开着 `-Werror` 的严格构建都没问题。
 - **为出事的那一天准备好。** 进程崩溃后能把崩溃前写下的日志恢复回来；磁盘写满时既不崩溃也不卡死；损坏的文件也能尽可能恢复；日志文件可加密，保护隐私。
 - **关注代码体验。** 一行创建日志、一行写日志；内部机制尽可能透明，避免复杂配置；所有的接口都对IDE代码提示友好；提供UE蓝图等方便的接入工具适配。
 
@@ -87,7 +88,7 @@
 - 内存消耗少：在 Benchmark 用例中（10 线程、每线程 200 万条日志），macOS 上整个 benchmark 进程的峰值内存不超过 3.1 MB。移动平台上，BqLog 自身一般在 1 MB 左右。
 - 提供高性能、高压缩比的实时压缩日志格式。
 - 以接近于0的性能损耗，提供高强度的非对称混合加密日志，保护日志内容安全（可选）。
-- 可在游戏引擎（`Unity`、`Unreal` 等）中正常使用，对 Unreal 提供蓝图和常用类型的支持。
+- 可在游戏引擎（`Unity`、`团结引擎`、`Unreal`、`Godot` 等）中正常使用，提供 Unreal 蓝图、Godot GDExtension 及引擎常用数据类型适配。
 - 支持 `utf8`、`utf16`、`utf32` 字符及字符串，支持 bool、float、double、各种长度与类型的整数等常用参数类型。
 - 支持 `C++20` 的 `std::format` 规范（不含排序序号与时间格式化）。
 - 异步日志支持 Crash 复盘机制，尽量避免日志数据丢失。
@@ -105,7 +106,7 @@
 
 | 平台 | 语言 |
 |------|------|
-| Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 与 UE6 开发版） |
+| Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等） | C++（C++11+）、Java / Kotlin、C#（Unity、.NET、Godot）、ArkTS / C++（HarmonyOS 与 OpenHarmony 同一份包）、JavaScript / TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 与 UE6 开发版）、Godot 4（GDScript、C#、C++） |
 | PlayStation 4、PlayStation 5、Nintendo Switch（实验性，源码接入） | C++（C++11+） |
 
 **硬件架构**：x86、x86_64、ARM32、ARM64
@@ -126,8 +127,8 @@
 | [**npm**](docs/INTEGRATION_GUIDE_CHS.md#nodejs)<br>Node.js · TypeScript | `npm install @pippocao/bqlog` | ✅ | — | [npmjs.com](https://www.npmjs.com/package/@pippocao/bqlog) |
 | [**ohpm**](docs/INTEGRATION_GUIDE_CHS.md#harmonyos--openharmonyarkts--c)<br>HarmonyOS · OpenHarmony | `ohpm install bqlog` | ✅ | — | [ohpm.openharmony.cn](https://ohpm.openharmony.cn/#/cn/detail/bqlog) |
 | [**Go modules**](docs/INTEGRATION_GUIDE_CHS.md#go)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — | [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) |
-| [**Unity**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UPM tarball | *从 tarball 安装* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
-| [**Unreal Engine**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
+| [**Unity**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine--godot-4)<br>UPM tarball | *从 tarball 安装* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
+| [**Unreal Engine**](docs/INTEGRATION_GUIDE_CHS.md#unity--团结引擎--unreal-engine--godot-4)<br>UE4 · UE5 | *放进 `Plugins/`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
 | [**Godot 4**](docs/ENGINE_INTEGRATION_CHS.md#godot-4gdextension)<br>Godot 4.2+ (GDExtension) | *放进 `addons/bqlog`* | ✅ | — | [release 页面](https://github.com/Tencent/BqLog/releases) |
 
 > [!IMPORTANT]

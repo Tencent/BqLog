@@ -597,7 +597,7 @@ BqLog 的 C++ 有两种写日志的方式，输出完全一样：
 | 多语言支持 | ✅（C++/Java/C#/Python/TypeScript/ArkTS/Go） | ❌（仅 C++） | ❌（仅 C++） | ❌（仅 C++） | ❌（仅 C++） | 仅 Java |
 | 跨平台 | ✅（Win/Mac/Linux/iOS/Android/鸿蒙） | ✅（Win/Mac/Linux） | ✅（Win/Mac/Linux） | ✅（Win/Mac/Linux） | ✅（Win/Mac/Linux） | JVM |
 | `{fmt}` 格式化 | ✅ | ✅ | ❌（流式） | ✅ | ✅ | ✅（类似） |
-| 游戏引擎插件 | ✅（Unity/Unreal） | ❌ | ❌ | ❌ | ❌ | ❌ |
+| 游戏引擎插件 | ✅（Unity/Unreal/Godot） | ❌ | ❌ | ❌ | ❌ | ❌ |
 
 ## 6. 源代码
 

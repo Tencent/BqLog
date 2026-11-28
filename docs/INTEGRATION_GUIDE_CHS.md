@@ -340,14 +340,15 @@ pip install ./bqlog-{version}-cp37-abi3-{platform}.whl
 
 ---
 
-## Unity / 团结引擎 / Unreal Engine
+## Unity / 团结引擎 / Unreal Engine / Godot 4
 
 完整引擎集成步骤请见 **[游戏引擎集成指南](./ENGINE_INTEGRATION_CHS.md)**，包括：
 - Unity 和团结引擎 Package 导入
 - Unreal Engine 插件（通过 [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)、预编译版或源码版，支持 UE4、UE5 与当前 UE6 开发版；UE6 仅通过 GitHub Release 提供）
-- `FString` / `FName` / `FText` 支持
-- BqLog 输出重定向到 Unreal Output Log 窗口
-- 蓝图使用方式
+- Godot 4 原生 GDExtension 插件（`addons/bqlog`，支持 Godot 4.2+，GDScript / Godot C# / C++ `godot-cpp` 共享同进程唯一单例）
+- `FString` / `FName` / `FText` 与 Godot 内置类型适配
+- BqLog 输出重定向到引擎编辑器日志窗口
+- 蓝图与 Category Log 使用方式
 
 ---
 

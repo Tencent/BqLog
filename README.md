@@ -16,7 +16,7 @@
 [![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20macOS%20%7C%20Linux%20%7C%20iOS%20%7C%20Android%20%7C%20HarmonyOS%20%7C%20OpenHarmony%20%7C%20Unix%20%7C%20PS4%2F5%20%7C%20Switch-lightgrey.svg?style=flat)]()
 [![PlayStation 4/5](https://img.shields.io/badge/PlayStation_4%2F5-experimental-lightgrey?logo=playstation&style=flat)]()
 [![Nintendo Switch](https://img.shields.io/badge/Switch-experimental-lightgrey?logo=nintendoswitch&style=flat)]()
-[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go-blue.svg?style=flat)]()
+[![Language](https://img.shields.io/badge/language-C%2B%2B%20%7C%20Java%20%7C%20C%23%20%7C%20Kotlin%20%7C%20TypeScript%20%7C%20Python%20%7C%20Go%20%7C%20GDScript-blue.svg?style=flat)]()
 
 [![Homebrew](https://img.shields.io/homebrew/v/bqlog?logo=homebrew&logoColor=white&label=homebrew&style=flat)](https://formulae.brew.sh/formula/bqlog)
 [![NuGet](https://img.shields.io/nuget/v/BqLog?logo=nuget&label=nuget&style=flat)](https://www.nuget.org/packages/BqLog)
@@ -29,6 +29,7 @@
 [![vcpkg](https://img.shields.io/vcpkg/v/bqlog?logo=vcpkg&style=flat)](https://vcpkg.io/en/package/bqlog.html)
 [![Unity](https://img.shields.io/badge/Unity-package-black?logo=unity&style=flat)](https://github.com/Tencent/BqLog/releases)
 [![Unreal](https://img.shields.io/badge/Unreal-Fab-0E1128?logo=unrealengine&style=flat)](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)
+[![Godot](https://img.shields.io/badge/Godot-GDExtension-478CBF?logo=godotengine&logoColor=white&style=flat)](https://github.com/Tencent/BqLog/releases)
 
 > BqLog is a lightweight, high-performance, industrial-grade logging system that has been widely used in online projects such as "Honor of Kings".
 
@@ -40,7 +41,7 @@
   - Good performance (log as little as possible)
   - Save storage space (better not log at all)
 - If you are a backend service developer and your current logging library cannot handle **high-concurrency scenarios**, causing log loss or application stalls.
-- If your programming language is one of C++, Java, C#, Kotlin, TypeScript, JavaScript, Python, Go, or you use multiple languages at the same time and want a **unified cross-language logging solution**.
+- If your programming language is one of C++, Java, C#, Kotlin, TypeScript, JavaScript, Python, Go, GDScript, or you use multiple languages at the same time and want a **unified cross-language logging solution**.
 
 ---
 
@@ -49,7 +50,7 @@
 **Extreme speed is where BqLog starts, not where it stops.** It is a mature, industrial-grade component, built for products that ship:
 
 - **Content to play a supporting role.** On a modern machine a logging system should take as little of the system as it can. The logging threads and the consumer thread alike should use as little CPU, memory and disk I/O as possible. We do not optimize for benchmark scores; every optimization targets real use.
-- **Compatible everywhere it runs.** Windows, macOS, Linux, iOS, Android, HarmonyOS, OpenHarmony and the Unix family; C++, Java/Kotlin, C#, Python, TypeScript/ArkTS and Go sharing one core and even one log object; game engines, mobile toolchains without an STL, strict `-Werror` builds.
+- **Compatible everywhere it runs.** Windows, macOS, Linux, iOS, Android, HarmonyOS, OpenHarmony and the Unix family; C++, Java/Kotlin, C#, Python, TypeScript/ArkTS, Go and GDScript sharing one core and even one log object; game engines (Unity, Tuanjie, Unreal, Godot), mobile toolchains without an STL, strict `-Werror` builds.
 - **Built for the bad day.** Logs written before a crash are recovered after it; a full disk neither crashes nor hangs the app; corrupted files are recovered as far as possible; log files can be encrypted to protect privacy.
 - **Care about the coding experience.** One line to create a log, one line to write; the internals stay as transparent as possible, without complicated configuration; every interface is friendly to IDE code completion; integration tools such as UE Blueprints are provided.
 
@@ -88,7 +89,7 @@
 - Low memory usage: in the Benchmark case (10 threads, 2,000,000 log entries each), the whole benchmark process peaks at no more than 3.1 MB on macOS. On mobile platforms, BqLog itself generally uses around 1 MB.
 - Provides a high-performance, high-compression real-time compressed log format.
 - Supports strong hybrid encryption (asymmetric + symmetric) for log content protection with nearly zero performance overhead (optional).
-- Works well inside game engines (`Unity`, `Unreal`, etc.), with UE Blueprint and builtin data type support.
+- Works well inside game engines (`Unity`, `Tuanjie`, `Unreal`, `Godot`, etc.), with UE Blueprint, Godot GDExtension, and builtin data type support.
 - Supports `utf8`, `utf16`, `utf32` characters and strings, as well as bool, float, double, and integer types of various sizes.
 - Supports `C++20` `std::format` style format strings (without positional index and time formatting).
 - Asynchronous logging supports crash recovery and tries to avoid data loss.
@@ -106,7 +107,7 @@
 
 | Platforms | Languages |
 |-----------|-----------|
-| Windows 64-bit, macOS, Linux (incl. embedded), iOS, Android, HarmonyOS, OpenHarmony, Unix (FreeBSD, NetBSD, OpenBSD, Solaris, etc.) | C++ (C++11+), Java / Kotlin, C# (Unity, .NET), ArkTS / C++ (HarmonyOS & OpenHarmony share the same package), JavaScript / TypeScript (Node.js), Python 3.7+, Go, Unreal Engine (UE4, UE5 & UE6 development builds) |
+| Windows 64-bit, macOS, Linux (incl. embedded), iOS, Android, HarmonyOS, OpenHarmony, Unix (FreeBSD, NetBSD, OpenBSD, Solaris, etc.) | C++ (C++11+), Java / Kotlin, C# (Unity, .NET, Godot), ArkTS / C++ (HarmonyOS & OpenHarmony share the same package), JavaScript / TypeScript (Node.js), Python 3.7+, Go, Unreal Engine (UE4, UE5 & UE6 development builds), Godot 4 (GDScript, C#, C++) |
 | PlayStation 4, PlayStation 5, Nintendo Switch (experimental, source integration) | C++ (C++11+) |
 
 **Hardware architectures**: x86, x86_64, ARM32, ARM64
@@ -127,8 +128,8 @@
 | [**npm**](docs/INTEGRATION_GUIDE.md#nodejs)<br>Node.js · TypeScript | `npm install @pippocao/bqlog` | ✅ | — | [npmjs.com](https://www.npmjs.com/package/@pippocao/bqlog) |
 | [**ohpm**](docs/INTEGRATION_GUIDE.md#harmonyos--openharmony-arkts--c)<br>HarmonyOS · OpenHarmony | `ohpm install bqlog` | ✅ | — | [ohpm.openharmony.cn](https://ohpm.openharmony.cn/#/cn/detail/bqlog) |
 | [**Go modules**](docs/INTEGRATION_GUIDE.md#go)<br>Go | `go get github.com/Tencent/BqLog/go/v2@latest` | ✅ | — | [pkg.go.dev](https://pkg.go.dev/github.com/Tencent/BqLog/go/v2) |
-| [**Unity**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine)<br>UPM tarball | *Install package from tarball* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) |
-| [**Unreal Engine**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine)<br>UE4 · UE5 | *copy into `Plugins/`* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
+| [**Unity**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine--godot-4)<br>UPM tarball | *Install package from tarball* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) |
+| [**Unreal Engine**](docs/INTEGRATION_GUIDE.md#unity--tuanjie-engine--unreal-engine--godot-4)<br>UE4 · UE5 | *copy into `Plugins/`* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) · [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf) |
 | [**Godot 4**](docs/ENGINE_INTEGRATION.md#godot-4-gdextension)<br>Godot 4.2+ (GDExtension) | *copy into `addons/bqlog`* | ✅ | — | [release page](https://github.com/Tencent/BqLog/releases) |
 
 > [!IMPORTANT]

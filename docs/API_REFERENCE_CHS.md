@@ -599,7 +599,7 @@ bq.Unregister_console_callback(callback)
 
 **注意：**
 1. **不要**在回调中调用任何同步刷新的 BqLog 函数——会造成死锁。
-2. Unity / 团结引擎 / Unreal 插件已自动将 ConsoleAppender 重定向到编辑器日志窗口。
+2. Unity / 团结引擎 / Unreal / Godot 插件已自动将 ConsoleAppender 重定向到编辑器日志窗口。
 
 ### 主动拉取（适用于虚拟机环境）
 
@@ -929,7 +929,7 @@ void thread_a() {
 ├── tools      # 工具（LogDecoder、CategoryLogGenerator 等）
 ├── wrapper    # 各语言 Wrapper 工程（Java / C# 等）
 ├── benchmark  # Benchmark 工程构建
-└── plugin     # 游戏引擎插件（Unity / 团结引擎 / Unreal）
+└── plugin     # 游戏引擎插件（Unity / 团结引擎 / Unreal / Godot）
 ```
 
 **所需环境变量：**

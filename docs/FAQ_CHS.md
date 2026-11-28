@@ -32,7 +32,7 @@
 ## 支持哪些平台和语言？
 
 - 平台：Windows 64-bit、macOS、Linux（含嵌入式）、iOS、Android、HarmonyOS、OpenHarmony、Unix（FreeBSD、NetBSD、OpenBSD、Solaris 等）
-- 语言：C++（C++11 起）、Java/Kotlin、C#（Unity、.NET）、ArkTS/C++（HarmonyOS 与 OpenHarmony 共用同一包）、JavaScript/TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 及 UE6 开发构建）
+- 语言：C++（C++11 起）、Java/Kotlin、C#（Unity、.NET、Godot）、ArkTS/C++（HarmonyOS 与 OpenHarmony 共用同一包）、JavaScript/TypeScript（Node.js）、Python 3.7+、Go、Unreal Engine（UE4、UE5 及 UE6 开发构建）、Godot 4（GDScript、C#、C++）
 - 硬件架构：x86、x86_64、ARM32、ARM64
 - 集成方式：动态库、静态库、源码
 
@@ -42,7 +42,7 @@
 
 ## 对游戏引擎的支持如何？
 
-专项支持，不是"能编过"就算完：Unity、团结引擎、Unreal 都有现成插件/包；UE 插件对蓝图和 UE 内置数据类型（FString、FName 等）有天然支持；Unity 侧对常用数据类型做了适配。引擎内写日志和自己项目里写 C++ 是一个手感。见[引擎集成指南](ENGINE_INTEGRATION.md)（[中文](ENGINE_INTEGRATION_CHS.md)）。
+专项支持，不是"能编过"就算完：Unity、团结引擎、Unreal、Godot 4 都有现成插件/包；UE 插件对蓝图和 UE 内置数据类型（FString、FName 等）有天然支持；Godot 4 提供原生 GDExtension 插件，支持零 GC GDScript 写日志、Category Log `.gd` 生成以及 GDScript / Godot C# / C++（`godot-cpp`）共享同进程单例；Unity 侧对常用数据类型做了适配。引擎内写日志和自己项目里写 C++ 是一个手感。见[引擎集成指南](ENGINE_INTEGRATION.md)（[中文](ENGINE_INTEGRATION_CHS.md)）。
 
 ## 有哪些发布渠道？
 
@@ -55,6 +55,7 @@
 - **ohpm**：HarmonyOS / OpenHarmony（`ohpm install bqlog`）
 - **Fab**：Unreal Engine 插件
 - **Unity / 团结引擎**：package 导入
+- **Godot 4**：预编译 GDExtension 插件（`addons/bqlog`，通过 GitHub Releases、Godot Asset Library 与 Godot Asset Store 提供）
 - **Go**：源码模块分发
 
 ## 性能数据在哪？

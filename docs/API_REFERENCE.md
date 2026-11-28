@@ -600,7 +600,7 @@ bq.Unregister_console_callback(callback)
 
 **Note:**
 1. Do **not** call any synchronous BqLog flush functions inside the callback — this will deadlock.
-2. Unity / Tuanjie / Unreal plugins already redirect ConsoleAppender to the editor log window automatically.
+2. Unity / Tuanjie / Unreal / Godot plugins already redirect ConsoleAppender to the editor log window automatically.
 
 ### Actively fetch (for VM environments)
 
@@ -935,7 +935,7 @@ All build scripts are in `/build`:
 ├── tools      # Tools (LogDecoder, CategoryLogGenerator, etc.)
 ├── wrapper    # Language Wrapper Projects (Java / C# etc.)
 ├── benchmark  # Benchmark Project Build
-└── plugin     # Game Engine Plugins (Unity / Tuanjie / Unreal)
+└── plugin     # Game Engine Plugins (Unity / Tuanjie / Unreal / Godot)
 ```
 
 **Required env vars:**

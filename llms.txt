@@ -6,9 +6,9 @@ BqLog's design: a log entry is stored as a template index plus raw arguments, so
 
 ## Languages and platforms
 
-- Languages: C++ (C++11+), Java/Kotlin, C#, Python 3.7+, JavaScript/TypeScript (Node.js), Go; wrappers of different languages can share one Log object in the same process
+- Languages: C++ (C++11+), Java/Kotlin, C#, Python 3.7+, JavaScript/TypeScript (Node.js), Go, GDScript (Godot 4); wrappers of different languages can share one Log object in the same process
 - Platforms: Windows, macOS, Linux (including embedded), iOS, Android, HarmonyOS/OpenHarmony, FreeBSD and other Unix
-- Game engines: Unity and Unreal Engine plugins included
+- Game engines: Unity, Tuanjie, Unreal Engine, and Godot 4 plugins included
 - Only depends on the C standard library and platform APIs; the Android dynamic library is about 200 KB
 
 ## Docs

@@ -14,7 +14,7 @@ Part of the [BqLog](https://github.com/Tencent/BqLog) project.
 ## 🚀 Why BqLog?
 
 - ⚡ **Fastest in class** — lock-free MISO ring-buffer delivers ~80% higher throughput than comparable loggers for UTF-8, and >500% for UTF-16 environments
-- 🏭 **Industrial grade** — production-proven at Tencent, designed for game engines (Unity, Unreal), mobile apps, and high-concurrency server workloads
+- 🏭 **Industrial grade** — production-proven at Tencent, designed for game engines (Unity, Tuanjie, Unreal, Godot), mobile apps, and high-concurrency server workloads
 - 🔐 **Compressed & Encrypted appender** — `compressed_file` produces the smallest log files with near-zero overhead, and supports **hybrid asymmetric encryption** (RSA + AES) for secure log storage at virtually no performance cost
 - 🔄 **Sync & Async modes** — choose per-log thread model to balance latency vs throughput
 - 🏷️ **Category logging** — attach categories to log entries, filter with category masks
@@ -188,7 +188,7 @@ BqLog consistently outperforms popular logging libraries. See [full benchmark re
 
 Full documentation and examples for all supported languages:
 
-**C++ · Java · C# · Python · TypeScript · Unreal Engine · Unity · HarmonyOS**
+**C++ · Java · C# · Python · TypeScript · Go · Unreal Engine · Unity · Godot · HarmonyOS**
 
 👉 **[github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
 

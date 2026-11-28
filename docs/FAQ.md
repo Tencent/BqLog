@@ -32,7 +32,7 @@ Honor of Kings (international) — a client product validated at 30M+ DAU. Recen
 ## Which platforms and languages are covered?
 
 - Platforms: Windows 64-bit, macOS, Linux (including embedded), iOS, Android, HarmonyOS, OpenHarmony, Unix (FreeBSD, NetBSD, OpenBSD, Solaris, …)
-- Languages: C++ (C++11+), Java/Kotlin, C# (Unity, .NET), ArkTS/C++ (HarmonyOS and OpenHarmony share one package), JavaScript/TypeScript (Node.js), Python 3.7+, Go, Unreal Engine (UE4, UE5 and UE6 development builds)
+- Languages: C++ (C++11+), Java/Kotlin, C# (Unity, .NET, Godot), ArkTS/C++ (HarmonyOS and OpenHarmony share one package), JavaScript/TypeScript (Node.js), Python 3.7+, Go, Unreal Engine (UE4, UE5 and UE6 development builds), Godot 4 (GDScript, C#, C++)
 - Hardware: x86, x86_64, ARM32, ARM64
 - Integration: dynamic library, static library, or source
 
@@ -42,7 +42,7 @@ Yes: PS5 and Switch have no prebuilt binaries for now (console toolchains come w
 
 ## What about game engines?
 
-Dedicated support, not just "it compiles": Unity, Tuanjie Engine and Unreal all have ready-made plugins/packages; the UE plugin natively understands Blueprints and UE's builtin data types (FString, FName and friends); common data types are adapted on the Unity side. Logging inside an engine feels the same as logging in your own C++ project. See [Engine Integration](ENGINE_INTEGRATION.md).
+Dedicated support, not just "it compiles": Unity, Tuanjie Engine, Unreal, and Godot 4 all have ready-made plugins/packages; the UE plugin natively understands Blueprints and UE's builtin data types (FString, FName and friends); the Godot 4 GDExtension plugin provides zero-GC GDScript logging, Category Log `.gd` generation, and a shared in-process singleton across GDScript, Godot C#, and C++ (`godot-cpp`); common data types are adapted on the Unity side. Logging inside an engine feels the same as logging in your own C++ project. See [Engine Integration](ENGINE_INTEGRATION.md).
 
 ## Where is it published?
 
@@ -55,6 +55,7 @@ Every language has its proper channel:
 - **ohpm**: HarmonyOS / OpenHarmony (`ohpm install bqlog`)
 - **Fab**: the Unreal Engine plugin
 - **Unity / Tuanjie Engine**: package import
+- **Godot 4**: prebuilt GDExtension plugin (`addons/bqlog` via GitHub Releases, Godot Asset Library & Godot Asset Store)
 - **Go**: source-module distribution
 
 ## Where are the performance numbers?
