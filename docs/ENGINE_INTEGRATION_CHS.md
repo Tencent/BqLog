@@ -254,7 +254,7 @@ Unreal 插件会自动将所有 BqLog 输出转接到 Unreal 的 Output Log，�
 
 ### 集成方式
 
-1. 在 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `godot_plugin_{version}.zip`（或通过 Godot Asset Library 安装 **BqLog**）；
+1. 在 [Releases 页面](https://github.com/Tencent/BqLog/releases) 下载 `godot_plugin_{version}.zip`（或通过 Godot Asset Library、Godot Asset Store 安装 **BqLog**）；
 2. 将压缩包中的 `addons/bqlog` 解压到 Godot 项目根目录（`res://addons/bqlog`）；
 3. 重新打开工程（或在 CI 中执行一次 `godot --headless --import --quit`）让 Godot 注册 `bqlog.gdextension`。
 

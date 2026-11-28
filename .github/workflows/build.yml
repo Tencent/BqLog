@@ -8137,6 +8137,7 @@ jobs:
           cp plugin/godot/addons/bqlog/bqlog.gdextension "$STAGE/addons/bqlog/"
           cp plugin/godot/include/bq_log_godot_adapter.h "$STAGE/addons/bqlog/include/"
           cp LICENSE.txt "$STAGE/addons/bqlog/LICENSE.txt"
+          cp plugin/godot/addons/bqlog/README.md "$STAGE/addons/bqlog/README.md"
 
           cp -R godot_bins/_godot_bin_windows_x86_64/. "$STAGE/addons/bqlog/bin/windows/x86_64/"
           cp -R godot_bins/_godot_bin_windows_arm64/. "$STAGE/addons/bqlog/bin/windows/arm64/"
@@ -8148,6 +8149,36 @@ jobs:
           cp -R godot_bins/_godot_bin_ios/. "$STAGE/addons/bqlog/bin/ios/"
 
           find "$STAGE/addons/bqlog" -maxdepth 5 | sort
+      - name: Validate Godot plugin package (Asset Library / Asset Store rules)
+        env:
+          VERSION: ${{ needs.extract_version.outputs.version }}
+        run: |
+          set -euo pipefail
+          ROOT="dist/godot_plugin"
+          ADDON="$ROOT/addons/bqlog"
+          fail=0
+          # 1. Only addons/bqlog/ may exist at the package top level.
+          extra=$(ls -A "$ROOT" | grep -v '^addons$' || true)
+          [ -z "$extra" ] || { echo "::error::Unexpected top-level entries: $extra"; fail=1; }
+          extra=$(ls -A "$ROOT/addons" | grep -v '^bqlog$' || true)
+          [ -z "$extra" ] || { echo "::error::Unexpected entries under addons/: $extra"; fail=1; }
+          # 2. License (with year and holder) and README must ship inside the add-on.
+          for f in LICENSE.txt README.md plugin.cfg bqlog.gdextension; do
+            [ -f "$ADDON/$f" ] || { echo "::error::Missing $ADDON/$f"; fail=1; }
+          done
+          grep -Eq 'Copyright \(C\) [0-9]{4}' "$ADDON/LICENSE.txt" || { echo "::error::LICENSE.txt lacks a copyright statement with year"; fail=1; }
+          # 3. plugin.cfg version must match the release version.
+          grep -q "^version=\"${VERSION}\"" "$ADDON/plugin.cfg" || { echo "::error::plugin.cfg version != ${VERSION}"; fail=1; }
+          # 4. Every library referenced by the .gdextension file must be present.
+          while read -r ref; do
+            rel="${ref#res://addons/bqlog/}"
+            [ -e "$ADDON/$rel" ] || { echo "::error::Missing library referenced by .gdextension: $rel"; fail=1; }
+          done < <(grep -o 'res://addons/bqlog/[^"]*' "$ADDON/bqlog.gdextension" | sort -u)
+          # 5. No junk files.
+          junk=$(find "$ROOT" \( -name '.DS_Store' -o -name '__MACOSX' -o -name 'Thumbs.db' -o -name '.git*' -o -name '.github' -o -name '*.nupkg' -o -name '*.exe' \) || true)
+          [ -z "$junk" ] || { echo "::error::Junk files found: $junk"; fail=1; }
+          [ "$fail" -eq 0 ] || exit 1
+          echo "Godot plugin package validation passed."
       - name: Upload Godot plugin artifact
         uses: actions/upload-artifact@v6
         with:

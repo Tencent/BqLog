@@ -257,7 +257,7 @@ Behaviour to know about:
 
 ### Integration
 
-1. Download `godot_plugin_{version}.zip` from the [Releases page](https://github.com/Tencent/BqLog/releases) (or install **BqLog** from the Godot Asset Library).
+1. Download `godot_plugin_{version}.zip` from the [Releases page](https://github.com/Tencent/BqLog/releases) (or install **BqLog** from the Godot Asset Library or the Godot Asset Store).
 2. Extract the `addons/bqlog` directory into your Godot project root (`res://addons/bqlog`).
 3. Reopen the project (or run `godot --headless --import --quit` in CI) so Godot registers `bqlog.gdextension`.
 
