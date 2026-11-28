@@ -1,3 +1,5 @@
+![BqLog Banner](https://raw.githubusercontent.com/Tencent/BqLog/main/banner.jpg)
+
 # @pippocao/bqlog
 
 > **The fastest industrial-grade logging engine** for Node.js — powered by a native C++ lock-free ring-buffer core, battle-tested at Tencent across large-scale game engines and backend services.

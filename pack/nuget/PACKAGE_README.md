@@ -1,3 +1,5 @@
+![BqLog Banner](https://raw.githubusercontent.com/Tencent/BqLog/main/banner.jpg)
+
 # BqLog
 
 .NET bindings for the [BqLog](https://github.com/Tencent/BqLog) logging library, with the native library for every supported platform included.

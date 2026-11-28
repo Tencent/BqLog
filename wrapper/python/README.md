@@ -1,3 +1,5 @@
+![BqLog Banner](https://raw.githubusercontent.com/Tencent/BqLog/main/banner.jpg)
+
 # BqLog Python Wrapper
 
 High-performance Python logging powered by [BqLog](https://github.com/Tencent/BqLog).

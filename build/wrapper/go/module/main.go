@@ -77,7 +77,9 @@ func module_readme(guide, module, version, commit string) (string, error) {
 	chapter := strings.TrimSpace(guide[start+len(start_marker) : end])
 	chapter = strings.ReplaceAll(chapter, "github.com/Tencent/BqLog/go/v2", module)
 	chapter = strings.Replace(chapter, "## Go\n", "## Quick Start\n", 1)
-	return fmt.Sprintf(`# BqLog for Go %s
+	return fmt.Sprintf(`![BqLog Banner](https://raw.githubusercontent.com/Tencent/BqLog/main/banner.jpg)
+
+# BqLog for Go %s
 
 **GitHub: [https://github.com/Tencent/BqLog](https://github.com/Tencent/BqLog)**
 

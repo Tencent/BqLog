@@ -1,3 +1,5 @@
+![BqLog Banner](https://cdn.jsdelivr.net/gh/Tencent/BqLog@main/banner.jpg)
+
 # BqLog
 
 > **工业级高性能日志引擎** -- 基于原生 C++ 无锁环形缓冲区核心，经过腾讯大规模游戏引擎和APP的生产验证，现已支持 HarmonyOS (ArkTS)。

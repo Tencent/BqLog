@@ -22,6 +22,7 @@
     <RepositoryUrl>https://github.com/Tencent/BqLog</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
     <PackageTags>logging;log;performance;native;cross-platform</PackageTags>
   </PropertyGroup>
 
@@ -35,6 +36,7 @@
     <None Include="runtimes/**/*" Pack="true"
           PackagePath="runtimes/%(RecursiveDir)%(Filename)%(Extension)" />
     <None Include="PACKAGE_README.md" Pack="true" PackagePath="README.md" />
+    <None Include="../../icon.png" Pack="true" PackagePath="icon.png" />
   </ItemGroup>
 
   <!-- Imported by every consumer; the file itself only acts on .NET Framework targets. -->
