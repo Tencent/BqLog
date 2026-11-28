@@ -36,6 +36,10 @@ logger.force_flush()
 
 In the Godot editor, console output is redirected to the Output panel automatically. In exported builds, BqLog writes to the native platform channels (stdout, Logcat, NSLog).
 
+### Godot C# (.NET)
+
+Add `<Reference Include="addons/bqlog/csharp/BqLog.Managed.dll" />` to your `.csproj` (do not also install the `BqLog` NuGet package). C# and GDScript automatically share the same in-process BqLog singleton.
+
 ### Documentation
 
 - Project home and full documentation: https://github.com/Tencent/BqLog
@@ -79,6 +83,10 @@ logger.force_flush()
 ```
 
 在 Godot 编辑器中,控制台输出会自动重定向到 Output 面板;导出的运行时包则直接输出到平台原生通道(stdout、Logcat、NSLog)。
+
+### Godot C#（.NET）
+
+在项目的 `.csproj` 中添加 `<Reference Include="addons/bqlog/csharp/BqLog.Managed.dll" />` 即可使用零 GC C# 接口（请勿同时安装 `BqLog` NuGet 包），C# 与 GDScript 自动共享同进程唯一单例。
 
 ### 文档
 

@@ -120,7 +120,7 @@
 |------|---------|:--:|:---------:|----------|
 | [**Homebrew**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ | [formulae.brew.sh](https://formulae.brew.sh/formula/bqlog) |
 | [**vcpkg**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>Windows · Linux · macOS | `vcpkg install bqlog` | ✅ | `bqlog[tools]` | [vcpkg.io](https://vcpkg.io/en/package/bqlog.html) |
-| [**NuGet**](docs/INTEGRATION_GUIDE_CHS.md#cunity--团结引擎--net)<br>C# · .NET · Unity · Godot | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
+| [**NuGet**](docs/INTEGRATION_GUIDE_CHS.md#cunity--团结引擎--net)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
 | [**Maven Central — Java**](docs/INTEGRATION_GUIDE_CHS.md#javaserver--desktop)<br>Java · Kotlin · 服务端 | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) |
 | [**Maven Central — Android**](docs/INTEGRATION_GUIDE_CHS.md#android)<br>Android · Kotlin | `implementation("com.tencent.bqlog:android:2.+")` | ✅ | — | [com.tencent.bqlog:android](https://central.sonatype.com/artifact/com.tencent.bqlog/android) |
 | [**PyPI**](docs/INTEGRATION_GUIDE_CHS.md#python)<br>Python 3.7+ | `pip install bqlog` | ✅ | — | [pypi.org](https://pypi.org/project/bqlog/) |

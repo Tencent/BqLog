@@ -286,9 +286,22 @@ biz.info(biz.cat.Shop.Seller, "sold item {}, price {}", item_id, price)
 
 ### GDScript / Godot C#（.NET）/ C++ 混用
 
-`BqLogGodot` 动态链接共享的 `BqLog` 核心库。Godot .NET 项目可直接引用 `BqLog` NuGet 包获得零 GC 的 C# 日志通道，且 GDScript、C# 与 C++（`godot-cpp`）在同进程内共享唯一 BqLog 单例，可通过 `get_log_by_name` 无缝互通。
+`BqLogGodot` 动态链接共享的 `BqLog` 核心库。Godot .NET 项目只需在 `.csproj` 中直接引用插件内置的托管程序集即可获得零 GC 的 C# 日志通道（无需开启 `AllowUnsafeBlocks`；**请勿**同时安装 `BqLog` NuGet 包，因为 NuGet 包自带一份独立的原生库，混用会导致进程内加载两份库而无法共享单例）：
 
-> **在 Godot C++（`godot-cpp`）中只需包含 `"bq_log_godot_adapter.h"`，不要再单独包含 `"bq_log/bq_log.h"`**——`"bq_log_godot_adapter.h"` 内部已自动包含 `"bq_log/bq_log.h"`，并内置 `godot::String`、`godot::StringName`、`godot::NodePath`、`Vector2/2i/3/3i/4/4i`、`Color`、`Quaternion`、`Rect2/2i` 的零堆分配适配（同时支持 `BQ_LOG_FAST_*`）。
+```xml
+<ItemGroup>
+  <Reference Include="addons/bqlog/csharp/BqLog.Managed.dll" />
+</ItemGroup>
+```
+
+插件自带的 `addons/bqlog/csharp/BqLogGodotResolver.cs` 会自动将 `BqLog.Managed.dll` 解析到 `addons/bqlog/bin/` 下同一份原生库，因此 GDScript、C# 与 C++（`godot-cpp`）在同进程内共享唯一 BqLog 单例，可通过 `get_log_by_name` 无缝互通：
+
+```csharp
+var log = bq.log.get_log_by_name("game_log");
+log.info("Hello from Godot C#! value={}", 42);
+```
+
+> **在 Godot C++（`godot-cpp`）中只需包含 `"bq_log_godot_adapter.h"`（位于 `addons/bqlog/include/bq_log_godot_adapter.h`），不要再单独包含 `"bq_log/bq_log.h"`**——`"bq_log_godot_adapter.h"` 内部已自动包含 `"bq_log/bq_log.h"`，并内置 `godot::String`、`godot::StringName`、`godot::NodePath`、`Vector2/2i/3/3i/4/4i`、`Color`、`Quaternion`、`Rect2/2i` 的零堆分配适配（同时支持 `BQ_LOG_FAST_*`）。
 
 完整可运行示例请参考仓库的 `demo/godot` 目录。
 

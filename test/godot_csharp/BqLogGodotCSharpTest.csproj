@@ -2,13 +2,8 @@
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <BqLogMode Condition="'$(BqLogMode)' == ''">addon</BqLogMode>
-    <BqLogVersion Condition="'$(BqLogVersion)' == ''">2.8.99-ci</BqLogVersion>
   </PropertyGroup>
-  <ItemGroup Condition="'$(BqLogMode)' == 'addon'">
+  <ItemGroup>
     <Reference Include="addons/bqlog/csharp/BqLog.Managed.dll" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(BqLogMode)' == 'nuget'">
-    <PackageReference Include="BqLog" Version="$(BqLogVersion)" />
   </ItemGroup>
 </Project>

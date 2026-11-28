@@ -8146,6 +8146,7 @@ jobs:
 
           dotnet build pack/nuget/BqLog.csproj -c Release -p:Version="${VERSION}" -o dist/godot_csharp_out
           cp dist/godot_csharp_out/BqLog.Managed.dll "$STAGE/addons/bqlog/csharp/BqLog.Managed.dll"
+          cp plugin/godot/addons/bqlog/csharp/BqLogGodotResolver.cs "$STAGE/addons/bqlog/csharp/BqLogGodotResolver.cs"
 
           cp -R godot_bins/_godot_bin_windows_x86_64/. "$STAGE/addons/bqlog/bin/windows/x86_64/"
           cp -R godot_bins/_godot_bin_windows_arm64/. "$STAGE/addons/bqlog/bin/windows/arm64/"
@@ -8171,7 +8172,7 @@ jobs:
           extra=$(ls -A "$ROOT/addons" | grep -v '^bqlog$' || true)
           [ -z "$extra" ] || { echo "::error::Unexpected entries under addons/: $extra"; fail=1; }
           # 2. License (with year and holder) and README must ship inside the add-on.
-          for f in LICENSE.txt README.md plugin.cfg bqlog.gdextension csharp/BqLog.Managed.dll; do
+          for f in LICENSE.txt README.md plugin.cfg bqlog.gdextension csharp/BqLog.Managed.dll csharp/BqLogGodotResolver.cs; do
             [ -f "$ADDON/$f" ] || { echo "::error::Missing $ADDON/$f"; fail=1; }
           done
           grep -Eq 'Copyright \(C\) [0-9]{4}' "$ADDON/LICENSE.txt" || { echo "::error::LICENSE.txt lacks a copyright statement with year"; fail=1; }

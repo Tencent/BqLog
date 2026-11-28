@@ -289,9 +289,22 @@ biz.info(biz.cat.Shop.Seller, "sold item {}, price {}", item_id, price)
 
 ### Mixing GDScript, Godot C# (.NET), and C++
 
-`BqLogGodot` dynamically links against the shared `BqLog` core library. In Godot .NET projects, add the `BqLog` NuGet package for zero-GC C# logging; GDScript, C#, and C++ (`godot-cpp`) share the exact same in-process BqLog singleton and can look up each other's logs via `get_log_by_name`.
+`BqLogGodot` dynamically links against the shared `BqLog` core library. In Godot .NET projects, add a reference to the prebuilt managed assembly bundled inside the addon in your `.csproj` (no `AllowUnsafeBlocks` required; **do not** also install the `BqLog` NuGet package, as it ships its own copy of the native library which would split the singleton):
 
-> **Inside Godot C++ (`godot-cpp`), include `"bq_log_godot_adapter.h"`, not `"bq_log/bq_log.h"`** — `"bq_log_godot_adapter.h"` already includes `"bq_log/bq_log.h"` and adds zero-heap-allocation adapters for `godot::String`, `godot::StringName`, `godot::NodePath`, `Vector2/2i/3/3i/4/4i`, `Color`, `Quaternion`, and `Rect2/2i` (including `BQ_LOG_FAST_*`).
+```xml
+<ItemGroup>
+  <Reference Include="addons/bqlog/csharp/BqLog.Managed.dll" />
+</ItemGroup>
+```
+
+`addons/bqlog/csharp/BqLogGodotResolver.cs` automatically resolves the native `BqLog` shared library from `addons/bqlog/bin/` so GDScript, C#, and C++ (`godot-cpp`) share the exact same in-process BqLog singleton and can look up each other's logs via `get_log_by_name`:
+
+```csharp
+var log = bq.log.get_log_by_name("game_log");
+log.info("Hello from Godot C#! value={}", 42);
+```
+
+> **Inside Godot C++ (`godot-cpp`), include `"bq_log_godot_adapter.h"` (located at `addons/bqlog/include/bq_log_godot_adapter.h`), not `"bq_log/bq_log.h"`** — `"bq_log_godot_adapter.h"` already includes `"bq_log/bq_log.h"` and adds zero-heap-allocation adapters for `godot::String`, `godot::StringName`, `godot::NodePath`, `Vector2/2i/3/3i/4/4i`, `Color`, `Quaternion`, and `Rect2/2i` (including `BQ_LOG_FAST_*`).
 
 For a runnable sample, see the `demo/godot` directory.
 
