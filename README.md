@@ -52,7 +52,7 @@
 - **Content to play a supporting role.** On a modern machine a logging system should take as little of the system as it can. The logging threads and the consumer thread alike should use as little CPU, memory and disk I/O as possible. We do not optimize for benchmark scores; every optimization targets real use.
 - **Compatible everywhere it runs.** Windows, macOS, Linux, iOS, Android, HarmonyOS, OpenHarmony and the Unix family; C++, Java/Kotlin, C#, Python, TypeScript/ArkTS, Go and GDScript sharing one core and even one log object; game engines (Unity, Tuanjie, Unreal, Godot), mobile toolchains without an STL, strict `-Werror` builds.
 - **Built for the bad day.** Logs written before a crash are recovered after it; a full disk neither crashes nor hangs the app; corrupted files are recovered as far as possible; log files can be encrypted to protect privacy.
-- **Care about the coding experience.** One line to create a log, one line to write; the internals stay as transparent as possible, without complicated configuration; every interface is friendly to IDE code completion; integration tools such as UE Blueprints are provided.
+- **Care about the coding experience.** One line to create a log, one line to write; the internals stay as transparent as possible, without complicated configuration; every interface is friendly to IDE code completion; dedicated engine integrations such as UE Blueprints and Godot 4 GDExtension are provided.
 
 ---
 
@@ -93,7 +93,7 @@
 - Supports `utf8`, `utf16`, `utf32` characters and strings, as well as bool, float, double, and integer types of various sizes.
 - Supports `C++20` `std::format` style format strings (without positional index and time formatting).
 - Asynchronous logging supports crash recovery and tries to avoid data loss.
-- On Java, C#, TypeScript wrappers, it can achieve "zero extra heap alloc" (or very close), avoiding continuous object allocations.
+- On Java, C#, TypeScript, and GDScript wrappers, it can achieve "zero extra heap alloc" (or very close), avoiding continuous object allocations.
 - Depends only on the standard C library and platform APIs; can be compiled with Android `ANDROID_STL = none`.
 - Supports `C++11` and later standards and works under very strict compiler options.
 - Build system is based on `CMake` and provides multi-platform scripts, easy to integrate.
@@ -121,7 +121,7 @@
 |-----------|---------|:-------:|:---------:|--------------|
 | [**Homebrew**](docs/INTEGRATION_GUIDE.md#c-dynamic--static--source)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ | [formulae.brew.sh](https://formulae.brew.sh/formula/bqlog) |
 | [**vcpkg**](docs/INTEGRATION_GUIDE.md#c-dynamic--static--source)<br>Windows · Linux · macOS | `vcpkg install bqlog` | ✅ | `bqlog[tools]` | [vcpkg.io](https://vcpkg.io/en/package/bqlog.html) |
-| [**NuGet**](docs/INTEGRATION_GUIDE.md#c-unity--tuanjie-engine--net)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
+| [**NuGet**](docs/INTEGRATION_GUIDE.md#c-unity--tuanjie-engine--net)<br>C# · .NET · Unity · Godot | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
 | [**Maven Central — Java**](docs/INTEGRATION_GUIDE.md#java-server--desktop)<br>Java · Kotlin · server | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) |
 | [**Maven Central — Android**](docs/INTEGRATION_GUIDE.md#android)<br>Android · Kotlin | `implementation("com.tencent.bqlog:android:2.+")` | ✅ | — | [com.tencent.bqlog:android](https://central.sonatype.com/artifact/com.tencent.bqlog/android) |
 | [**PyPI**](docs/INTEGRATION_GUIDE.md#python)<br>Python 3.7+ | `pip install bqlog` | ✅ | — | [pypi.org](https://pypi.org/project/bqlog/) |
@@ -153,7 +153,7 @@ All diagrams and the series index live in [Performance Design](docs/PERFORMANCE_
 
 ![Structure](docs/img/log_structure.png)
 
-Your program accesses the core engine through `BqLog Wrapper` (C++, Java, C#, TypeScript, Python, etc.). Each Log object can mount one or more Appenders (Console / Text File / Compressed File). **Within the same process, Wrappers of different languages can access the same Log object.**
+Your program accesses the core engine through `BqLog Wrapper` (C++, Java, C#, TypeScript, Python, Go, GDScript, etc.). Each Log object can mount one or more Appenders (Console / Text File / Compressed File). **Within the same process, Wrappers of different languages can access the same Log object.**
 
 | Appender | Output | Readable | Performance | Size | Encryption |
 |----------|--------|----------|-------------|------|------------|
@@ -167,7 +167,7 @@ Your program accesses the core engine through `BqLog Wrapper` (C++, Java, C#, Ty
 
 > Before calling any API, you need to integrate BqLog into your project first:
 > - **Standard environments** (C++, Java, C#, Python, Node.js, etc.) → [Integration Guide](docs/INTEGRATION_GUIDE.md)
-> - **Game engines** (Unity, Tuanjie Engine, Unreal Engine) → [Game Engine Integration Guide](docs/ENGINE_INTEGRATION.md)
+> - **Game engines** (Unity, Tuanjie Engine, Unreal Engine, Godot 4) → [Game Engine Integration Guide](docs/ENGINE_INTEGRATION.md)
 > - **Anything else** → [FAQ](docs/FAQ.md)
 
 ### C++
@@ -282,6 +282,18 @@ log.info("Hello from HarmonyOS / OpenHarmony! params: {}, {}", "text", 123);
 bq.log.force_flush_all_logs();
 ```
 
+### GDScript (Godot 4)
+
+```gdscript
+var config := """
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+"""
+var logger := bq_log.create_log("godot_log", config)
+logger.info("Hello from Godot 4! params: {}, {}", "text", 123)
+logger.force_flush()
+```
+
 > For full integration steps for all platforms, see [Integration Guide](docs/INTEGRATION_GUIDE.md) and [Game Engine Integration Guide](docs/ENGINE_INTEGRATION.md).
 
 ---
@@ -312,13 +324,13 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 ## 🔄 Changes from 1.x to 2.x
 
 1. Added HarmonyOS support, plus PS4 / PS5 / Switch (experimental, source integration).
-2. Added TypeScript (Node.js, ArkTS), Python and Go support.
+2. Added TypeScript (Node.js, ArkTS), Python, Go, and GDScript (Godot 4) support.
 3. Improved cross-platform compatibility, stability and generality; supports more Unix systems.
 4. Significant performance improvements, most visible in UTF-16 environments (C#, Unreal, Unity). See [benchmark](docs/BENCHMARK.md).
 5. Android no longer must be used together with Java.
 6. Removed the `is_in_sandbox` config and replaced it with `base_dir_type`; added filters for snapshots and support for opening a new log file on each startup. See [Configuration](docs/CONFIGURATION.md).
 7. Added high-performance hybrid asymmetric encryption, ***almost zero overhead***; see [Advanced Usage — Encryption](docs/ADVANCED_USAGE.md#6-log-encryption-and-decryption).
-8. Provides Unity, Tuanjie Engine, and Unreal Engine plugins, making it easy to use in game engines; the Unreal plugin supports UE4, UE5, and current UE6 development builds, with ConsoleAppender redirection and Blueprint support. UE4/UE5 packages are also published on [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf), while UE6 packages are available from GitHub Releases only. See [Game Engine Integration Guide](docs/ENGINE_INTEGRATION.md).
+8. Provides Unity, Tuanjie Engine, Unreal Engine, and Godot 4 plugins, making it easy to use in game engines: the Unreal plugin supports UE4, UE5, and current UE6 development builds with ConsoleAppender redirection and Blueprint support (UE4/UE5 packages are also published on [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf), while UE6 packages are available from GitHub Releases only); the Godot 4 GDExtension plugin (`addons/bqlog`) supports Godot 4.2+ with zero-GC GDScript logging, Category Log `.gd` generation, and a shared in-process singleton across GDScript, Godot C#, and C++. See [Game Engine Integration Guide](docs/ENGINE_INTEGRATION.md).
 9. The repository no longer ships binaries. From 2.x on, please download platform- and language-specific packages from the [Releases page](https://github.com/Tencent/BqLog/releases).
 10. The size of a single log entry is not limited by `log.buffer_size` anymore;
 11. The timezone can be specified manually.
@@ -334,7 +346,7 @@ Logging is not the core of an application, and a logger that takes a lot of CPU 
 | [Development Guidelines](DEVELOPMENT_GUIDELINES.md) | Coding rules for contributors |
 | [FAQ](docs/FAQ.md) | Common questions: comparisons, platforms, distribution channels, crash recovery |
 | [Integration Guide](docs/INTEGRATION_GUIDE.md) | Full integration steps for all platforms + all language demos |
-| [Game Engine Integration](docs/ENGINE_INTEGRATION.md) | Unity, Tuanjie Engine, Unreal Engine plugins and Blueprint usage |
+| [Game Engine Integration](docs/ENGINE_INTEGRATION.md) | Unity, Tuanjie Engine, Unreal Engine, and Godot 4 plugins (Blueprint, Verse, GDExtension) |
 | [API Reference](docs/API_REFERENCE.md) | Core APIs, sync/async logging, Appender overview, build & tools |
 | [Configuration](docs/CONFIGURATION.md) | Full configuration reference (appenders, log, snapshot) |
 | [Advanced Usage](docs/ADVANCED_USAGE.md) | No Heap Alloc, Category, crash recovery, custom types, encryption |

@@ -51,7 +51,7 @@
 - **甘心做配角。** 一台现代设备上，日志系统要尽可能少占用系统资源。不管是日志线程还是消费者线程，都要尽量少占用 CPU、内存和磁盘 I/O。我们不是单纯为了跑分，我们所有的优化都针对实际应用场景。
 - **跑在哪里都兼容。** Windows、macOS、Linux、iOS、Android、HarmonyOS、OpenHarmony 和各类 Unix；C++、Java/Kotlin、C#、Python、TypeScript/ArkTS、Go、GDScript 共用同一个内核，甚至可以共用同一个日志对象；游戏引擎（Unity、团结引擎、Unreal、Godot）、不带 STL 的移动端工具链、开着 `-Werror` 的严格构建都没问题。
 - **为出事的那一天准备好。** 进程崩溃后能把崩溃前写下的日志恢复回来；磁盘写满时既不崩溃也不卡死；损坏的文件也能尽可能恢复；日志文件可加密，保护隐私。
-- **关注代码体验。** 一行创建日志、一行写日志；内部机制尽可能透明，避免复杂配置；所有的接口都对IDE代码提示友好；提供UE蓝图等方便的接入工具适配。
+- **关注代码体验。** 一行创建日志、一行写日志；内部机制尽可能透明，避免复杂配置；所有的接口都对IDE代码提示友好；提供 UE 蓝图、Godot 4 GDExtension 等开箱即用的引擎接入适配。
 
 ---
 
@@ -92,7 +92,7 @@
 - 支持 `utf8`、`utf16`、`utf32` 字符及字符串，支持 bool、float、double、各种长度与类型的整数等常用参数类型。
 - 支持 `C++20` 的 `std::format` 规范（不含排序序号与时间格式化）。
 - 异步日志支持 Crash 复盘机制，尽量避免日志数据丢失。
-- 在 Java、C#、TypeScript 上可以做到「零额外 Heap Alloc」（或极少），不会随着运行不断 new 对象。
+- 在 Java、C#、TypeScript、GDScript 上可以做到「零额外 Heap Alloc」（或极少），不会随着运行不断 new 对象。
 - 仅依赖标准 C 语言库与平台 API，可在 Android 的 `ANDROID_STL = none` 模式下编译通过。
 - 支持 `C++11` 及之后的标准，可在极其严格的编译选项下工作。
 - 编译系统基于 `CMake`，并提供多平台编译脚本，集成简单。
@@ -120,7 +120,7 @@
 |------|---------|:--:|:---------:|----------|
 | [**Homebrew**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>macOS · Linux | `brew install bqlog` | ✅ | ✅ | [formulae.brew.sh](https://formulae.brew.sh/formula/bqlog) |
 | [**vcpkg**](docs/INTEGRATION_GUIDE_CHS.md#c动态库--静态库--源码)<br>Windows · Linux · macOS | `vcpkg install bqlog` | ✅ | `bqlog[tools]` | [vcpkg.io](https://vcpkg.io/en/package/bqlog.html) |
-| [**NuGet**](docs/INTEGRATION_GUIDE_CHS.md#cunity--团结引擎--net)<br>C# · .NET · Unity | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
+| [**NuGet**](docs/INTEGRATION_GUIDE_CHS.md#cunity--团结引擎--net)<br>C# · .NET · Unity · Godot | `dotnet add package BqLog` | ✅ | — | [nuget.org](https://www.nuget.org/packages/BqLog) |
 | [**Maven Central — Java**](docs/INTEGRATION_GUIDE_CHS.md#javaserver--desktop)<br>Java · Kotlin · 服务端 | `implementation("com.tencent.bqlog:java:2.+")` | ✅ | — | [com.tencent.bqlog:java](https://central.sonatype.com/artifact/com.tencent.bqlog/java) |
 | [**Maven Central — Android**](docs/INTEGRATION_GUIDE_CHS.md#android)<br>Android · Kotlin | `implementation("com.tencent.bqlog:android:2.+")` | ✅ | — | [com.tencent.bqlog:android](https://central.sonatype.com/artifact/com.tencent.bqlog/android) |
 | [**PyPI**](docs/INTEGRATION_GUIDE_CHS.md#python)<br>Python 3.7+ | `pip install bqlog` | ✅ | — | [pypi.org](https://pypi.org/project/bqlog/) |
@@ -152,7 +152,7 @@ BqLog 的快不是变魔术变出来的。这个系列从一行日志出发，�
 
 ![基础结构](docs/img/log_structure.png)
 
-您的程序通过 BqLog 提供的 `BqLog Wrapper`（C++、Java、C#、TypeScript、Python 等）来访问核心引擎。每个 Log 对象可挂载一个或多个 Appender（控制台 / 文本文件 / 压缩文件）。**同一进程内，不同语言的 Wrapper 可以访问同一个 Log 对象。**
+您的程序通过 BqLog 提供的 `BqLog Wrapper`（C++、Java、C#、TypeScript、Python、Go、GDScript 等）来访问核心引擎。每个 Log 对象可挂载一个或多个 Appender（控制台 / 文本文件 / 压缩文件）。**同一进程内，不同语言的 Wrapper 可以访问同一个 Log 对象。**
 
 | Appender | 输出目标 | 可读 | 性能 | 尺寸 | 加密 |
 |----------|---------|------|------|------|------|
@@ -166,7 +166,7 @@ BqLog 的快不是变魔术变出来的。这个系列从一行日志出发，�
 
 > 调用 API 前，请先将 BqLog 集成到您的项目：
 > - **常规编程环境**（C++、Java、C#、Python、Node.js 等）→ [集成指南](docs/INTEGRATION_GUIDE_CHS.md)
-> - **游戏引擎**（Unity、团结引擎、Unreal Engine）→ [游戏引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)
+> - **游戏引擎**（Unity、团结引擎、Unreal Engine、Godot 4）→ [游戏引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)
 > - **其他问题** → [常见问题（FAQ）](docs/FAQ_CHS.md)
 
 ### C++
@@ -281,6 +281,18 @@ log.info("Hello from HarmonyOS / OpenHarmony! params: {}, {}", "text", 123);
 bq.log.force_flush_all_logs();
 ```
 
+### GDScript (Godot 4)
+
+```gdscript
+var config := """
+    appenders_config.console.type=console
+    appenders_config.console.levels=[all]
+"""
+var logger := bq_log.create_log("godot_log", config)
+logger.info("Hello from Godot 4! params: {}, {}", "text", 123)
+logger.force_flush()
+```
+
 > 各平台完整集成步骤请见 [集成指南](docs/INTEGRATION_GUIDE_CHS.md) 和 [游戏引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)。
 
 ---
@@ -311,13 +323,13 @@ bq.log.force_flush_all_logs();
 ## 🔄 从 1.x 版本升级到 2.x 版本的变化
 
 1. 增加对鸿蒙系统以及 PS4、PS5、Switch 的支持（主机平台为实验性，源码接入）。
-2. 增加对 TypeScript（Node.js、ArkTS）、Python、Go 等语言的支持。
+2. 增加对 TypeScript（Node.js、ArkTS）、Python、Go、GDScript（Godot 4）等语言的支持。
 3. 增强跨平台兼容性、稳定性与通用性，支持更多 Unix 系统。
 4. 性能大幅提升，UTF-16 环境（C#、Unreal、Unity）尤为明显，详见[性能基准](docs/BENCHMARK_CHS.md)。
 5. Android 不再强制要求与 Java 一起使用。
 6. 移除 `is_in_sandbox` 配置，改用 `base_dir_type`；对 snapshot 增加过滤配置，支持每次启动新开日志文件。详见 [配置说明](docs/CONFIGURATION_CHS.md)。
 7. 支持高性能非对称混合加密，几乎无额外性能损耗，详见 [高级用法 — 加密](docs/ADVANCED_USAGE_CHS.md#6-日志加密和解密)。
-8. 提供 Unity、团结引擎、Unreal 引擎插件，方便在游戏引擎中使用；Unreal 插件支持 UE4、UE5 与当前 UE6 开发版，并提供 ConsoleAppender 日志重定向和蓝图支持。UE4/UE5 插件同时发布于 [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)，UE6 插件目前仅通过 GitHub Releases 提供。详见 [游戏引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)。
+8. 提供 Unity、团结引擎、Unreal、Godot 4 引擎插件，方便在游戏引擎中使用：Unreal 插件支持 UE4、UE5 与当前 UE6 开发版，并提供 ConsoleAppender 日志重定向和蓝图支持（UE4/UE5 插件同时发布于 [Fab](https://www.fab.com/listings/386d1c78-e164-4e97-8b3e-e88cbf9b6acf)，UE6 插件目前仅通过 GitHub Releases 提供）；Godot 4 提供原生 GDExtension 插件（`addons/bqlog`，支持 Godot 4.2+，零 GC GDScript 写日志、Category Log `.gd` 生成以及 GDScript / Godot C# / C++ 共享同进程单例）。详见 [游戏引擎集成指南](docs/ENGINE_INTEGRATION_CHS.md)。
 9. 仓库不再包含二进制产物，从 2.x 版本起请从 [Releases 页面](https://github.com/Tencent/BqLog/releases)下载对应平台和语言的二进制包。
 10. 单条日志长度不再受log.buffer_size限制。
 11. 可以精确手动设置时区。
@@ -333,7 +345,7 @@ bq.log.force_flush_all_logs();
 | [开发规范](DEVELOPMENT_GUIDELINES_CHS.md) | 贡献代码的编码规范 |
 | [常见问题（FAQ）](docs/FAQ_CHS.md) | 常见问题：对比、平台与语言、发布渠道、崩溃恢复 |
 | [集成指南](docs/INTEGRATION_GUIDE_CHS.md) | 所有平台完整集成步骤 + 各语言 Demo |
-| [游戏引擎集成](docs/ENGINE_INTEGRATION_CHS.md) | Unity、团结引擎、Unreal Engine 插件与蓝图使用 |
+| [游戏引擎集成](docs/ENGINE_INTEGRATION_CHS.md) | Unity、团结引擎、Unreal Engine、Godot 4 插件（蓝图、Verse、GDExtension） |
 | [API 参考](docs/API_REFERENCE_CHS.md) | 核心 API、同步/异步日志、Appender 介绍、构建与工具 |
 | [配置说明](docs/CONFIGURATION_CHS.md) | 完整配置参考（appenders、log、snapshot） |
 | [高级用法](docs/ADVANCED_USAGE_CHS.md) | 无 Heap Alloc、Category、崩溃恢复、自定义类型、加密 |
